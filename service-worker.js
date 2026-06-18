@@ -1,5 +1,5 @@
 // AcopiApp Service Worker — cache offline
-const CACHE_NAME = 'acopiapp-v1';
+const CACHE_NAME = 'acopiapp-v2';
 const ASSETS = [
   './app.html',
   './manifest.json',
