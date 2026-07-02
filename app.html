@@ -1099,6 +1099,21 @@ async function fetchCentroRemote(uid) {
 // trazabilidad sin que la otra lo valide.
 let pendientesList = [];
 
+// Guarda local (independiente de Firebase) de los ids que YA resolví en
+// este dispositivo. Esto es necesario porque, justo después de confirmar,
+// se dispara un refresco (initResumen → refreshPendientes) que vuelve a
+// leer Firebase por GET — y esa lectura puede llegar antes de que el PUT
+// que marca "confirmado" haya terminado de propagarse. Sin esta guarda
+// local, ese vuelto a leer "pendiente" permite confirmar la misma venta
+// una y otra vez, duplicando el stock cada vez. Con la guarda, un id ya
+// resuelto en este dispositivo nunca vuelve a mostrarse ni a procesarse,
+// sin importar lo que diga (todavía) el servidor.
+function getPendResueltos() { try { return JSON.parse(localStorage.getItem('acopi_pend_resueltos')) || []; } catch { return []; } }
+function addPendResuelto(id) {
+  const r = getPendResueltos();
+  if (!r.includes(id)) { r.push(id); localStorage.setItem('acopi_pend_resueltos', JSON.stringify(r.slice(-500))); }
+}
+
 async function fetchPendientes() {
   const c = DB.getCentro();
   if (!c || !auth.currentUser) return [];
@@ -1107,8 +1122,9 @@ async function fetchPendientes() {
     const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(c.id)}/entradas_pendientes.json${qs}`, { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json();
+    const resueltos = new Set(getPendResueltos());
     return Object.values(data || {})
-      .filter(p => p && p.estado === 'pendiente')
+      .filter(p => p && p.estado === 'pendiente' && !resueltos.has(p.id))
       .sort((a, b) => b.id - a.id);
   } catch { return []; }
 }
@@ -1164,9 +1180,13 @@ function renderPendientesDrawerList() {
 }
 
 function confirmPendiente(id) {
+  // Guarda de idempotencia: si este id ya fue resuelto en este dispositivo
+  // (aunque Firebase todavía no lo refleje), no hacer nada más.
+  if (getPendResueltos().includes(id)) return;
   const p = pendientesList.find(x => x.id === id);
   const c = DB.getCentro();
   if (!p || !c) return;
+  addPendResuelto(id); // se marca ANTES de tocar la red, para que ningún refresco posterior pueda volver a colarlo
   DB.addEntrada({
     fecha: p.fecha || new Date().toISOString(),
     recId: null, recName: p.vendedorName || 'Cuenta de la red', recColor: '#0F172A',
@@ -1183,10 +1203,12 @@ function confirmPendiente(id) {
 }
 
 function rechazarPendiente(id) {
+  if (getPendResueltos().includes(id)) return;
   const p = pendientesList.find(x => x.id === id);
   const c = DB.getCentro();
   if (!p || !c) return;
   if (!confirm('¿Rechazar esta venta? El otro centro verá que no confirmaste la recepción.')) return;
+  addPendResuelto(id);
   queueSync(`centros/${c.id}/entradas_pendientes/${id}/estado`, 'rechazado');
   if (p.vendedorId) queueSyncPatch(`centros/${p.vendedorId}/ventas/${id}`, { estadoConfirmacion: 'rechazado', confirmadoAt: new Date().toISOString() });
   pendientesList = pendientesList.filter(x => x.id !== id);
@@ -1402,7 +1424,7 @@ function confirmEditPerfil() {
 }
 function logoutCentro() {
   auth.signOut();
-  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_precios','acopi_recicladores','acopi_sync_queue'].forEach(k => localStorage.removeItem(k));
+  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos'].forEach(k => localStorage.removeItem(k));
   location.reload();
 }
 
@@ -1418,6 +1440,7 @@ function resetMisDatos() {
   localStorage.setItem('acopi_entradas', '[]');
   localStorage.setItem('acopi_ventas', '[]');
   localStorage.removeItem('acopi_sync_queue');
+  localStorage.removeItem('acopi_pend_resueltos');
   queueSync(`centros/${centro.id}/entradas`, null);
   queueSync(`centros/${centro.id}/ventas`, null);
   queueSync(`centros/${centro.id}/entradas_pendientes`, null);
