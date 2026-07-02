@@ -1217,31 +1217,26 @@ function rechazarPendiente(id) {
   showRecsToast('❌ Venta rechazada');
 }
 
-// Lado del vendedor: si mis ventas a otras cuentas ya fueron confirmadas o
-// rechazadas por el comprador, reflejarlo localmente (solo ese campo).
-async function syncVentasEstado() {
+// ── SINCRONIZACIÓN ENTRE DISPOSITIVOS DE LA MISMA CUENTA ──
+// Antes, un dispositivo solo traía los datos de Firebase UNA VEZ, al iniciar
+// sesión por primera vez (mergeRemoteCentro). Si ya estaba conectado y otro
+// aparato con la MISMA cuenta agregaba una entrada/venta, este dispositivo
+// nunca se enteraba: quedaba congelado en lo que había el día del primer
+// login. syncOwnData() repite esa misma fusión (mergeById) periódicamente,
+// para que cualquier dispositivo conectado a una cuenta vea lo que agregan
+// los demás — y de paso trae el estadoConfirmacion actualizado de mis
+// ventas (lo que antes hacía syncVentasEstado).
+async function syncOwnData() {
   const c = DB.getCentro();
   if (!c || !auth.currentUser || !navigator.onLine) return;
-  const qs = await authQuery();
   try {
-    const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(c.id)}/ventas.json${qs}`, { cache: 'no-store' });
-    if (!res.ok) return;
-    const remote = await res.json();
+    const remote = await fetchCentroRemote(c.id);
     if (!remote) return;
-    const local = DB.getVentas();
-    let changed = false;
-    local.forEach(v => {
-      if (!v.compradorId) return;
-      const r = remote[v.id];
-      if (r && r.estadoConfirmacion && r.estadoConfirmacion !== v.estadoConfirmacion) {
-        v.estadoConfirmacion = r.estadoConfirmacion;
-        changed = true;
-      }
-    });
-    if (changed) {
-      localStorage.setItem('acopi_ventas', JSON.stringify(local));
-      if (currentScreen === 'resumen') initResumen();
-    }
+    if (remote.entradas) localStorage.setItem('acopi_entradas', JSON.stringify(mergeById(DB.getEntradas(), remote.entradas)));
+    if (remote.ventas) localStorage.setItem('acopi_ventas', JSON.stringify(mergeById(DB.getVentas(), remote.ventas)));
+    if (remote.precios) localStorage.setItem('acopi_precios', JSON.stringify({ ...remote.precios, ...DB.getPrecios() }));
+    if (remote.recicladores) localStorage.setItem('acopi_recicladores', JSON.stringify(mergeById(DB.getRecs(), remote.recicladores)));
+    if (currentScreen === 'resumen') initResumen();
   } catch { /* silencioso: se reintenta en el próximo ciclo */ }
 }
 // Directorio de cuentas de la red (para elegir contraparte al comprar/vender
@@ -1468,7 +1463,7 @@ auth.onAuthStateChanged(user => {
   document.getElementById('centroSetupOverlay').classList.remove('show');
   flushSyncQueue();
   refreshPendientes();
-  syncVentasEstado();
+  syncOwnData();
 });
 
 // ── DIRECTORIO DE LA RED (elegir contraparte al comprar/vender) ──
@@ -2463,16 +2458,20 @@ updateCentroDisplay();
 goTo('resumen');
 // La cuenta (login/registro) se maneja en auth.onAuthStateChanged, más arriba.
 
-// Sincronización: al cargar, al recuperar conexión, y cada 20s por si acaso.
-// También revisa entradas pendientes por confirmar y el estado de mis
-// propias ventas a otras cuentas (confirmado/rechazado por el comprador).
+// Sincronización: al cargar, al recuperar conexión, cada 20s, y también al
+// volver a primer plano (cambiar de app y regresar, desbloquear el
+// teléfono) — para no depender de esperar hasta 20s cuando alguien vuelve
+// a mirar la app justo después de esperar una notificación.
+// También revisa entradas pendientes por confirmar y trae lo que otros
+// dispositivos de la MISMA cuenta hayan agregado (ver syncOwnData).
 function periodicSync() {
   flushSyncQueue();
   refreshPendientes();
-  syncVentasEstado();
+  syncOwnData();
 }
 periodicSync();
 window.addEventListener('online', periodicSync);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') periodicSync(); });
 setInterval(periodicSync, 20000);
 
 // ── SERVICE WORKER ────────────────────────────────────────
