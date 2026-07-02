@@ -109,6 +109,9 @@
     .centro-setup-input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 16px; color: var(--text-primary); outline: none; font-family: inherit; text-align: center; }
     .centro-setup-input:focus { border-color: var(--border-focus); }
     .centro-setup-cancel { background: none; border: none; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px; }
+    .centro-setup-error { font-size: 12px; color: var(--red); margin-top: -6px; }
+    .centro-setup-code-box { background: var(--bg); border: 1.5px dashed var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; text-align: left; }
+    .centro-setup-code-box b { color: var(--text-primary); font-family: monospace; font-size: 13px; word-break: break-all; }
 
     /* ── SHARED: MATERIAL GRID ── */
     .material-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -425,8 +428,11 @@
     <div class="centro-setup-title" id="centroSetupTitle">Bienvenido a AcopiApp</div>
     <div class="centro-setup-sub" id="centroSetupSub">¿Cómo se llama tu centro de acopio? Este nombre identifica tus datos.</div>
     <input class="centro-setup-input" id="centroSetupInput" type="text" placeholder="Ej: Centro Villa El Salvador" autocomplete="off" autocorrect="off" oninput="onCentroSetupInput(this.value)">
-    <button class="confirm-btn" id="centroSetupBtn" disabled onclick="confirmCentroSetup()">Continuar</button>
+    <div class="centro-setup-error" id="centroSetupError" style="display:none"></div>
+    <button class="confirm-btn" id="centroSetupBtn" disabled>Continuar</button>
+    <button class="centro-setup-cancel" id="centroSetupSwitchLink" onclick="toggleCentroSetupMode()">¿Ya tienes un centro? Ingresa tu código</button>
     <button class="centro-setup-cancel" id="centroSetupCancel" style="display:none" onclick="closeCentroSetup()">Cancelar</button>
+    <div class="centro-setup-code-box" id="centroSetupCodeBox" style="display:none"></div>
   </div>
 </div>
 
@@ -861,8 +867,16 @@ const DB = {
     queueSync(`centros/${centro.id}/meta`, centro);
     return centro;
   },
-  savePrecios(o) { localStorage.setItem('acopi_precios', JSON.stringify(o)); },
-  saveRecs(list) { localStorage.setItem('acopi_recicladores', JSON.stringify(list)); },
+  savePrecios(o) {
+    localStorage.setItem('acopi_precios', JSON.stringify(o));
+    const c = this.getCentro();
+    if (c) queueSync(`centros/${c.id}/precios`, o);
+  },
+  saveRecs(list) {
+    localStorage.setItem('acopi_recicladores', JSON.stringify(list));
+    const c = this.getCentro();
+    if (c) queueSync(`centros/${c.id}/recicladores`, list);
+  },
   addEntrada(e)  {
     const c = this.getCentro();
     const rec = {...e, centroId: c ? c.id : null, centroName: c ? c.name : null, id: Date.now()};
@@ -920,21 +934,65 @@ function flushSyncQueue() {
 // ── IDENTIDAD DEL CENTRO ─────────────────────────────────
 function genCentroId() { return 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-let centroSetupEditMode = false;
+let centroSetupMode = 'create'; // 'create' | 'join' | 'edit'
+
 function openCentroSetup(isEdit) {
-  centroSetupEditMode = !!isEdit;
-  const centro = DB.getCentro();
-  document.getElementById('centroSetupTitle').textContent = isEdit ? 'Nombre del centro' : 'Bienvenido a AcopiApp';
-  document.getElementById('centroSetupSub').textContent = isEdit
-    ? 'Este nombre identifica tus datos ante SinBa y otros centros. Cámbialo si es necesario.'
-    : '¿Cómo se llama tu centro de acopio? Este nombre identifica tus datos.';
-  document.getElementById('centroSetupBtn').textContent = isEdit ? 'Guardar' : 'Continuar';
-  document.getElementById('centroSetupCancel').style.display = isEdit ? 'block' : 'none';
-  const input = document.getElementById('centroSetupInput');
-  input.value = (isEdit && centro) ? centro.name : '';
-  onCentroSetupInput(input.value);
+  centroSetupMode = isEdit ? 'edit' : 'create';
+  renderCentroSetupMode();
   document.getElementById('centroSetupOverlay').classList.add('show');
-  setTimeout(() => input.focus(), 300);
+  setTimeout(() => document.getElementById('centroSetupInput').focus(), 300);
+}
+let centroSetupReturnMode = 'create';
+function toggleCentroSetupMode() {
+  if (centroSetupMode === 'join') {
+    centroSetupMode = centroSetupReturnMode;
+  } else {
+    centroSetupReturnMode = centroSetupMode;
+    centroSetupMode = 'join';
+  }
+  renderCentroSetupMode();
+  setTimeout(() => document.getElementById('centroSetupInput').focus(), 100);
+}
+function renderCentroSetupMode() {
+  const centro = DB.getCentro();
+  const input = document.getElementById('centroSetupInput');
+  const err = document.getElementById('centroSetupError');
+  const btn = document.getElementById('centroSetupBtn');
+  err.style.display = 'none'; err.textContent = '';
+  document.getElementById('centroSetupCodeBox').style.display = 'none';
+  document.getElementById('centroSetupCancel').style.display = centro ? 'block' : 'none';
+  document.getElementById('centroSetupSwitchLink').style.display = 'block';
+  btn.disabled = false;
+
+  if (centroSetupMode === 'create') {
+    document.getElementById('centroSetupTitle').textContent = 'Bienvenido a AcopiApp';
+    document.getElementById('centroSetupSub').textContent = '¿Cómo se llama tu centro de acopio? Este nombre identifica tus datos.';
+    input.placeholder = 'Ej: Centro Villa El Salvador'; input.value = '';
+    btn.textContent = 'Continuar';
+    btn.onclick = confirmCentroSetup;
+    document.getElementById('centroSetupSwitchLink').textContent = '¿Ya tienes un centro? Ingresa tu código';
+  } else if (centroSetupMode === 'join') {
+    document.getElementById('centroSetupTitle').textContent = 'Vincular con un centro existente';
+    document.getElementById('centroSetupSub').textContent = centro
+      ? 'Este dispositivo ya tiene datos propios. Al vincular, se fusionarán con los del código que ingreses — no se pierde nada.'
+      : 'Ingresa el código de tu centro (tócalo en el otro dispositivo, arriba en la app, para verlo).';
+    input.placeholder = 'Ej: c_mr3m94tyunpkb'; input.value = '';
+    btn.textContent = 'Vincular';
+    btn.onclick = confirmCentroJoin;
+    document.getElementById('centroSetupSwitchLink').textContent = '← Volver';
+  } else if (centroSetupMode === 'edit') {
+    document.getElementById('centroSetupTitle').textContent = 'Nombre del centro';
+    document.getElementById('centroSetupSub').textContent = 'Este nombre identifica tus datos ante SinBa y otros centros.';
+    input.placeholder = 'Ej: Centro Villa El Salvador'; input.value = centro ? centro.name : '';
+    btn.textContent = 'Guardar';
+    btn.onclick = confirmCentroSetup;
+    document.getElementById('centroSetupSwitchLink').textContent = '¿Prefieres vincular con otro centro existente?';
+    if (centro) {
+      document.getElementById('centroSetupCodeBox').style.display = 'block';
+      document.getElementById('centroSetupCodeBox').innerHTML = `Código de tu centro: <b>${centro.id}</b><br>Úsalo en "¿Ya tienes un centro?" desde otro celular u ordenador para ver los mismos datos ahí.`;
+    }
+  }
+  onCentroSetupInput(input.value);
 }
 function closeCentroSetup() {
   if (!DB.getCentro()) return; // no se puede cerrar sin nombre en el primer uso
@@ -949,6 +1007,60 @@ function confirmCentroSetup() {
   DB.setCentro(val);
   document.getElementById('centroSetupOverlay').classList.remove('show');
   updateCentroDisplay();
+}
+
+async function fetchCentroRemote(id) {
+  const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(id)}.json`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP_' + res.status);
+  return res.json();
+}
+function mergeById(localList, remoteObj) {
+  const items = Array.isArray(remoteObj) ? remoteObj : Object.values(remoteObj || {});
+  const byId = new Map(localList.map(r => [r.id, r]));
+  items.forEach(r => { if (r && r.id != null) byId.set(r.id, { ...(byId.get(r.id) || {}), ...r }); });
+  return Array.from(byId.values()).sort((a, b) => b.id - a.id);
+}
+function mergeRemoteCentro(code, remote) {
+  const name = (remote.meta && remote.meta.name) || 'Centro vinculado';
+  const createdAt = (remote.meta && remote.meta.createdAt) || new Date().toISOString();
+  localStorage.setItem('acopi_centro', JSON.stringify({ id: code, name, createdAt }));
+
+  // Fusiona local + remoto, y re-etiqueta TODO con la identidad del centro vinculado
+  // — esto cubre el caso de un dispositivo que ya tenía su propia identidad (con sus
+  // propios registros) antes de vincularse a un centro distinto.
+  const remoteEntradaIds = new Set(Object.keys(remote.entradas || {}).map(Number));
+  const mergedEntradas = mergeById(DB.getEntradas(), remote.entradas).map(r => ({ ...r, centroId: code, centroName: name }));
+  localStorage.setItem('acopi_entradas', JSON.stringify(mergedEntradas));
+  mergedEntradas.forEach(r => { if (!remoteEntradaIds.has(r.id)) queueSync(`centros/${code}/entradas/${r.id}`, r); });
+
+  const remoteVentaIds = new Set(Object.keys(remote.ventas || {}).map(Number));
+  const mergedVentas = mergeById(DB.getVentas(), remote.ventas).map(r => ({ ...r, centroId: code, centroName: name }));
+  localStorage.setItem('acopi_ventas', JSON.stringify(mergedVentas));
+  mergedVentas.forEach(r => { if (!remoteVentaIds.has(r.id)) queueSync(`centros/${code}/ventas/${r.id}`, r); });
+
+  if (remote.precios) localStorage.setItem('acopi_precios', JSON.stringify(remote.precios));
+  if (remote.recicladores) localStorage.setItem('acopi_recicladores', JSON.stringify(mergeById(DB.getRecs(), remote.recicladores)));
+}
+async function confirmCentroJoin() {
+  const code = document.getElementById('centroSetupInput').value.trim();
+  if (code.length < 2) return;
+  const btn = document.getElementById('centroSetupBtn');
+  const err = document.getElementById('centroSetupError');
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Vinculando…';
+  try {
+    const remote = await fetchCentroRemote(code);
+    if (!remote) throw new Error('NOT_FOUND');
+    mergeRemoteCentro(code, remote);
+    document.getElementById('centroSetupOverlay').classList.remove('show');
+    location.reload(); // vuelve a cargar la app con los datos recién importados
+  } catch (e) {
+    err.textContent = (e && e.message === 'NOT_FOUND')
+      ? 'Código no encontrado. Verifica que esté bien escrito.'
+      : 'No se pudo verificar el código. Revisa tu conexión e inténtalo de nuevo.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Vincular';
+  }
 }
 function updateCentroDisplay() {
   const centro = DB.getCentro();
