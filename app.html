@@ -177,6 +177,27 @@
     .stock-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
     .stock-badge.ok { background: var(--green-light); color: var(--green); }
     .stock-badge.vacio { background: #F1F5F9; color: var(--text-muted); }
+    .pend-banner { background: var(--amber-light); border: 2px solid #FCD34D; border-radius: var(--radius); padding: 14px 16px; display: none; align-items: center; gap: 10px; cursor: pointer; }
+    .pend-banner.show { display: flex; }
+    .pend-banner-icon { font-size: 22px; flex-shrink: 0; }
+    .pend-banner-text { flex: 1; min-width: 0; }
+    .pend-banner-title { font-size: 14px; font-weight: 700; color: var(--amber); }
+    .pend-banner-sub { font-size: 11px; color: #92400E; margin-top: 2px; line-height: 1.4; }
+    .pend-banner-chevron { font-size: 18px; color: var(--amber); flex-shrink: 0; }
+    .pend-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+    .pend-item-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pend-item-emoji { font-size: 22px; flex-shrink: 0; }
+    .pend-item-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .pend-item-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .pend-item-total { margin-left: auto; font-size: 15px; font-weight: 800; color: var(--green); flex-shrink: 0; }
+    .pend-item-actions { display: flex; gap: 8px; }
+    .pend-btn-confirm { flex: 1; background: var(--green); color: white; border: none; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .pend-btn-reject { flex: 1; background: var(--red-light); color: var(--red); border: none; border-radius: 10px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .pend-empty { padding: 24px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    .venta-estado-badge { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 20px; margin-left: 6px; white-space: nowrap; vertical-align: middle; }
+    .venta-estado-badge.pendiente { background: var(--amber-light); color: var(--amber); }
+    .venta-estado-badge.confirmado { background: var(--green-light); color: var(--green); }
+    .venta-estado-badge.rechazado { background: var(--red-light); color: var(--red); }
     .actividad-list { display: flex; flex-direction: column; gap: 6px; }
     .act-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 11px 14px; display: flex; align-items: center; gap: 12px; }
     .act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -468,6 +489,14 @@
 <!-- ══════════════════════════════════ SCREEN: RESUMEN ══════════════════════════════════ -->
 <div id="screen-resumen" class="screen active">
   <div class="scroll-area">
+    <div class="pend-banner" id="pendBanner" onclick="openPendientesDrawer()">
+      <div class="pend-banner-icon">🔔</div>
+      <div class="pend-banner-text">
+        <div class="pend-banner-title" id="pendBannerTitle">Tienes 1 venta por confirmar</div>
+        <div class="pend-banner-sub">Un centro dice haberte vendido material — confírmalo para sumarlo a tu stock</div>
+      </div>
+      <div class="pend-banner-chevron">›</div>
+    </div>
     <div class="hero-card">
       <div class="mes-nav">
         <button id="btnMesPrev" class="mes-nav-btn" onclick="navegarMes(-1)">‹</button>
@@ -881,6 +910,17 @@
   <div class="drawer-list" id="origenDrawerList" style="padding:0 16px 16px;max-height:50vh;overflow-y:auto"></div>
 </div>
 
+<!-- ── PENDIENTES DE CONFIRMACIÓN DRAWER (recepción de material de otra cuenta) ── -->
+<div class="drawer-overlay" id="pendientesDrawerOverlay" onclick="closePendientesDrawer()"></div>
+<div class="drawer historial-drawer" id="pendientesDrawer">
+  <div class="drawer-handle"></div>
+  <div class="historial-drawer-header">
+    <div class="historial-drawer-title">🔔 Por confirmar</div>
+    <button class="historial-close-btn" onclick="closePendientesDrawer()">✕</button>
+  </div>
+  <div class="historial-body" id="pendientesList" style="padding:16px"></div>
+</div>
+
 <!-- ── HISTORIAL DRAWER (A3) ── -->
 <div class="drawer-overlay" id="historialOverlay" onclick="closeHistorial()"></div>
 <div class="drawer historial-drawer" id="historialDrawer">
@@ -950,6 +990,17 @@ const DB = {
     const rec = {...v, centroId: c ? c.id : null, centroName: c ? c.name : null, id: Date.now()};
     const l = this.getVentas(); l.unshift(rec); localStorage.setItem('acopi_ventas', JSON.stringify(l));
     if (c) queueSync(`centros/${c.id}/ventas/${rec.id}`, rec);
+    // Si el comprador es una cuenta registrada de la red, avisarle: le llega
+    // una "entrada pendiente" que debe confirmar antes de sumarla a su stock.
+    // Así se traza la cadena de custodia con la confirmación de ambas partes.
+    if (c && rec.compradorId) {
+      queueSync(`centros/${rec.compradorId}/entradas_pendientes/${rec.id}`, {
+        id: rec.id, vendedorId: c.id, vendedorName: c.name,
+        matId: rec.matId, matName: rec.matName, kg: rec.kg,
+        precioKg: rec.precioKg, total: rec.total, fecha: rec.fecha,
+        estado: 'pendiente',
+      });
+    }
   },
   addRec(r)      { const l = this.getRecs(); const rec = {...r, id: Date.now()}; l.push(rec); this.saveRecs(l); return rec; },
 };
@@ -974,6 +1025,15 @@ function queueSync(path, data) {
   setSyncQueue(q);
   flushSyncQueue();
 }
+// Igual que queueSync, pero con PATCH (fusión superficial) en vez de PUT —
+// para actualizar un campo puntual de un nodo ajeno (ej: el estado de
+// confirmación de una venta) sin sobrescribir el resto de sus datos.
+function queueSyncPatch(path, data) {
+  const q = getSyncQueue();
+  q.push({ path, data, method: 'PATCH', ts: Date.now() });
+  setSyncQueue(q);
+  flushSyncQueue();
+}
 
 let syncInFlight = false;
 async function flushSyncQueue() {
@@ -988,7 +1048,7 @@ async function flushSyncQueue() {
     if (i >= q.length) { setSyncQueue(remaining); syncInFlight = false; return; }
     const item = q[i++];
     fetch(`${FIREBASE_DB_URL}/${item.path}.json${qs}`, {
-      method: 'PUT',
+      method: item.method || 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item.data),
     }).then(r => { if (!r.ok) remaining.push(item); })
@@ -1003,6 +1063,137 @@ async function fetchCentroRemote(uid) {
   const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(uid)}.json${qs}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP_' + res.status);
   return res.json();
+}
+
+// ── CONFIRMACIÓN BILATERAL (cadena de custodia) ──────────
+// Cuando vendo a otra cuenta de la red, esa venta le llega como "entrada
+// pendiente": no cuenta en su stock hasta que él mismo confirme que
+// recibió el material. Así ninguna de las dos partes puede inflar su
+// trazabilidad sin que la otra lo valide.
+let pendientesList = [];
+
+async function fetchPendientes() {
+  const c = DB.getCentro();
+  if (!c || !auth.currentUser) return [];
+  const qs = await authQuery();
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(c.id)}/entradas_pendientes.json${qs}`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Object.values(data || {})
+      .filter(p => p && p.estado === 'pendiente')
+      .sort((a, b) => b.id - a.id);
+  } catch { return []; }
+}
+
+async function refreshPendientes() {
+  pendientesList = await fetchPendientes();
+  renderPendBanner();
+  if (document.getElementById('pendientesDrawer')?.classList.contains('open')) renderPendientesDrawerList();
+}
+
+function renderPendBanner() {
+  const banner = document.getElementById('pendBanner');
+  if (!banner) return;
+  const n = pendientesList.length;
+  banner.classList.toggle('show', n > 0);
+  if (n > 0) {
+    document.getElementById('pendBannerTitle').textContent = n === 1 ? 'Tienes 1 venta por confirmar' : `Tienes ${n} ventas por confirmar`;
+  }
+}
+
+function openPendientesDrawer() {
+  document.getElementById('pendientesDrawerOverlay').classList.add('open');
+  document.getElementById('pendientesDrawer').classList.add('open');
+  renderPendientesDrawerList();
+}
+function closePendientesDrawer() {
+  document.getElementById('pendientesDrawerOverlay').classList.remove('open');
+  document.getElementById('pendientesDrawer').classList.remove('open');
+}
+function renderPendientesDrawerList() {
+  const list = document.getElementById('pendientesList');
+  if (!pendientesList.length) {
+    list.innerHTML = '<div class="pend-empty">No tienes ventas por confirmar.</div>';
+    return;
+  }
+  list.innerHTML = pendientesList.map(p => {
+    const mat = MATERIALES.find(m => m.id === p.matId);
+    return `<div class="pend-item">
+      <div class="pend-item-top">
+        <div class="pend-item-emoji">${mat ? mat.emoji : '📦'}</div>
+        <div style="flex:1;min-width:0">
+          <div class="pend-item-name">${escHtml(p.vendedorName || 'Cuenta de la red')}</div>
+          <div class="pend-item-sub">${p.matName || (mat ? mat.name : p.matId)} · ${p.kg} kg · S/${(p.precioKg || 0).toFixed(2)}/kg · ${fechaLabel(p.fecha)}</div>
+        </div>
+        <div class="pend-item-total">${fmt(p.total || 0)}</div>
+      </div>
+      <div class="pend-item-actions">
+        <button class="pend-btn-reject" onclick="rechazarPendiente(${p.id})">❌ Rechazar</button>
+        <button class="pend-btn-confirm" onclick="confirmPendiente(${p.id})">✅ Confirmar recepción</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function confirmPendiente(id) {
+  const p = pendientesList.find(x => x.id === id);
+  const c = DB.getCentro();
+  if (!p || !c) return;
+  DB.addEntrada({
+    fecha: p.fecha || new Date().toISOString(),
+    recId: null, recName: p.vendedorName || 'Cuenta de la red', recColor: '#0F172A',
+    matId: p.matId, matName: p.matName, kg: p.kg, precioKg: p.precioKg, total: p.total,
+    origenCentroId: p.vendedorId || null,
+  });
+  queueSync(`centros/${c.id}/entradas_pendientes/${id}/estado`, 'confirmado');
+  if (p.vendedorId) queueSyncPatch(`centros/${p.vendedorId}/ventas/${id}`, { estadoConfirmacion: 'confirmado', confirmadoAt: new Date().toISOString() });
+  pendientesList = pendientesList.filter(x => x.id !== id);
+  renderPendientesDrawerList();
+  renderPendBanner();
+  if (currentScreen === 'resumen') initResumen();
+  showRecsToast('✅ Recepción confirmada — sumada a tu stock');
+}
+
+function rechazarPendiente(id) {
+  const p = pendientesList.find(x => x.id === id);
+  const c = DB.getCentro();
+  if (!p || !c) return;
+  if (!confirm('¿Rechazar esta venta? El otro centro verá que no confirmaste la recepción.')) return;
+  queueSync(`centros/${c.id}/entradas_pendientes/${id}/estado`, 'rechazado');
+  if (p.vendedorId) queueSyncPatch(`centros/${p.vendedorId}/ventas/${id}`, { estadoConfirmacion: 'rechazado', confirmadoAt: new Date().toISOString() });
+  pendientesList = pendientesList.filter(x => x.id !== id);
+  renderPendientesDrawerList();
+  renderPendBanner();
+  showRecsToast('❌ Venta rechazada');
+}
+
+// Lado del vendedor: si mis ventas a otras cuentas ya fueron confirmadas o
+// rechazadas por el comprador, reflejarlo localmente (solo ese campo).
+async function syncVentasEstado() {
+  const c = DB.getCentro();
+  if (!c || !auth.currentUser || !navigator.onLine) return;
+  const qs = await authQuery();
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(c.id)}/ventas.json${qs}`, { cache: 'no-store' });
+    if (!res.ok) return;
+    const remote = await res.json();
+    if (!remote) return;
+    const local = DB.getVentas();
+    let changed = false;
+    local.forEach(v => {
+      if (!v.compradorId) return;
+      const r = remote[v.id];
+      if (r && r.estadoConfirmacion && r.estadoConfirmacion !== v.estadoConfirmacion) {
+        v.estadoConfirmacion = r.estadoConfirmacion;
+        changed = true;
+      }
+    });
+    if (changed) {
+      localStorage.setItem('acopi_ventas', JSON.stringify(local));
+      if (currentScreen === 'resumen') initResumen();
+    }
+  } catch { /* silencioso: se reintenta en el próximo ciclo */ }
 }
 // Directorio de cuentas de la red (para elegir contraparte al comprar/vender
 // entre centros — incluye a SinBa si se registra como una cuenta más).
@@ -1203,6 +1394,8 @@ auth.onAuthStateChanged(user => {
   updateCentroDisplay();
   document.getElementById('centroSetupOverlay').classList.remove('show');
   flushSyncQueue();
+  refreshPendientes();
+  syncVentasEstado();
 });
 
 // ── DIRECTORIO DE LA RED (elegir contraparte al comprar/vender) ──
@@ -1379,6 +1572,8 @@ function initResumen() {
   renderResumenValorPotencial(stats);
   renderResumenStock(stats);
   renderResumenActividad(stats);
+  renderPendBanner();
+  refreshPendientes();
 }
 
 function isMesSel(iso) { const d=new Date(iso); return d.getMonth()===resumenMes.month && d.getFullYear()===resumenMes.year; }
@@ -1474,9 +1669,15 @@ function renderResumenActividad(stats) {
   const { entradas, ventas } = stats;
   const list = document.getElementById('actividadList');
   const matName = id => MATERIALES.find(m=>m.id===id)?.name || '';
+  const estadoBadge = v => {
+    if (!v.compradorId) return '';
+    const e = v.estadoConfirmacion || 'pendiente';
+    const lbl = e === 'confirmado' ? '✅ Confirmado' : e === 'rechazado' ? '❌ Rechazado' : '⏳ Por confirmar';
+    return `<span class="venta-estado-badge ${e}">${lbl}</span>`;
+  };
   const items = [
-    ...entradas.map(e => ({ tipo:'entrada', fecha:e.fecha, title:e.recName, sub:`${e.matName||matName(e.matId)} · ${e.kg} kg`, total:-e.total })),
-    ...ventas.map(v   => ({ tipo:'venta',   fecha:v.fecha, title:v.comprador||'Venta', sub:`${v.matName||matName(v.matId)} · ${v.kg} kg`, total:v.total })),
+    ...entradas.map(e => ({ tipo:'entrada', fecha:e.fecha, title:e.recName, sub:`${e.matName||matName(e.matId)} · ${e.kg} kg`, total:-e.total, badge:'' })),
+    ...ventas.map(v   => ({ tipo:'venta',   fecha:v.fecha, title:v.comprador||'Venta', sub:`${v.matName||matName(v.matId)} · ${v.kg} kg`, total:v.total, badge:estadoBadge(v) })),
   ].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,5);
   if (!items.length) {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Sin actividad este mes</div><div class="empty-sub">Registra tu primera entrada para empezar.</div></div>`;
@@ -1484,7 +1685,7 @@ function renderResumenActividad(stats) {
   }
   list.innerHTML = items.map(i => `<div class="act-item">
     <div class="act-dot ${i.tipo}"></div>
-    <div class="act-info"><div class="act-title">${i.tipo==='entrada'?'⬇ ':'⬆ '}${i.title}</div><div class="act-sub">${i.sub}</div></div>
+    <div class="act-info"><div class="act-title">${i.tipo==='entrada'?'⬇ ':'⬆ '}${i.title}${i.badge}</div><div class="act-sub">${i.sub}</div></div>
     <div class="act-right"><div class="act-total ${i.tipo}">${i.tipo==='entrada'?'−':'+'}${fmt(i.total)}</div><div class="act-fecha">${fechaLabel(i.fecha)}</div></div>
   </div>`).join('');
 }
@@ -1829,7 +2030,7 @@ function confirmVenta() {
   const kg=parseFloat(ventaState.kgStr)||0, pv=parseFloat(ventaState.precioStr)||0, mat=ventaState.material;
   if (!mat||kg<=0||pv<=0) return;
   const ingreso=kg*pv, margen=ingreso-kg*mat.precio, comprador=document.getElementById('compradorInput').value.trim();
-  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg:mat.precio, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null });
+  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg:mat.precio, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null, estadoConfirmacion: ventaCompradorId ? 'pendiente' : null });
   document.getElementById('successAmountVenta').textContent = fmt(ingreso);
   document.getElementById('successMargenVenta').textContent = 'Margen: '+(margen>=0?'+':'')+fmt(margen);
   document.getElementById('successSubVenta').textContent    = `${kg} kg de ${mat.name}${comprador?' → '+comprador:''}`;
@@ -2190,9 +2391,16 @@ goTo('resumen');
 // La cuenta (login/registro) se maneja en auth.onAuthStateChanged, más arriba.
 
 // Sincronización: al cargar, al recuperar conexión, y cada 20s por si acaso.
-flushSyncQueue();
-window.addEventListener('online', flushSyncQueue);
-setInterval(flushSyncQueue, 20000);
+// También revisa entradas pendientes por confirmar y el estado de mis
+// propias ventas a otras cuentas (confirmado/rechazado por el comprador).
+function periodicSync() {
+  flushSyncQueue();
+  refreshPendientes();
+  syncVentasEstado();
+}
+periodicSync();
+window.addEventListener('online', periodicSync);
+setInterval(periodicSync, 20000);
 
 // ── SERVICE WORKER ────────────────────────────────────────
 if ('serviceWorker' in navigator) {
