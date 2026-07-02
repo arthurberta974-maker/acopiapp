@@ -1037,15 +1037,15 @@ function queueSync(path, data) {
   setSyncQueue(q);
   flushSyncQueue();
 }
-// Igual que queueSync, pero con PATCH (fusión superficial) en vez de PUT —
-// para actualizar un campo puntual de un nodo ajeno (ej: el estado de
-// confirmación de una venta) sin sobrescribir el resto de sus datos.
-function queueSyncPatch(path, data) {
-  const q = getSyncQueue();
-  q.push({ id: newQueueId(), path, data, method: 'PATCH', ts: Date.now() });
-  setSyncQueue(q);
-  flushSyncQueue();
-}
+// NOTA: existió una queueSyncPatch() que escribía el estado de confirmación
+// directamente en la venta de OTRA cuenta (la del vendedor) desde el
+// dispositivo del comprador. Se quitó: si el vendedor borraba/sobrescribía
+// su propia venta justo en ese momento (ej: el botón de reset), ese PATCH
+// llegaba después y resucitaba un registro fantasma con solo esos dos
+// campos (lo confirmamos viendo uno real en Firebase: sólo tenía
+// estadoConfirmacion + confirmadoAt, sin matId/kg/id/etc.). Ahora cada
+// cuenta solo escribe en su propio nodo — el vendedor LEE (no escribe) el
+// estado desde la cuenta del comprador, ver syncMisVentasEstado().
 
 // IMPORTANTE: varias llamadas a queueSync() pueden encadenarse de forma
 // síncrona (ej: una venta que también notifica al comprador). Como esta
@@ -1193,8 +1193,12 @@ function confirmPendiente(id) {
     matId: p.matId, matName: p.matName, kg: p.kg, precioKg: p.precioKg, total: p.total,
     origenCentroId: p.vendedorId || null,
   });
+  // Solo escribimos en NUESTRO propio nodo (entradas_pendientes de mi
+  // cuenta). El vendedor no recibe ningún PATCH — él mismo lee este mismo
+  // campo cuando quiere saber el estado (ver syncMisVentasEstado). Así,
+  // pase lo que pase en su cuenta (incluso si borra sus datos de prueba),
+  // nunca puede corromper lo que YO ya confirmé.
   queueSync(`centros/${c.id}/entradas_pendientes/${id}/estado`, 'confirmado');
-  if (p.vendedorId) queueSyncPatch(`centros/${p.vendedorId}/ventas/${id}`, { estadoConfirmacion: 'confirmado', confirmadoAt: new Date().toISOString() });
   pendientesList = pendientesList.filter(x => x.id !== id);
   renderPendientesDrawerList();
   renderPendBanner();
@@ -1210,7 +1214,6 @@ function rechazarPendiente(id) {
   if (!confirm('¿Rechazar esta venta? El otro centro verá que no confirmaste la recepción.')) return;
   addPendResuelto(id);
   queueSync(`centros/${c.id}/entradas_pendientes/${id}/estado`, 'rechazado');
-  if (p.vendedorId) queueSyncPatch(`centros/${p.vendedorId}/ventas/${id}`, { estadoConfirmacion: 'rechazado', confirmadoAt: new Date().toISOString() });
   pendientesList = pendientesList.filter(x => x.id !== id);
   renderPendientesDrawerList();
   renderPendBanner();
@@ -1224,8 +1227,7 @@ function rechazarPendiente(id) {
 // nunca se enteraba: quedaba congelado en lo que había el día del primer
 // login. syncOwnData() repite esa misma fusión (mergeById) periódicamente,
 // para que cualquier dispositivo conectado a una cuenta vea lo que agregan
-// los demás — y de paso trae el estadoConfirmacion actualizado de mis
-// ventas (lo que antes hacía syncVentasEstado).
+// los demás.
 async function syncOwnData() {
   const c = DB.getCentro();
   if (!c || !auth.currentUser || !navigator.onLine) return;
@@ -1233,11 +1235,54 @@ async function syncOwnData() {
     const remote = await fetchCentroRemote(c.id);
     if (!remote) return;
     if (remote.entradas) localStorage.setItem('acopi_entradas', JSON.stringify(mergeById(DB.getEntradas(), remote.entradas)));
-    if (remote.ventas) localStorage.setItem('acopi_ventas', JSON.stringify(mergeById(DB.getVentas(), remote.ventas)));
+    if (remote.ventas) {
+      const localVentas = DB.getVentas();
+      const merged = mergeById(localVentas, remote.ventas).map(v => {
+        // estadoConfirmacion es un dato que solo YO actualizo localmente (ver
+        // syncMisVentasEstado) — la copia remota se queda en "pendiente" para
+        // siempre porque ya nadie le escribe encima. Si no protegemos esto,
+        // esta misma fusión pisaría hacia atrás un "confirmado" ya resuelto.
+        const prev = localVentas.find(lv => lv.id === v.id);
+        if (prev && prev.estadoConfirmacion && prev.estadoConfirmacion !== 'pendiente') v.estadoConfirmacion = prev.estadoConfirmacion;
+        return v;
+      });
+      localStorage.setItem('acopi_ventas', JSON.stringify(merged));
+    }
     if (remote.precios) localStorage.setItem('acopi_precios', JSON.stringify({ ...remote.precios, ...DB.getPrecios() }));
     if (remote.recicladores) localStorage.setItem('acopi_recicladores', JSON.stringify(mergeById(DB.getRecs(), remote.recicladores)));
     if (currentScreen === 'resumen') initResumen();
   } catch { /* silencioso: se reintenta en el próximo ciclo */ }
+}
+
+// Lado del vendedor: para saber si una venta a otra cuenta ya fue
+// confirmada o rechazada, LEO (nunca escribo) el campo estado en la propia
+// entrada pendiente del comprador — es su nodo, solo él escribe ahí, así
+// que no hay ninguna carrera posible con nada que yo haga en mi cuenta
+// (como el botón de reset). Solo se consulta lo que sigue "pendiente"
+// localmente, para no golpear la red de más.
+async function syncMisVentasEstado() {
+  const c = DB.getCentro();
+  if (!c || !auth.currentUser || !navigator.onLine) return;
+  const local = DB.getVentas();
+  const porRevisar = local.filter(v => v.compradorId && (v.estadoConfirmacion || 'pendiente') === 'pendiente');
+  if (!porRevisar.length) return;
+  const qs = await authQuery();
+  let changed = false;
+  for (const v of porRevisar) {
+    try {
+      const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(v.compradorId)}/entradas_pendientes/${v.id}/estado.json${qs}`, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const estado = await res.json();
+      if (estado && estado !== 'pendiente' && estado !== v.estadoConfirmacion) {
+        v.estadoConfirmacion = estado;
+        changed = true;
+      }
+    } catch { /* se reintenta en el próximo ciclo */ }
+  }
+  if (changed) {
+    localStorage.setItem('acopi_ventas', JSON.stringify(local));
+    if (currentScreen === 'resumen') initResumen();
+  }
 }
 // Directorio de cuentas de la red (para elegir contraparte al comprar/vender
 // entre centros — incluye a SinBa si se registra como una cuenta más).
@@ -1464,6 +1509,7 @@ auth.onAuthStateChanged(user => {
   flushSyncQueue();
   refreshPendientes();
   syncOwnData();
+  syncMisVentasEstado();
 });
 
 // ── DIRECTORIO DE LA RED (elegir contraparte al comprar/vender) ──
@@ -2468,6 +2514,7 @@ function periodicSync() {
   flushSyncQueue();
   refreshPendientes();
   syncOwnData();
+  syncMisVentasEstado();
 }
 periodicSync();
 window.addEventListener('online', periodicSync);
