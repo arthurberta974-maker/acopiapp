@@ -466,6 +466,8 @@
     <button class="centro-setup-cancel" id="centroSetupSwitchLink" onclick="toggleCentroSetupMode()">¿Ya tienes cuenta? Inicia sesión</button>
     <button class="centro-setup-cancel" id="centroSetupCancel" style="display:none" onclick="closeCentroSetup()">Cancelar</button>
     <button class="centro-setup-cancel" id="centroSetupLogout" style="display:none" onclick="logoutCentro()">Cerrar sesión</button>
+    <!-- BOTÓN TEMPORAL DE PRUEBAS (pedido por Arthur el 2026-07-02) — quitar antes de que centros reales usen la app en producción. -->
+    <button class="centro-setup-cancel" id="centroSetupReset" style="display:none;color:#DC2626" onclick="resetMisDatos()">🗑️ Borrar mis transacciones (solo pruebas)</button>
   </div>
 </div>
 
@@ -1016,12 +1018,22 @@ async function authQuery() {
   try { return '?auth=' + await user.getIdToken(); } catch { return ''; }
 }
 
-function getSyncQueue() { try { return JSON.parse(localStorage.getItem('acopi_sync_queue')) || []; } catch { return []; } }
+function newQueueId() { return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); }
+function getSyncQueue() {
+  let q;
+  try { q = JSON.parse(localStorage.getItem('acopi_sync_queue')) || []; } catch { return []; }
+  // Autocura ítems antiguos (de antes de tener id) para que el filtrado por
+  // id de flushSyncQueue funcione también con lo que ya estaba en cola.
+  let changed = false;
+  q.forEach(item => { if (item.id == null) { item.id = newQueueId(); changed = true; } });
+  if (changed) setSyncQueue(q);
+  return q;
+}
 function setSyncQueue(q) { localStorage.setItem('acopi_sync_queue', JSON.stringify(q)); }
 
 function queueSync(path, data) {
   const q = getSyncQueue();
-  q.push({ path, data, ts: Date.now() });
+  q.push({ id: newQueueId(), path, data, ts: Date.now() });
   setSyncQueue(q);
   flushSyncQueue();
 }
@@ -1030,32 +1042,47 @@ function queueSync(path, data) {
 // confirmación de una venta) sin sobrescribir el resto de sus datos.
 function queueSyncPatch(path, data) {
   const q = getSyncQueue();
-  q.push({ path, data, method: 'PATCH', ts: Date.now() });
+  q.push({ id: newQueueId(), path, data, method: 'PATCH', ts: Date.now() });
   setSyncQueue(q);
   flushSyncQueue();
 }
 
+// IMPORTANTE: varias llamadas a queueSync() pueden encadenarse de forma
+// síncrona (ej: una venta que también notifica al comprador). Como esta
+// función es async, el "await authQuery()" cede el control — así que un
+// segundo queueSync() puede agregar un ítem a la cola MIENTRAS el primer
+// flush ya está en curso. Por eso nunca hay que fiarse de una foto vieja de
+// la cola al guardar: siempre se relee la cola actual y solo se quitan los
+// ítems cuyo id ya confirmamos que se guardaron en Firebase. Así ningún
+// ítem agregado en paralelo se pierde.
 let syncInFlight = false;
 async function flushSyncQueue() {
   if (syncInFlight || !navigator.onLine || !auth.currentUser) return;
-  const q = getSyncQueue();
-  if (!q.length) return;
   syncInFlight = true;
-  const qs = await authQuery();
-  const remaining = [];
-  let i = 0;
-  const next = () => {
-    if (i >= q.length) { setSyncQueue(remaining); syncInFlight = false; return; }
-    const item = q[i++];
-    fetch(`${FIREBASE_DB_URL}/${item.path}.json${qs}`, {
-      method: item.method || 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(item.data),
-    }).then(r => { if (!r.ok) remaining.push(item); })
-      .catch(() => remaining.push(item))
-      .finally(next);
-  };
-  next();
+  try {
+    const qs = await authQuery();
+    let guard = 0;
+    while (guard++ < 25) {
+      const batch = getSyncQueue();
+      if (!batch.length) break;
+      const succeededIds = new Set();
+      for (const item of batch) {
+        try {
+          const res = await fetch(`${FIREBASE_DB_URL}/${item.path}.json${qs}`, {
+            method: item.method || 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.data),
+          });
+          if (res.ok) succeededIds.add(item.id);
+        } catch { /* se reintenta en el próximo ciclo */ }
+      }
+      const current = getSyncQueue();
+      setSyncQueue(current.filter(i => !succeededIds.has(i.id)));
+      if (!succeededIds.size) break; // nada avanzó: evita loop en caso de fallo persistente
+    }
+  } finally {
+    syncInFlight = false;
+  }
 }
 
 async function fetchCentroRemote(uid) {
@@ -1270,6 +1297,7 @@ function renderCentroSetupMode() {
   const btn = document.getElementById('centroSetupBtn');
   document.getElementById('centroSetupCancel').style.display = (centroSetupMode === 'edit' && centro) ? 'block' : 'none';
   document.getElementById('centroSetupLogout').style.display = (centroSetupMode === 'edit' && centro) ? 'block' : 'none';
+  document.getElementById('centroSetupReset').style.display = (centroSetupMode === 'edit' && centro) ? 'block' : 'none';
   document.getElementById('centroSetupSwitchLink').style.display = (centroSetupMode === 'edit') ? 'none' : 'block';
   ['csNombre','csDireccion','csTelefono','csPassword'].forEach(id => {
     document.getElementById(id).style.display = CS_FIELDS[centroSetupMode].includes(id) ? 'block' : 'none';
@@ -1376,6 +1404,28 @@ function logoutCentro() {
   auth.signOut();
   ['acopi_centro','acopi_entradas','acopi_ventas','acopi_precios','acopi_recicladores','acopi_sync_queue'].forEach(k => localStorage.removeItem(k));
   location.reload();
+}
+
+// ── BOTÓN TEMPORAL DE PRUEBAS — quitar antes de producción real ──
+// Borra únicamente las TRANSACCIONES (entradas/ventas/pendientes) de la
+// cuenta conectada, en este dispositivo y en Firebase. No toca la
+// identidad del centro (nombre/teléfono) ni sus precios de compra ni su
+// lista de recicladores.
+function resetMisDatos() {
+  const centro = DB.getCentro();
+  if (!centro) return;
+  if (!confirm(`¿Borrar TODAS las entradas y ventas de "${centro.name}"?\n\nEsto no se puede deshacer y afecta este dispositivo Y la red (Firebase). Solo para pruebas.`)) return;
+  localStorage.setItem('acopi_entradas', '[]');
+  localStorage.setItem('acopi_ventas', '[]');
+  localStorage.removeItem('acopi_sync_queue');
+  queueSync(`centros/${centro.id}/entradas`, null);
+  queueSync(`centros/${centro.id}/ventas`, null);
+  queueSync(`centros/${centro.id}/entradas_pendientes`, null);
+  pendientesList = [];
+  document.getElementById('centroSetupOverlay').classList.remove('show');
+  renderPendBanner();
+  if (currentScreen === 'resumen') initResumen();
+  showRecsToast('🗑️ Transacciones borradas');
 }
 function updateCentroDisplay() {
   const centro = DB.getCentro();
