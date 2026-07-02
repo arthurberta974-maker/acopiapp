@@ -99,6 +99,17 @@
     .btn-new:active { opacity: 0.8; }
     .btn-sec-overlay { background: rgba(255,255,255,0.2); color: white; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
+    /* ── CENTRO SETUP OVERLAY ── */
+    .centro-setup-overlay { position: fixed; inset: 0; z-index: 300; display: none; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
+    .centro-setup-overlay.show { display: flex; animation: fadeIn 0.25s; }
+    .centro-setup-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
+    .centro-setup-icon { font-size: 48px; }
+    .centro-setup-title { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+    .centro-setup-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 4px; }
+    .centro-setup-input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 16px; color: var(--text-primary); outline: none; font-family: inherit; text-align: center; }
+    .centro-setup-input:focus { border-color: var(--border-focus); }
+    .centro-setup-cancel { background: none; border: none; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px; }
+
     /* ── SHARED: MATERIAL GRID ── */
     .material-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .mat-btn { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 14px 12px; cursor: pointer; transition: all 0.15s; text-align: left; display: flex; flex-direction: column; gap: 6px; }
@@ -407,12 +418,24 @@
 </head>
 <body>
 
+<!-- ── CENTRO SETUP (primer uso / editar nombre) ── -->
+<div class="centro-setup-overlay" id="centroSetupOverlay">
+  <div class="centro-setup-card">
+    <div class="centro-setup-icon">📦</div>
+    <div class="centro-setup-title" id="centroSetupTitle">Bienvenido a AcopiApp</div>
+    <div class="centro-setup-sub" id="centroSetupSub">¿Cómo se llama tu centro de acopio? Este nombre identifica tus datos.</div>
+    <input class="centro-setup-input" id="centroSetupInput" type="text" placeholder="Ej: Centro Villa El Salvador" autocomplete="off" autocorrect="off" oninput="onCentroSetupInput(this.value)">
+    <button class="confirm-btn" id="centroSetupBtn" disabled onclick="confirmCentroSetup()">Continuar</button>
+    <button class="centro-setup-cancel" id="centroSetupCancel" style="display:none" onclick="closeCentroSetup()">Cancelar</button>
+  </div>
+</div>
+
 <!-- ── TOPBAR DYNAMIQUE ── -->
 <div class="topbar">
   <div class="topbar-inner">
     <div id="tb-brand" style="flex:1;display:flex;flex-direction:column">
       <div class="topbar-title">📦 AcopiApp</div>
-      <div class="topbar-sub">Centro de acopio</div>
+      <div class="topbar-sub" id="tb-brand-sub" onclick="openCentroSetup(true)" style="cursor:pointer">Centro de acopio</div>
     </div>
     <div id="tb-badge" class="topbar-badge">—</div>
     <button id="tb-back" class="back-btn" style="display:none" onclick="goTo('resumen')">←</button>
@@ -830,12 +853,107 @@ const DB = {
   getVentas()    { try { return JSON.parse(localStorage.getItem('acopi_ventas'))      || []; } catch { return []; } },
   getPrecios()   { try { return JSON.parse(localStorage.getItem('acopi_precios'))     || {}; } catch { return {}; } },
   getRecs()      { try { return JSON.parse(localStorage.getItem('acopi_recicladores'))|| []; } catch { return []; } },
+  getCentro()    { try { return JSON.parse(localStorage.getItem('acopi_centro'))      || null; } catch { return null; } },
+  setCentro(name) {
+    const existing = this.getCentro();
+    const centro = { id: (existing && existing.id) || genCentroId(), name: name.trim(), createdAt: (existing && existing.createdAt) || new Date().toISOString() };
+    localStorage.setItem('acopi_centro', JSON.stringify(centro));
+    queueSync(`centros/${centro.id}/meta`, centro);
+    return centro;
+  },
   savePrecios(o) { localStorage.setItem('acopi_precios', JSON.stringify(o)); },
   saveRecs(list) { localStorage.setItem('acopi_recicladores', JSON.stringify(list)); },
-  addEntrada(e)  { const l = this.getEntradas(); l.unshift({...e, id: Date.now()}); localStorage.setItem('acopi_entradas', JSON.stringify(l)); },
-  addVenta(v)    { const l = this.getVentas();   l.unshift({...v, id: Date.now()}); localStorage.setItem('acopi_ventas',   JSON.stringify(l)); },
+  addEntrada(e)  {
+    const c = this.getCentro();
+    const rec = {...e, centroId: c ? c.id : null, centroName: c ? c.name : null, id: Date.now()};
+    const l = this.getEntradas(); l.unshift(rec); localStorage.setItem('acopi_entradas', JSON.stringify(l));
+    if (c) queueSync(`centros/${c.id}/entradas/${rec.id}`, rec);
+  },
+  addVenta(v)    {
+    const c = this.getCentro();
+    const rec = {...v, centroId: c ? c.id : null, centroName: c ? c.name : null, id: Date.now()};
+    const l = this.getVentas(); l.unshift(rec); localStorage.setItem('acopi_ventas', JSON.stringify(l));
+    if (c) queueSync(`centros/${c.id}/ventas/${rec.id}`, rec);
+  },
   addRec(r)      { const l = this.getRecs(); const rec = {...r, id: Date.now()}; l.push(rec); this.saveRecs(l); return rec; },
 };
+
+// ── SINCRONIZACIÓN REMOTA (Firebase Realtime Database) ───
+// Cada centro sigue funcionando 100% en local (localStorage). Esto es una
+// copia de respaldo + visibilidad a distancia para SinBa, en segundo plano.
+// Si no hay internet, los datos quedan en cola y se reintenta más tarde —
+// nunca bloquea el uso de la app.
+const FIREBASE_DB_URL = 'https://acopiapp-32910-default-rtdb.firebaseio.com';
+
+function getSyncQueue() { try { return JSON.parse(localStorage.getItem('acopi_sync_queue')) || []; } catch { return []; } }
+function setSyncQueue(q) { localStorage.setItem('acopi_sync_queue', JSON.stringify(q)); }
+
+function queueSync(path, data) {
+  const q = getSyncQueue();
+  q.push({ path, data, ts: Date.now() });
+  setSyncQueue(q);
+  flushSyncQueue();
+}
+
+let syncInFlight = false;
+function flushSyncQueue() {
+  if (syncInFlight || !navigator.onLine) return;
+  const q = getSyncQueue();
+  if (!q.length) return;
+  syncInFlight = true;
+  const remaining = [];
+  let i = 0;
+  const next = () => {
+    if (i >= q.length) { setSyncQueue(remaining); syncInFlight = false; return; }
+    const item = q[i++];
+    fetch(`${FIREBASE_DB_URL}/${item.path}.json`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item.data),
+    }).then(r => { if (!r.ok) remaining.push(item); })
+      .catch(() => remaining.push(item))
+      .finally(next);
+  };
+  next();
+}
+
+// ── IDENTIDAD DEL CENTRO ─────────────────────────────────
+function genCentroId() { return 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+let centroSetupEditMode = false;
+function openCentroSetup(isEdit) {
+  centroSetupEditMode = !!isEdit;
+  const centro = DB.getCentro();
+  document.getElementById('centroSetupTitle').textContent = isEdit ? 'Nombre del centro' : 'Bienvenido a AcopiApp';
+  document.getElementById('centroSetupSub').textContent = isEdit
+    ? 'Este nombre identifica tus datos ante SinBa y otros centros. Cámbialo si es necesario.'
+    : '¿Cómo se llama tu centro de acopio? Este nombre identifica tus datos.';
+  document.getElementById('centroSetupBtn').textContent = isEdit ? 'Guardar' : 'Continuar';
+  document.getElementById('centroSetupCancel').style.display = isEdit ? 'block' : 'none';
+  const input = document.getElementById('centroSetupInput');
+  input.value = (isEdit && centro) ? centro.name : '';
+  onCentroSetupInput(input.value);
+  document.getElementById('centroSetupOverlay').classList.add('show');
+  setTimeout(() => input.focus(), 300);
+}
+function closeCentroSetup() {
+  if (!DB.getCentro()) return; // no se puede cerrar sin nombre en el primer uso
+  document.getElementById('centroSetupOverlay').classList.remove('show');
+}
+function onCentroSetupInput(val) {
+  document.getElementById('centroSetupBtn').disabled = val.trim().length < 2;
+}
+function confirmCentroSetup() {
+  const val = document.getElementById('centroSetupInput').value.trim();
+  if (val.length < 2) return;
+  DB.setCentro(val);
+  document.getElementById('centroSetupOverlay').classList.remove('show');
+  updateCentroDisplay();
+}
+function updateCentroDisplay() {
+  const centro = DB.getCentro();
+  document.getElementById('tb-brand-sub').textContent = centro ? centro.name : 'Centro de acopio';
+}
 
 // ── MATERIALES ───────────────────────────────────────────
 const MATERIALES = [
@@ -845,6 +963,7 @@ const MATERIALES = [
   { id: 'aluminio', emoji: '🥫', name: 'Aluminio',         hint: 'Latas, perfiles',         precio: 3.50 },
   { id: 'papel',    emoji: '📰', name: 'Papel',            hint: 'Periódico, papel blanco', precio: 0.15 },
   { id: 'vidrio',   emoji: '🍶', name: 'Vidrio',           hint: 'Botellas, frascos',       precio: 0.10 },
+  { id: 'tetrapak', emoji: '🧃', name: 'Tetrapak',         hint: 'Envases de bebida (leche, jugo)', precio: 0.20 },
 ];
 
 function loadMatPrices() {
@@ -1681,7 +1800,14 @@ function showRecsToast(msg) {
 // ════════════════════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════════════════════
+updateCentroDisplay();
+if (!DB.getCentro()) { openCentroSetup(false); }
 goTo('resumen');
+
+// Sincronización: al cargar, al recuperar conexión, y cada 20s por si acaso.
+flushSyncQueue();
+window.addEventListener('online', flushSyncQueue);
+setInterval(flushSyncQueue, 20000);
 
 // ── SERVICE WORKER ────────────────────────────────────────
 if ('serviceWorker' in navigator) {

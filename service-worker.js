@@ -1,5 +1,5 @@
 // AcopiApp Service Worker — cache offline
-const CACHE_NAME = 'acopiapp-v2';
+const CACHE_NAME = 'acopiapp-v3';
 const ASSETS = [
   './app.html',
   './manifest.json',
@@ -25,11 +25,28 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch : cache-first pour les assets statiques
+// Fetch : app.html (app shell) en "red primero" para recibir siempre la
+// última versión durante el desarrollo activo — con la caché como respaldo
+// si no hay conexión. El resto de assets estáticos siguen en cache-first.
 self.addEventListener('fetch', event => {
   // Ignorer les requêtes non-GET et non-http(s)
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
+
+  const isAppShell = event.request.mode === 'navigate' || event.request.url.includes('app.html');
+
+  if (isAppShell) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request).then(c => c || caches.match('./app.html')))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then(cached => {
