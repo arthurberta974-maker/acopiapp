@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AcopiApp · Panel de red</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F8FAFC; --surface: #FFFFFF; --border: #E2E8F0; --border-focus: #0F172A;
+    --text-primary: #0F172A; --text-secondary: #475569; --text-muted: #94A3B8;
+    --accent: #0F172A; --green: #16A34A; --green-light: #DCFCE7;
+    --amber: #D97706; --amber-light: #FFFBEB;
+    --red: #DC2626; --red-light: #FEE2E2;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+  body { display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; min-height: 100dvh; }
+
+  .topbar { background: var(--accent); color: white; padding: env(safe-area-inset-top, 0) 16px 0; flex-shrink: 0; }
+  .topbar-inner { display: flex; align-items: center; padding: 14px 0; gap: 12px; }
+  .topbar-title { font-size: 17px; font-weight: 700; }
+  .topbar-sub { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 1px; }
+  .refresh-btn, .logout-btn { background: rgba(255,255,255,0.15); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.2s; }
+  .refresh-btn:active, .logout-btn:active { background: rgba(255,255,255,0.25); }
+  .refresh-btn.spinning { animation: spin 0.7s linear; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* ── LOGIN ── */
+  .login-overlay { position: fixed; inset: 0; z-index: 400; display: none; align-items: center; justify-content: center; padding: 24px; background: var(--bg); overflow-y: auto; }
+  .login-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
+  .login-icon { font-size: 44px; }
+  .login-title { font-size: 19px; font-weight: 800; }
+  .login-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 4px; }
+  .login-input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 15px; color: var(--text-primary); outline: none; font-family: inherit; text-align: center; }
+  .login-input:focus { border-color: var(--border-focus); }
+  .login-error { font-size: 12px; color: var(--red); }
+  .login-btn { background: var(--accent); color: white; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .login-note { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+  .scroll-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 32px; }
+
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 8px; }
+
+  /* ── SELECTOR DE MATERIA Y FILTROS ── */
+  .mat-pills { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .mat-pills::-webkit-scrollbar { display: none; }
+  .mat-pill { flex-shrink: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; padding: 8px 14px; font-size: 12px; font-weight: 700; color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+  .mat-pill.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .filter-row { display: flex; gap: 8px; }
+  .filter-select { flex: 1; min-width: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 9px 8px; font-size: 12px; font-weight: 600; color: var(--text-secondary); font-family: inherit; }
+
+  .hero-card { background: var(--accent); border-radius: 16px; padding: 20px; color: white; }
+  .hero-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,0.55); margin-bottom: 4px; }
+  .hero-row-main { display: flex; gap: 16px; margin-top: 10px; }
+  .hero-mini { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .hero-mini-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: rgba(255,255,255,0.5); }
+  .hero-mini-val { font-size: 28px; font-weight: 900; color: white; line-height: 1; }
+  .hero-unit-sm { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.5); }
+  .hero-divider { width: 1px; background: rgba(255,255,255,0.15); flex-shrink: 0; }
+  .hero-updated { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 12px; }
+
+  .threshold-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.12); }
+  .threshold-label { font-size: 12px; color: rgba(255,255,255,0.65); flex-shrink: 0; }
+  .threshold-input { width: 72px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 14px; color: white; outline: none; font-family: inherit; text-align: center; }
+  .threshold-input::placeholder { color: rgba(255,255,255,0.4); }
+
+  .status-badge { margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .status-badge.ready { background: rgba(74,222,128,0.18); color: #4ADE80; }
+  .status-badge.waiting { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+
+  .centro-list, .comprador-list, .sale-list { display: flex; flex-direction: column; gap: 8px; }
+  .centro-card, .comprador-row, .sale-row { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 13px 16px; display: flex; align-items: center; gap: 14px; }
+  .centro-rank { width: 26px; height: 26px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: var(--text-muted); flex-shrink: 0; }
+  .centro-info { flex: 1; min-width: 0; }
+  .centro-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .centro-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .centro-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+  .centro-kg { font-size: 18px; font-weight: 900; }
+  .centro-kg-sub { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+  .comprador-row { padding: 12px 16px; }
+  .comprador-icon { font-size: 18px; flex-shrink: 0; }
+  .comprador-name { flex: 1; font-size: 13px; font-weight: 700; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .comprador-kg { font-size: 15px; font-weight: 800; flex-shrink: 0; }
+
+  .sale-row { padding: 11px 16px; justify-content: space-between; }
+  .sale-main { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; min-width: 0; flex-wrap: wrap; }
+  .sale-centro, .sale-comprador { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+  .sale-comprador { color: var(--text-secondary); }
+  .sale-arrow { color: var(--text-muted); flex-shrink: 0; }
+  .sale-right { text-align: right; flex-shrink: 0; }
+  .sale-kg { font-size: 13px; font-weight: 800; }
+  .sale-date { font-size: 10px; color: var(--text-muted); }
+
+  .mat-totals { display: flex; flex-direction: column; gap: 6px; }
+  .mat-row { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 11px 14px; display: flex; align-items: center; gap: 12px; }
+  .mat-emoji { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
+  .mat-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+  .mat-row-vals { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+  .mat-kg { font-size: 14px; font-weight: 800; }
+  .mat-kg-sub { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+  .empty-state, .error-state, .loading-state { background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius); padding: 32px 20px; text-align: center; color: var(--text-muted); }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; }
+  .empty-title { font-size: 14px; font-weight: 700; color: var(--text-secondary); }
+  .empty-sub { font-size: 12px; margin-top: 4px; line-height: 1.5; }
+  .retry-btn { margin-top: 14px; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .mini-empty { background: var(--surface); border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px; }
+
+  .nota { background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 11px; color: #92400E; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-icon">📦</div>
+    <div class="login-title">AcopiApp · Panel de red</div>
+    <div class="login-sub">Inicia sesión con tu cuenta registrada (la misma que usas en la app del centro).</div>
+    <input class="login-input" id="loginTelefono" type="tel" placeholder="Teléfono" inputmode="numeric" autocomplete="off">
+    <input class="login-input" id="loginPassword" type="password" placeholder="Contraseña" autocomplete="off">
+    <div class="login-error" id="loginError" style="display:none"></div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Iniciar sesión</button>
+    <div class="login-note">Cualquier cuenta de la red puede ver este panel — centros y compradores por igual.</div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div style="flex:1;display:flex;flex-direction:column">
+      <div class="topbar-title">📦 AcopiApp</div>
+      <div class="topbar-sub">Panel de red · Vista agregada</div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">⎋</button>
+    <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">🔄</button>
+  </div>
+</div>
+
+<div class="scroll-area">
+
+  <div id="loadingState" class="loading-state">
+    <div class="empty-icon">⏳</div>
+    <div class="empty-title">Cargando datos…</div>
+  </div>
+
+  <div id="errorState" class="error-state" style="display:none">
+    <div class="empty-icon">⚠️</div>
+    <div class="empty-title">No se pudo conectar</div>
+    <div class="empty-sub">Verifica tu conexión a internet y vuelve a intentar.</div>
+    <button class="retry-btn" onclick="manualRefresh()">Reintentar</button>
+  </div>
+
+  <div id="content" style="display:none">
+
+    <div class="mat-pills" id="matPills"></div>
+
+    <div class="filter-row">
+      <select class="filter-select" id="filterCentro" onchange="onFilterChange()"><option value="ALL">Todos los centros</option></select>
+      <select class="filter-select" id="filterComprador" onchange="onFilterChange()"><option value="ALL">Todos los compradores</option></select>
+    </div>
+
+    <div class="hero-card">
+      <div class="hero-label" id="heroLabel">🧃 Tetrapak en la red</div>
+      <div class="hero-row-main">
+        <div class="hero-mini">
+          <div class="hero-mini-lbl">Stock actual</div>
+          <div class="hero-mini-val"><span id="heroStock">0</span> <span class="hero-unit-sm">kg</span></div>
+        </div>
+        <div class="hero-divider"></div>
+        <div class="hero-mini">
+          <div class="hero-mini-lbl">Vendido (con filtros)</div>
+          <div class="hero-mini-val"><span id="heroVendido">0</span> <span class="hero-unit-sm">kg</span></div>
+        </div>
+      </div>
+      <div class="hero-updated" id="heroUpdated">—</div>
+
+      <div class="threshold-row">
+        <span class="threshold-label">Meta camión (kg de stock)</span>
+        <input class="threshold-input" id="thresholdInput" type="number" inputmode="numeric" placeholder="500" oninput="onThresholdChange(this.value)">
+      </div>
+
+      <div id="statusBadge"></div>
+    </div>
+
+    <div>
+      <div class="section-label" id="centroListLabel">Centros — Tetrapak</div>
+      <div class="centro-list" id="centroList"></div>
+    </div>
+
+    <div>
+      <div class="section-label" id="compradorLabel">Compradores — Tetrapak</div>
+      <div class="comprador-list" id="compradorList"></div>
+    </div>
+
+    <div>
+      <div class="section-label" id="salesLabel">Ventas recientes — Tetrapak</div>
+      <div class="sale-list" id="saleList"></div>
+    </div>
+
+    <div>
+      <div class="section-label">Todas las materias (resumen red)</div>
+      <div class="mat-totals" id="matTotals"></div>
+    </div>
+
+    <div class="nota">Vista de solo lectura, agregada por centro. "Stock" = lo que aún está en el centro. "Vendido" = ventas que salieron por venta (según los filtros activos). No requiere que los centros hagan nada distinto — se actualiza sola con lo que ya registran en AcopiApp.</div>
+
+  </div>
+
+</div>
+
+<script>
+// Reemplazar con la config real (misma que en app.html): Firebase console →
+// ⚙ Configuración del proyecto → tus apps → Web app → "SDK setup and configuration".
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDzVq1QEIENS7NcyWLGsILpI6aLBohsv70",
+  authDomain: "acopiapp-32910.firebaseapp.com",
+  databaseURL: "https://acopiapp-32910-default-rtdb.firebaseio.com",
+  projectId: "acopiapp-32910",
+  storageBucket: "acopiapp-32910.firebasestorage.app",
+  messagingSenderId: "848079783314",
+  appId: "1:848079783314:web:214720cf0eedbd9395ad4b",
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const FIREBASE_DB_URL = FIREBASE_CONFIG.databaseURL;
+
+function phoneToEmail(telefono) { return `tel${telefono.replace(/\D/g,'')}@acopiapp.pe`; }
+async function authQuery() {
+  const user = auth.currentUser;
+  if (!user) return '';
+  try { return '?auth=' + await user.getIdToken(); } catch { return ''; }
+}
+async function doLogin() {
+  const tel = document.getElementById('loginTelefono').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn'), err = document.getElementById('loginError');
+  err.style.display = 'none'; btn.disabled = true; btn.textContent = 'Entrando…';
+  try {
+    await auth.signInWithEmailAndPassword(phoneToEmail(tel), pass);
+  } catch (e) {
+    err.textContent = 'Teléfono o contraseña incorrectos.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Iniciar sesión';
+  }
+}
+function doLogout() { auth.signOut(); }
+auth.onAuthStateChanged(user => {
+  document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
+  const btn = document.getElementById('loginBtn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Iniciar sesión'; }
+  if (user) refresh();
+});
+
+const MAT_LIST   = ['tetrapak', 'pet', 'petColor', 'carton', 'aluminio', 'papel', 'vidrio'];
+const MAT_LABELS = { pet: 'PET Transparente', petColor: 'PET Color', carton: 'Cartón', aluminio: 'Aluminio', papel: 'Papel', vidrio: 'Vidrio', tetrapak: 'Tetrapak' };
+const MAT_EMOJI  = { pet: '🧴', petColor: '🟣', carton: '📦', aluminio: '🥫', papel: '📰', vidrio: '🍶', tetrapak: '🧃' };
+
+let selectedMat = 'tetrapak';
+let selectedCentro = 'ALL';
+let selectedComprador = 'ALL';
+let lastCentrosRaw = null;
+let lastComputed = null;
+
+function fmtKg(kg) {
+  const n = Math.round(kg * 10) / 10;
+  return (n >= 1000 ? (n/1000).toFixed(1) + ' t' : n + ' kg');
+}
+function fechaLabel(iso) {
+  if (!iso) return 'sin actividad';
+  const d = new Date(iso), now = new Date();
+  const diffH = Math.floor((now - d) / 3600000);
+  if (diffH < 1) return 'hace unos minutos';
+  if (diffH < 24) return 'hace ' + diffH + 'h';
+  const diffD = Math.floor(diffH / 24);
+  if (diffD === 1) return 'ayer';
+  if (diffD < 7) return 'hace ' + diffD + 'd';
+  return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+}
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function compradorNombre(v) { return (v.comprador && v.comprador.trim()) || 'Sin especificar'; }
+
+function getThreshold(matId) {
+  const v = localStorage.getItem('acopiapp_threshold_' + matId);
+  return v ? Number(v) : null;
+}
+function onThresholdChange(val) {
+  const key = 'acopiapp_threshold_' + selectedMat;
+  if (val === '') { localStorage.removeItem(key); }
+  else { const n = Number(val); if (!isNaN(n)) localStorage.setItem(key, String(n)); }
+  renderStatusBadge();
+}
+
+// stock = todavía en el centro (entradas - ventas). vendido = todo lo que salió por venta (sin filtrar, histórico bruto).
+function computeStockByCentro(centros) {
+  const list = [];
+  for (const [centroId, c] of Object.entries(centros || {})) {
+    const name = (c.meta && c.meta.name) || centroId;
+    const entradas = c.entradas ? Object.values(c.entradas) : [];
+    const ventas   = c.ventas   ? Object.values(c.ventas)   : [];
+    const stock = {};
+    let lastActivity = null;
+    entradas.forEach(e => {
+      if (!e || !e.matId) return;
+      stock[e.matId] = (stock[e.matId] || 0) + (Number(e.kg) || 0);
+      if (!lastActivity || new Date(e.fecha) > new Date(lastActivity)) lastActivity = e.fecha;
+    });
+    ventas.forEach(v => {
+      if (!v || !v.matId) return;
+      stock[v.matId] = (stock[v.matId] || 0) - (Number(v.kg) || 0);
+      if (!lastActivity || new Date(v.fecha) > new Date(lastActivity)) lastActivity = v.fecha;
+    });
+    list.push({ centroId, name, stock, lastActivity });
+  }
+  return list;
+}
+
+// Lista plana de todas las ventas de la red, con el nombre del centro adjunto —
+// esto es lo que permite responder "¿quién le vendió qué a quién?".
+function collectAllVentas(centros) {
+  const all = [];
+  Object.entries(centros || {}).forEach(([centroId, c]) => {
+    const name = (c.meta && c.meta.name) || centroId;
+    const ventas = c.ventas ? Object.values(c.ventas) : [];
+    ventas.forEach(v => { if (v && v.matId) all.push({ ...v, centroName: v.centroName || name }); });
+  });
+  return all;
+}
+
+async function loadData() {
+  const qs = await authQuery();
+  const res = await fetch(`${FIREBASE_DB_URL}/centros.json${qs}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return data || {};
+}
+
+function renderPills() {
+  document.getElementById('matPills').innerHTML = MAT_LIST.map(id => `
+    <button class="mat-pill ${id === selectedMat ? 'active' : ''}" onclick="selectMaterial('${id}')">${MAT_EMOJI[id]} ${MAT_LABELS[id]}</button>
+  `).join('');
+}
+function selectMaterial(id) { selectedMat = id; renderPills(); renderAll(); }
+function onFilterChange() {
+  selectedCentro = document.getElementById('filterCentro').value;
+  selectedComprador = document.getElementById('filterComprador').value;
+  renderAll();
+}
+function populateFilterOptions(centros) {
+  const list = computeStockByCentro(centros);
+  const centroNames = [...new Set(list.map(c => c.name))].sort((a, b) => a.localeCompare(b));
+  const compradorNames = [...new Set(collectAllVentas(centros).map(compradorNombre))].sort((a, b) => a.localeCompare(b));
+
+  const selCentro = document.getElementById('filterCentro');
+  const prevCentro = selCentro.value || 'ALL';
+  selCentro.innerHTML = '<option value="ALL">Todos los centros</option>' + centroNames.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  selCentro.value = centroNames.includes(prevCentro) ? prevCentro : 'ALL';
+
+  const selComp = document.getElementById('filterComprador');
+  const prevComp = selComp.value || 'ALL';
+  selComp.innerHTML = '<option value="ALL">Todos los compradores</option>' + compradorNames.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('');
+  selComp.value = compradorNames.includes(prevComp) ? prevComp : 'ALL';
+
+  selectedCentro = selCentro.value;
+  selectedComprador = selComp.value;
+}
+
+function renderStatusBadge() {
+  const badge = document.getElementById('statusBadge');
+  if (!lastComputed) { badge.innerHTML = ''; return; }
+  const threshold = getThreshold(selectedMat);
+  if (threshold == null || isNaN(threshold) || threshold <= 0) { badge.innerHTML = ''; return; }
+  const total = lastComputed.totalStock;
+  if (total >= threshold) {
+    badge.innerHTML = `<div class="status-badge ready">✅ Listo para enviar camión (${fmtKg(total)} / ${fmtKg(threshold)})</div>`;
+  } else {
+    badge.innerHTML = `<div class="status-badge waiting">⏳ Faltan ${fmtKg(threshold - total)} para la meta</div>`;
+  }
+}
+
+function renderAll() {
+  if (!lastCentrosRaw) return;
+  const list = computeStockByCentro(lastCentrosRaw);
+  let ventasMat = collectAllVentas(lastCentrosRaw).filter(v => v.matId === selectedMat);
+  if (selectedCentro !== 'ALL') ventasMat = ventasMat.filter(v => v.centroName === selectedCentro);
+  if (selectedComprador !== 'ALL') ventasMat = ventasMat.filter(v => compradorNombre(v) === selectedComprador);
+
+  const matLabel = `${MAT_EMOJI[selectedMat]} ${MAT_LABELS[selectedMat]}`;
+  const etiquetaFiltro = [selectedCentro !== 'ALL' ? selectedCentro : null, selectedComprador !== 'ALL' ? '→ ' + selectedComprador : null].filter(Boolean).join(' ');
+
+  // Stock: lo que hay ahora en el/los centro(s), según el filtro de centro (el comprador no afecta el stock).
+  const centrosStock = selectedCentro === 'ALL' ? list : list.filter(c => c.name === selectedCentro);
+  let totalStock = 0;
+  centrosStock.forEach(c => { totalStock += (c.stock[selectedMat] || 0); });
+  let totalVendido = 0;
+  ventasMat.forEach(v => { totalVendido += (Number(v.kg) || 0); });
+
+  document.getElementById('heroLabel').textContent = etiquetaFiltro ? `${matLabel} — ${etiquetaFiltro}` : `${matLabel} en la red`;
+  document.getElementById('heroStock').textContent = Math.round(totalStock * 10) / 10;
+  document.getElementById('heroVendido').textContent = Math.round(totalVendido * 10) / 10;
+  document.getElementById('heroUpdated').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('thresholdInput').value = getThreshold(selectedMat) ?? '';
+  lastComputed = { totalStock, totalVendido };
+  renderStatusBadge();
+
+  // Centros: ranking por stock (respeta el filtro de centro); el "vendido" de cada tarjeta
+  // respeta también el filtro de comprador.
+  document.getElementById('centroListLabel').textContent = `Centros — ${MAT_LABELS[selectedMat]}`;
+  const vendidoPorCentroFiltrado = {};
+  ventasMat.forEach(v => { vendidoPorCentroFiltrado[v.centroName] = (vendidoPorCentroFiltrado[v.centroName] || 0) + (Number(v.kg) || 0); });
+  const withActivity = centrosStock.filter(c => Math.abs(c.stock[selectedMat] || 0) > 0.001 || (vendidoPorCentroFiltrado[c.name] || 0) > 0.001);
+  if (!withActivity.length) {
+    document.getElementById('centroList').innerHTML = `<div class="mini-empty">Ningún centro tiene actividad de ${MAT_LABELS[selectedMat]} con estos filtros.</div>`;
+  } else {
+    const sorted = [...withActivity].sort((a, b) => (b.stock[selectedMat] || 0) - (a.stock[selectedMat] || 0));
+    document.getElementById('centroList').innerHTML = sorted.map((c, i) => `
+      <div class="centro-card">
+        <div class="centro-rank">${i + 1}</div>
+        <div class="centro-info">
+          <div class="centro-name">${escHtml(c.name)}</div>
+          <div class="centro-sub">${fechaLabel(c.lastActivity)}</div>
+        </div>
+        <div class="centro-right">
+          <div class="centro-kg">${fmtKg(c.stock[selectedMat] || 0)}</div>
+          <div class="centro-kg-sub">vendido: ${fmtKg(vendidoPorCentroFiltrado[c.name] || 0)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Compradores (¿quién compra este material, y cuánto — con los filtros activos?)
+  document.getElementById('compradorLabel').textContent = `Compradores — ${MAT_LABELS[selectedMat]}`;
+  const compradorTotals = {};
+  ventasMat.forEach(v => { const comp = compradorNombre(v); compradorTotals[comp] = (compradorTotals[comp] || 0) + (Number(v.kg) || 0); });
+  const compradorEntries = Object.entries(compradorTotals).sort((a, b) => b[1] - a[1]);
+  document.getElementById('compradorList').innerHTML = compradorEntries.length
+    ? compradorEntries.map(([comp, kg]) => `
+        <div class="comprador-row">
+          <div class="comprador-icon">🏭</div>
+          <div class="comprador-name">${escHtml(comp)}</div>
+          <div class="comprador-kg">${fmtKg(kg)}</div>
+        </div>
+      `).join('')
+    : `<div class="mini-empty">Sin ventas registradas con estos filtros.</div>`;
+
+  // Ventas recientes: quién le vendió qué a quién
+  document.getElementById('salesLabel').textContent = `Ventas recientes — ${MAT_LABELS[selectedMat]}`;
+  const recientes = [...ventasMat].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 15);
+  document.getElementById('saleList').innerHTML = recientes.length
+    ? recientes.map(v => `
+        <div class="sale-row">
+          <div class="sale-main">
+            <span class="sale-centro">${escHtml(v.centroName || '—')}</span>
+            <span class="sale-arrow">→</span>
+            <span class="sale-comprador">${escHtml(compradorNombre(v))}</span>
+          </div>
+          <div class="sale-right">
+            <div class="sale-kg">${fmtKg(v.kg || 0)}</div>
+            <div class="sale-date">${fechaLabel(v.fecha)}</div>
+          </div>
+        </div>
+      `).join('')
+    : `<div class="mini-empty">Sin ventas recientes con estos filtros.</div>`;
+
+  // Resumen de todas las materias (stock total red + vendido sin filtrar, para tener una vista global)
+  const allVentasRed = collectAllVentas(lastCentrosRaw);
+  const totals = {};
+  list.forEach(c => {
+    MAT_LIST.forEach(matId => {
+      totals[matId] = totals[matId] || { stock: 0, vendido: 0 };
+      totals[matId].stock += (c.stock[matId] || 0);
+    });
+  });
+  allVentasRed.forEach(v => {
+    totals[v.matId] = totals[v.matId] || { stock: 0, vendido: 0 };
+    totals[v.matId].vendido += (Number(v.kg) || 0);
+  });
+  const totalsEntries = MAT_LIST
+    .map(matId => [matId, totals[matId] || { stock: 0, vendido: 0 }])
+    .filter(([, v]) => Math.abs(v.stock) > 0.001 || v.vendido > 0.001);
+  document.getElementById('matTotals').innerHTML = totalsEntries.length
+    ? totalsEntries.map(([matId, v]) => `
+        <div class="mat-row">
+          <div class="mat-emoji">${MAT_EMOJI[matId] || '📦'}</div>
+          <div class="mat-name">${MAT_LABELS[matId] || matId}</div>
+          <div class="mat-row-vals">
+            <div class="mat-kg">${fmtKg(v.stock)}</div>
+            <div class="mat-kg-sub">vendido: ${fmtKg(v.vendido)}</div>
+          </div>
+        </div>
+      `).join('')
+    : `<div class="mini-empty">Aún no hay movimientos registrados en la red.</div>`;
+}
+
+function render(centros) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('errorState').style.display = 'none';
+
+  const list = computeStockByCentro(centros);
+  if (!list.length) {
+    document.getElementById('content').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorState').querySelector('.empty-title').textContent = 'Aún no hay datos';
+    document.getElementById('errorState').querySelector('.empty-sub').textContent = 'Ningún centro ha registrado movimientos todavía.';
+    document.getElementById('errorState').querySelector('.retry-btn').textContent = 'Actualizar';
+    return;
+  }
+
+  document.getElementById('content').style.display = 'block';
+  lastCentrosRaw = centros;
+  renderPills();
+  populateFilterOptions(centros);
+  renderAll();
+}
+
+async function refresh() {
+  if (!auth.currentUser) return;
+  try {
+    const data = await loadData();
+    render(data);
+  } catch (err) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('content').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorState').querySelector('.empty-title').textContent = 'No se pudo conectar';
+    document.getElementById('errorState').querySelector('.empty-sub').textContent = 'Verifica tu conexión a internet y vuelve a intentar.';
+    document.getElementById('errorState').querySelector('.retry-btn').textContent = 'Reintentar';
+  }
+}
+
+function manualRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.remove('spinning'); void btn.offsetWidth; btn.classList.add('spinning');
+  refresh();
+}
+
+setInterval(() => { if (auth.currentUser) refresh(); }, 30000);
+</script>
+</body>
+</html>

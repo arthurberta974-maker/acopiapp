@@ -10,6 +10,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>AcopiApp</title>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -100,7 +102,7 @@
     .btn-sec-overlay { background: rgba(255,255,255,0.2); color: white; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
     /* ── CENTRO SETUP OVERLAY ── */
-    .centro-setup-overlay { position: fixed; inset: 0; z-index: 300; display: none; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
+    .centro-setup-overlay { position: fixed; inset: 0; z-index: 300; display: none; align-items: center; justify-content: center; padding: 24px; background: var(--bg); overflow-y: auto; }
     .centro-setup-overlay.show { display: flex; animation: fadeIn 0.25s; }
     .centro-setup-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
     .centro-setup-icon { font-size: 48px; }
@@ -157,6 +159,10 @@
     .hero-stat { display: flex; flex-direction: column; gap: 2px; }
     .hero-stat-val { font-size: 15px; font-weight: 800; color: rgba(255,255,255,0.9); }
     .hero-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.45); font-weight: 500; }
+    .valor-potencial-card { background: var(--green-light); border: 2px solid #86EFAC; border-radius: var(--radius); padding: 16px; }
+    .valor-potencial-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #15803D; margin-bottom: 4px; }
+    .valor-potencial-val { font-size: 28px; font-weight: 900; color: #15803D; }
+    .valor-potencial-sub { font-size: 11px; color: #166534; margin-top: 4px; line-height: 1.4; }
     .stock-list { display: flex; flex-direction: column; gap: 8px; }
     .stock-card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 13px 16px; display: flex; align-items: center; gap: 14px; }
     .stock-card.zero { opacity: 0.5; }
@@ -167,6 +173,7 @@
     .stock-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
     .stock-kg { font-size: 20px; font-weight: 900; line-height: 1; }
     .stock-kg-unit { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+    .stock-valor { font-size: 10px; color: #15803D; font-weight: 700; }
     .stock-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
     .stock-badge.ok { background: var(--green-light); color: var(--green); }
     .stock-badge.vacio { background: #F1F5F9; color: var(--text-muted); }
@@ -421,18 +428,23 @@
 </head>
 <body>
 
-<!-- ── CENTRO SETUP (primer uso / editar nombre) ── -->
+<!-- ── CUENTA DEL CENTRO (registro / inicio de sesión / perfil) ── -->
 <div class="centro-setup-overlay" id="centroSetupOverlay">
   <div class="centro-setup-card">
     <div class="centro-setup-icon">📦</div>
     <div class="centro-setup-title" id="centroSetupTitle">Bienvenido a AcopiApp</div>
-    <div class="centro-setup-sub" id="centroSetupSub">¿Cómo se llama tu centro de acopio? Este nombre identifica tus datos.</div>
-    <input class="centro-setup-input" id="centroSetupInput" type="text" placeholder="Ej: Centro Villa El Salvador" autocomplete="off" autocorrect="off" oninput="onCentroSetupInput(this.value)">
+    <div class="centro-setup-sub" id="centroSetupSub">Crea la cuenta de tu centro de acopio.</div>
+
+    <input class="centro-setup-input" id="csNombre" type="text" placeholder="Nombre del centro" autocomplete="off" autocorrect="off" oninput="onCentroFormInput()">
+    <input class="centro-setup-input" id="csDireccion" type="text" placeholder="Dirección" autocomplete="off" autocorrect="off" oninput="onCentroFormInput()">
+    <input class="centro-setup-input" id="csTelefono" type="tel" placeholder="Teléfono (Ej: 987654321)" autocomplete="off" inputmode="numeric" oninput="onCentroFormInput()">
+    <input class="centro-setup-input" id="csPassword" type="password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="off" oninput="onCentroFormInput()">
+
     <div class="centro-setup-error" id="centroSetupError" style="display:none"></div>
-    <button class="confirm-btn" id="centroSetupBtn" disabled>Continuar</button>
-    <button class="centro-setup-cancel" id="centroSetupSwitchLink" onclick="toggleCentroSetupMode()">¿Ya tienes un centro? Ingresa tu código</button>
+    <button class="confirm-btn" id="centroSetupBtn" disabled>Crear cuenta</button>
+    <button class="centro-setup-cancel" id="centroSetupSwitchLink" onclick="toggleCentroSetupMode()">¿Ya tienes cuenta? Inicia sesión</button>
     <button class="centro-setup-cancel" id="centroSetupCancel" style="display:none" onclick="closeCentroSetup()">Cancelar</button>
-    <div class="centro-setup-code-box" id="centroSetupCodeBox" style="display:none"></div>
+    <button class="centro-setup-cancel" id="centroSetupLogout" style="display:none" onclick="logoutCentro()">Cerrar sesión</button>
   </div>
 </div>
 
@@ -483,6 +495,11 @@
         <div class="hero-stat"><div class="hero-stat-val" id="heroVentas">0</div><div class="hero-stat-lbl">Ventas</div></div>
       </div>
     </div>
+    <div class="valor-potencial-card" id="valorPotencialCard" style="display:none">
+      <div class="valor-potencial-lbl">💰 Valor potencial de tu stock</div>
+      <div class="valor-potencial-val">S/ <span id="valorPotencialVal">0.00</span></div>
+      <div class="valor-potencial-sub" id="valorPotencialSub">Según tu precio promedio de venta de cada materia</div>
+    </div>
     <div>
       <div class="section-label">Stock actual</div>
       <div class="stock-list" id="stockList"></div>
@@ -504,10 +521,16 @@
 <div id="screen-entrada" class="screen">
   <div class="scroll-area">
     <div>
-      <div class="section-label">Reciclador</div>
-      <button class="rec-selector" id="recBtn" onclick="openEntradaDrawer()">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>¿A quién le compraste?</span>
+        <span style="display:flex;gap:6px">
+          <button type="button" id="origenTipoRec" onclick="setEntradaOrigenTipo('reciclador')" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1.5px solid var(--accent);background:var(--accent);color:white;cursor:pointer">Reciclador</button>
+          <button type="button" id="origenTipoCentro" onclick="setEntradaOrigenTipo('centro')" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);cursor:pointer">Otro centro</button>
+        </span>
+      </div>
+      <button class="rec-selector" id="recBtn" onclick="openEntradaOrigenSelector()">
         <div class="rec-avatar" id="recAvatar" style="background:#CBD5E1;display:none">??</div>
-        <div id="recPlaceholder" style="flex:1"><span class="rec-placeholder">Seleccionar reciclador...</span></div>
+        <div id="recPlaceholder" style="flex:1"><span class="rec-placeholder" id="recPlaceholderText">Seleccionar reciclador...</span></div>
         <div id="recInfoEl" class="rec-info" style="display:none">
           <div class="rec-name-el" id="recNameEl">—</div>
           <div class="rec-phone-el" id="recPhoneEl">—</div>
@@ -604,7 +627,10 @@
     </div>
     <div>
       <div class="section-label">Comprador <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></div>
-      <input class="comprador-input" id="compradorInput" type="text" placeholder="Ej: Industrias Papelera Lima S.A." autocomplete="off" autocorrect="off">
+      <div style="display:flex;gap:8px">
+        <input class="comprador-input" id="compradorInput" type="text" placeholder="Ej: Industrias Papelera Lima S.A." autocomplete="off" autocorrect="off" oninput="ventaCompradorId=null" style="flex:1">
+        <button type="button" onclick="openCompradorDrawer()" style="flex-shrink:0;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:0 14px;font-size:13px;font-weight:700;color:var(--text-secondary);cursor:pointer">🔗 Red</button>
+      </div>
     </div>
     <div class="total-card-venta" id="totalCardVenta">
       <div class="total-rows">
@@ -837,6 +863,24 @@
 <!-- TOASTS -->
 <div class="toast-recs" id="toastRecs">✅ Reciclador agregado</div>
 
+<!-- ── COMPRADOR REGISTRADO DRAWER (venta a otra cuenta de la red) ── -->
+<div class="drawer-overlay" id="compradorDrawerOverlay" onclick="closeCompradorDrawer()"></div>
+<div class="drawer" id="compradorDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">Elegir comprador registrado</div>
+  <input class="drawer-search" id="compradorDrawerSearch" placeholder="🔍 Buscar por nombre..." oninput="filterCompradorDrawer(this.value)">
+  <div class="drawer-list" id="compradorDrawerList" style="padding:0 16px 16px;max-height:50vh;overflow-y:auto"></div>
+</div>
+
+<!-- ── CENTRO/CUENTA REGISTRADA DRAWER (origen de una entrada) ── -->
+<div class="drawer-overlay" id="origenDrawerOverlay" onclick="closeOrigenDrawer()"></div>
+<div class="drawer" id="origenDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">Elegir cuenta de la red</div>
+  <input class="drawer-search" id="origenDrawerSearch" placeholder="🔍 Buscar por nombre..." oninput="filterOrigenDrawer(this.value)">
+  <div class="drawer-list" id="origenDrawerList" style="padding:0 16px 16px;max-height:50vh;overflow-y:auto"></div>
+</div>
+
 <!-- ── HISTORIAL DRAWER (A3) ── -->
 <div class="drawer-overlay" id="historialOverlay" onclick="closeHistorial()"></div>
 <div class="drawer historial-drawer" id="historialDrawer">
@@ -853,20 +897,38 @@
 // SHARED: DB + MATERIALES + HELPERS
 // ════════════════════════════════════════════════════════════
 
-// ── DB ────────────────────────────────────────────────────
+// ── FIREBASE ──────────────────────────────────────────────
+// Reemplazar con la config real: Firebase console → ⚙ Configuración del
+// proyecto → tus apps → Web app → "SDK setup and configuration".
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDzVq1QEIENS7NcyWLGsILpI6aLBohsv70",
+  authDomain: "acopiapp-32910.firebaseapp.com",
+  databaseURL: "https://acopiapp-32910-default-rtdb.firebaseio.com",
+  projectId: "acopiapp-32910",
+  storageBucket: "acopiapp-32910.firebasestorage.app",
+  messagingSenderId: "848079783314",
+  appId: "1:848079783314:web:214720cf0eedbd9395ad4b",
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const FIREBASE_DB_URL = FIREBASE_CONFIG.databaseURL;
+
+// El teléfono es el identificador que ve el usuario; por debajo usamos
+// Firebase Auth de tipo email+contraseña con un correo sintético — así no
+// dependemos de SMS (costo/fiabilidad) ni de que el centro tenga email real.
+function phoneToEmail(telefono) {
+  const digits = telefono.replace(/\D/g, '');
+  return `tel${digits}@acopiapp.pe`;
+}
+
+// ── DB (local) ────────────────────────────────────────────
 const DB = {
   getEntradas()  { try { return JSON.parse(localStorage.getItem('acopi_entradas'))    || []; } catch { return []; } },
   getVentas()    { try { return JSON.parse(localStorage.getItem('acopi_ventas'))      || []; } catch { return []; } },
   getPrecios()   { try { return JSON.parse(localStorage.getItem('acopi_precios'))     || {}; } catch { return {}; } },
   getRecs()      { try { return JSON.parse(localStorage.getItem('acopi_recicladores'))|| []; } catch { return []; } },
   getCentro()    { try { return JSON.parse(localStorage.getItem('acopi_centro'))      || null; } catch { return null; } },
-  setCentro(name) {
-    const existing = this.getCentro();
-    const centro = { id: (existing && existing.id) || genCentroId(), name: name.trim(), createdAt: (existing && existing.createdAt) || new Date().toISOString() };
-    localStorage.setItem('acopi_centro', JSON.stringify(centro));
-    queueSync(`centros/${centro.id}/meta`, centro);
-    return centro;
-  },
+  setCentroCache(centro) { localStorage.setItem('acopi_centro', JSON.stringify(centro)); },
   savePrecios(o) {
     localStorage.setItem('acopi_precios', JSON.stringify(o));
     const c = this.getCentro();
@@ -894,10 +956,14 @@ const DB = {
 
 // ── SINCRONIZACIÓN REMOTA (Firebase Realtime Database) ───
 // Cada centro sigue funcionando 100% en local (localStorage). Esto es una
-// copia de respaldo + visibilidad a distancia para SinBa, en segundo plano.
-// Si no hay internet, los datos quedan en cola y se reintenta más tarde —
-// nunca bloquea el uso de la app.
-const FIREBASE_DB_URL = 'https://acopiapp-32910-default-rtdb.firebaseio.com';
+// copia de respaldo + visibilidad en red, en segundo plano. Si no hay
+// internet (o no hay sesión), los datos quedan en cola y se reintenta más
+// tarde — nunca bloquea el uso de la app.
+async function authQuery() {
+  const user = auth.currentUser;
+  if (!user) return '';
+  try { return '?auth=' + await user.getIdToken(); } catch { return ''; }
+}
 
 function getSyncQueue() { try { return JSON.parse(localStorage.getItem('acopi_sync_queue')) || []; } catch { return []; } }
 function setSyncQueue(q) { localStorage.setItem('acopi_sync_queue', JSON.stringify(q)); }
@@ -910,17 +976,18 @@ function queueSync(path, data) {
 }
 
 let syncInFlight = false;
-function flushSyncQueue() {
-  if (syncInFlight || !navigator.onLine) return;
+async function flushSyncQueue() {
+  if (syncInFlight || !navigator.onLine || !auth.currentUser) return;
   const q = getSyncQueue();
   if (!q.length) return;
   syncInFlight = true;
+  const qs = await authQuery();
   const remaining = [];
   let i = 0;
   const next = () => {
     if (i >= q.length) { setSyncQueue(remaining); syncInFlight = false; return; }
     const item = q[i++];
-    fetch(`${FIREBASE_DB_URL}/${item.path}.json`, {
+    fetch(`${FIREBASE_DB_URL}/${item.path}.json${qs}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(item.data),
@@ -931,88 +998,24 @@ function flushSyncQueue() {
   next();
 }
 
-// ── IDENTIDAD DEL CENTRO ─────────────────────────────────
-function genCentroId() { return 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-
-let centroSetupMode = 'create'; // 'create' | 'join' | 'edit'
-
-function openCentroSetup(isEdit) {
-  centroSetupMode = isEdit ? 'edit' : 'create';
-  renderCentroSetupMode();
-  document.getElementById('centroSetupOverlay').classList.add('show');
-  setTimeout(() => document.getElementById('centroSetupInput').focus(), 300);
-}
-let centroSetupReturnMode = 'create';
-function toggleCentroSetupMode() {
-  if (centroSetupMode === 'join') {
-    centroSetupMode = centroSetupReturnMode;
-  } else {
-    centroSetupReturnMode = centroSetupMode;
-    centroSetupMode = 'join';
-  }
-  renderCentroSetupMode();
-  setTimeout(() => document.getElementById('centroSetupInput').focus(), 100);
-}
-function renderCentroSetupMode() {
-  const centro = DB.getCentro();
-  const input = document.getElementById('centroSetupInput');
-  const err = document.getElementById('centroSetupError');
-  const btn = document.getElementById('centroSetupBtn');
-  err.style.display = 'none'; err.textContent = '';
-  document.getElementById('centroSetupCodeBox').style.display = 'none';
-  document.getElementById('centroSetupCancel').style.display = centro ? 'block' : 'none';
-  document.getElementById('centroSetupSwitchLink').style.display = 'block';
-  btn.disabled = false;
-
-  if (centroSetupMode === 'create') {
-    document.getElementById('centroSetupTitle').textContent = 'Bienvenido a AcopiApp';
-    document.getElementById('centroSetupSub').textContent = '¿Cómo se llama tu centro de acopio? Este nombre identifica tus datos.';
-    input.placeholder = 'Ej: Centro Villa El Salvador'; input.value = '';
-    btn.textContent = 'Continuar';
-    btn.onclick = confirmCentroSetup;
-    document.getElementById('centroSetupSwitchLink').textContent = '¿Ya tienes un centro? Ingresa tu código';
-  } else if (centroSetupMode === 'join') {
-    document.getElementById('centroSetupTitle').textContent = 'Vincular con un centro existente';
-    document.getElementById('centroSetupSub').textContent = centro
-      ? 'Este dispositivo ya tiene datos propios. Al vincular, se fusionarán con los del código que ingreses — no se pierde nada.'
-      : 'Ingresa el código de tu centro (tócalo en el otro dispositivo, arriba en la app, para verlo).';
-    input.placeholder = 'Ej: c_mr3m94tyunpkb'; input.value = '';
-    btn.textContent = 'Vincular';
-    btn.onclick = confirmCentroJoin;
-    document.getElementById('centroSetupSwitchLink').textContent = '← Volver';
-  } else if (centroSetupMode === 'edit') {
-    document.getElementById('centroSetupTitle').textContent = 'Nombre del centro';
-    document.getElementById('centroSetupSub').textContent = 'Este nombre identifica tus datos ante SinBa y otros centros.';
-    input.placeholder = 'Ej: Centro Villa El Salvador'; input.value = centro ? centro.name : '';
-    btn.textContent = 'Guardar';
-    btn.onclick = confirmCentroSetup;
-    document.getElementById('centroSetupSwitchLink').textContent = '¿Prefieres vincular con otro centro existente?';
-    if (centro) {
-      document.getElementById('centroSetupCodeBox').style.display = 'block';
-      document.getElementById('centroSetupCodeBox').innerHTML = `Código de tu centro: <b>${centro.id}</b><br>Úsalo en "¿Ya tienes un centro?" desde otro celular u ordenador para ver los mismos datos ahí.`;
-    }
-  }
-  onCentroSetupInput(input.value);
-}
-function closeCentroSetup() {
-  if (!DB.getCentro()) return; // no se puede cerrar sin nombre en el primer uso
-  document.getElementById('centroSetupOverlay').classList.remove('show');
-}
-function onCentroSetupInput(val) {
-  document.getElementById('centroSetupBtn').disabled = val.trim().length < 2;
-}
-function confirmCentroSetup() {
-  const val = document.getElementById('centroSetupInput').value.trim();
-  if (val.length < 2) return;
-  DB.setCentro(val);
-  document.getElementById('centroSetupOverlay').classList.remove('show');
-  updateCentroDisplay();
-}
-
-async function fetchCentroRemote(id) {
-  const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(id)}.json`, { cache: 'no-store' });
+async function fetchCentroRemote(uid) {
+  const qs = await authQuery();
+  const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(uid)}.json${qs}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('HTTP_' + res.status);
   return res.json();
+}
+// Directorio de cuentas de la red (para elegir contraparte al comprar/vender
+// entre centros — incluye a SinBa si se registra como una cuenta más).
+async function fetchDirectorio() {
+  const qs = await authQuery();
+  const res = await fetch(`${FIREBASE_DB_URL}/centros.json${qs}`, { cache: 'no-store' });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const me = DB.getCentro();
+  return Object.entries(data || {})
+    .filter(([id]) => !me || id !== me.id)
+    .map(([id, c]) => ({ id, name: (c.meta && c.meta.name) || id }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 function mergeById(localList, remoteObj) {
   const items = Array.isArray(remoteObj) ? remoteObj : Object.values(remoteObj || {});
@@ -1020,51 +1023,268 @@ function mergeById(localList, remoteObj) {
   items.forEach(r => { if (r && r.id != null) byId.set(r.id, { ...(byId.get(r.id) || {}), ...r }); });
   return Array.from(byId.values()).sort((a, b) => b.id - a.id);
 }
-function mergeRemoteCentro(code, remote) {
-  const name = (remote.meta && remote.meta.name) || 'Centro vinculado';
-  const createdAt = (remote.meta && remote.meta.createdAt) || new Date().toISOString();
-  localStorage.setItem('acopi_centro', JSON.stringify({ id: code, name, createdAt }));
+function mergeRemoteCentro(uid, remote) {
+  const meta = (remote && remote.meta) || {};
+  const centro = { id: uid, name: meta.name || 'Mi centro', direccion: meta.direccion || '', telefono: meta.telefono || '', createdAt: meta.createdAt || new Date().toISOString() };
+  DB.setCentroCache(centro);
 
-  // Fusiona local + remoto, y re-etiqueta TODO con la identidad del centro vinculado
-  // — esto cubre el caso de un dispositivo que ya tenía su propia identidad (con sus
-  // propios registros) antes de vincularse a un centro distinto.
-  const remoteEntradaIds = new Set(Object.keys(remote.entradas || {}).map(Number));
-  const mergedEntradas = mergeById(DB.getEntradas(), remote.entradas).map(r => ({ ...r, centroId: code, centroName: name }));
+  // Fusiona local + remoto, y re-etiqueta TODO con la cuenta activa — cubre el
+  // caso de un dispositivo que ya tenía datos locales antes de iniciar sesión.
+  const remoteEntradaIds = new Set(Object.keys((remote && remote.entradas) || {}).map(Number));
+  const mergedEntradas = mergeById(DB.getEntradas(), remote && remote.entradas).map(r => ({ ...r, centroId: uid, centroName: centro.name }));
   localStorage.setItem('acopi_entradas', JSON.stringify(mergedEntradas));
-  mergedEntradas.forEach(r => { if (!remoteEntradaIds.has(r.id)) queueSync(`centros/${code}/entradas/${r.id}`, r); });
+  mergedEntradas.forEach(r => { if (!remoteEntradaIds.has(r.id)) queueSync(`centros/${uid}/entradas/${r.id}`, r); });
 
-  const remoteVentaIds = new Set(Object.keys(remote.ventas || {}).map(Number));
-  const mergedVentas = mergeById(DB.getVentas(), remote.ventas).map(r => ({ ...r, centroId: code, centroName: name }));
+  const remoteVentaIds = new Set(Object.keys((remote && remote.ventas) || {}).map(Number));
+  const mergedVentas = mergeById(DB.getVentas(), remote && remote.ventas).map(r => ({ ...r, centroId: uid, centroName: centro.name }));
   localStorage.setItem('acopi_ventas', JSON.stringify(mergedVentas));
-  mergedVentas.forEach(r => { if (!remoteVentaIds.has(r.id)) queueSync(`centros/${code}/ventas/${r.id}`, r); });
+  mergedVentas.forEach(r => { if (!remoteVentaIds.has(r.id)) queueSync(`centros/${uid}/ventas/${r.id}`, r); });
 
-  if (remote.precios) localStorage.setItem('acopi_precios', JSON.stringify(remote.precios));
-  if (remote.recicladores) localStorage.setItem('acopi_recicladores', JSON.stringify(mergeById(DB.getRecs(), remote.recicladores)));
+  if (remote && remote.precios) localStorage.setItem('acopi_precios', JSON.stringify(remote.precios));
+  if (remote && remote.recicladores) localStorage.setItem('acopi_recicladores', JSON.stringify(mergeById(DB.getRecs(), remote.recicladores)));
 }
-async function confirmCentroJoin() {
-  const code = document.getElementById('centroSetupInput').value.trim();
-  if (code.length < 2) return;
-  const btn = document.getElementById('centroSetupBtn');
-  const err = document.getElementById('centroSetupError');
-  err.style.display = 'none';
-  btn.disabled = true; btn.textContent = 'Vinculando…';
-  try {
-    const remote = await fetchCentroRemote(code);
-    if (!remote) throw new Error('NOT_FOUND');
-    mergeRemoteCentro(code, remote);
-    document.getElementById('centroSetupOverlay').classList.remove('show');
-    location.reload(); // vuelve a cargar la app con los datos recién importados
-  } catch (e) {
-    err.textContent = (e && e.message === 'NOT_FOUND')
-      ? 'Código no encontrado. Verifica que esté bien escrito.'
-      : 'No se pudo verificar el código. Revisa tu conexión e inténtalo de nuevo.';
-    err.style.display = 'block';
-    btn.disabled = false; btn.textContent = 'Vincular';
+// Si el dispositivo ya tenía entradas/ventas locales de antes de tener cuenta
+// (probando la app sin login), las adopta a la cuenta recién creada.
+function reclaimLocalDataFor(uid, nombre) {
+  const entradas = DB.getEntradas().map(r => ({ ...r, centroId: uid, centroName: nombre }));
+  if (entradas.length) {
+    localStorage.setItem('acopi_entradas', JSON.stringify(entradas));
+    entradas.forEach(r => queueSync(`centros/${uid}/entradas/${r.id}`, r));
   }
+  const ventas = DB.getVentas().map(r => ({ ...r, centroId: uid, centroName: nombre }));
+  if (ventas.length) {
+    localStorage.setItem('acopi_ventas', JSON.stringify(ventas));
+    ventas.forEach(r => queueSync(`centros/${uid}/ventas/${r.id}`, r));
+  }
+}
+
+// ── CUENTA DEL CENTRO (Firebase Authentication) ──────────
+let centroSetupMode = 'register'; // 'register' | 'login' | 'edit'
+const CS_FIELDS = { register: ['csNombre','csDireccion','csTelefono','csPassword'], login: ['csTelefono','csPassword'], edit: ['csNombre','csDireccion','csTelefono'] };
+
+function openCentroSetup(isEdit) {
+  centroSetupMode = isEdit ? 'edit' : 'register';
+  renderCentroSetupMode();
+  document.getElementById('centroSetupOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('csNombre').focus(), 300);
+}
+function toggleCentroSetupMode() {
+  centroSetupMode = (centroSetupMode === 'login') ? 'register' : 'login';
+  renderCentroSetupMode();
+}
+function renderCentroSetupMode() {
+  const centro = DB.getCentro();
+  const err = document.getElementById('centroSetupError');
+  err.style.display = 'none'; err.textContent = '';
+  const btn = document.getElementById('centroSetupBtn');
+  document.getElementById('centroSetupCancel').style.display = (centroSetupMode === 'edit' && centro) ? 'block' : 'none';
+  document.getElementById('centroSetupLogout').style.display = (centroSetupMode === 'edit' && centro) ? 'block' : 'none';
+  document.getElementById('centroSetupSwitchLink').style.display = (centroSetupMode === 'edit') ? 'none' : 'block';
+  ['csNombre','csDireccion','csTelefono','csPassword'].forEach(id => {
+    document.getElementById(id).style.display = CS_FIELDS[centroSetupMode].includes(id) ? 'block' : 'none';
+  });
+
+  if (centroSetupMode === 'register') {
+    document.getElementById('centroSetupTitle').textContent = 'Bienvenido a AcopiApp';
+    document.getElementById('centroSetupSub').textContent = 'Crea la cuenta de tu centro de acopio.';
+    btn.textContent = 'Crear cuenta';
+    btn.onclick = confirmRegister;
+    document.getElementById('centroSetupSwitchLink').textContent = '¿Ya tienes cuenta? Inicia sesión';
+    ['csNombre','csDireccion','csTelefono','csPassword'].forEach(id => document.getElementById(id).value = '');
+  } else if (centroSetupMode === 'login') {
+    document.getElementById('centroSetupTitle').textContent = 'Inicia sesión';
+    document.getElementById('centroSetupSub').textContent = 'Usa el teléfono y la contraseña de tu centro.';
+    btn.textContent = 'Iniciar sesión';
+    btn.onclick = confirmLogin;
+    document.getElementById('centroSetupSwitchLink').textContent = '¿No tienes cuenta? Créala';
+    document.getElementById('csTelefono').value = ''; document.getElementById('csPassword').value = '';
+  } else if (centroSetupMode === 'edit') {
+    document.getElementById('centroSetupTitle').textContent = 'Tu centro';
+    document.getElementById('centroSetupSub').textContent = 'Estos datos te identifican ante el resto de la red.';
+    btn.textContent = 'Guardar cambios';
+    btn.onclick = confirmEditPerfil;
+    document.getElementById('csNombre').value = centro ? centro.name : '';
+    document.getElementById('csDireccion').value = centro ? (centro.direccion || '') : '';
+    document.getElementById('csTelefono').value = centro ? (centro.telefono || '') : '';
+  }
+  onCentroFormInput();
+}
+function closeCentroSetup() {
+  if (!DB.getCentro()) return;
+  document.getElementById('centroSetupOverlay').classList.remove('show');
+}
+function onCentroFormInput() {
+  const ok = CS_FIELDS[centroSetupMode].every(id => {
+    const v = document.getElementById(id).value.trim();
+    return v.length >= (id === 'csPassword' ? 6 : 2);
+  });
+  document.getElementById('centroSetupBtn').disabled = !ok;
+}
+function authErrorMessage(e) {
+  const code = e && e.code;
+  if (code === 'auth/email-already-in-use') return 'Ya existe una cuenta con este teléfono. Intenta iniciar sesión.';
+  if (code === 'auth/weak-password') return 'La contraseña debe tener al menos 6 caracteres.';
+  if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Teléfono o contraseña incorrectos.';
+  if (code === 'auth/user-not-found') return 'No existe una cuenta con este teléfono.';
+  if (code === 'auth/invalid-email') return 'Número de teléfono inválido.';
+  if (code === 'auth/network-request-failed') return 'Sin conexión. Revisa tu internet e inténtalo de nuevo.';
+  return 'Ocurrió un error. Inténtalo de nuevo.';
+}
+async function confirmRegister() {
+  const nombre = document.getElementById('csNombre').value.trim();
+  const direccion = document.getElementById('csDireccion').value.trim();
+  const telefono = document.getElementById('csTelefono').value.trim();
+  const password = document.getElementById('csPassword').value;
+  const btn = document.getElementById('centroSetupBtn'), err = document.getElementById('centroSetupError');
+  err.style.display = 'none'; btn.disabled = true; btn.textContent = 'Creando cuenta…';
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(phoneToEmail(telefono), password);
+    const uid = cred.user.uid;
+    const centro = { id: uid, name: nombre, direccion, telefono, createdAt: new Date().toISOString() };
+    DB.setCentroCache(centro);
+    queueSync(`centros/${uid}/meta`, centro);
+    reclaimLocalDataFor(uid, nombre);
+    document.getElementById('centroSetupOverlay').classList.remove('show');
+    updateCentroDisplay();
+  } catch (e) {
+    err.textContent = authErrorMessage(e); err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Crear cuenta';
+  }
+}
+async function confirmLogin() {
+  const telefono = document.getElementById('csTelefono').value.trim();
+  const password = document.getElementById('csPassword').value;
+  const btn = document.getElementById('centroSetupBtn'), err = document.getElementById('centroSetupError');
+  err.style.display = 'none'; btn.disabled = true; btn.textContent = 'Entrando…';
+  try {
+    const cred = await auth.signInWithEmailAndPassword(phoneToEmail(telefono), password);
+    const remote = await fetchCentroRemote(cred.user.uid);
+    mergeRemoteCentro(cred.user.uid, remote || {});
+    document.getElementById('centroSetupOverlay').classList.remove('show');
+    location.reload();
+  } catch (e) {
+    err.textContent = authErrorMessage(e); err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Iniciar sesión';
+  }
+}
+function confirmEditPerfil() {
+  const existing = DB.getCentro();
+  if (!existing) return;
+  const centro = {
+    ...existing,
+    name: document.getElementById('csNombre').value.trim(),
+    direccion: document.getElementById('csDireccion').value.trim(),
+    telefono: document.getElementById('csTelefono').value.trim(),
+  };
+  DB.setCentroCache(centro);
+  queueSync(`centros/${centro.id}/meta`, centro);
+  document.getElementById('centroSetupOverlay').classList.remove('show');
+  updateCentroDisplay();
+}
+function logoutCentro() {
+  auth.signOut();
+  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_precios','acopi_recicladores','acopi_sync_queue'].forEach(k => localStorage.removeItem(k));
+  location.reload();
 }
 function updateCentroDisplay() {
   const centro = DB.getCentro();
   document.getElementById('tb-brand-sub').textContent = centro ? centro.name : 'Centro de acopio';
+}
+auth.onAuthStateChanged(user => {
+  if (!user) { openCentroSetup(false); return; }
+  const cached = DB.getCentro();
+  if (!cached || cached.id !== user.uid) {
+    fetchCentroRemote(user.uid).then(remote => {
+      mergeRemoteCentro(user.uid, remote || {});
+      location.reload();
+    }).catch(() => updateCentroDisplay());
+    return;
+  }
+  updateCentroDisplay();
+  document.getElementById('centroSetupOverlay').classList.remove('show');
+  flushSyncQueue();
+});
+
+// ── DIRECTORIO DE LA RED (elegir contraparte al comprar/vender) ──
+// SinBa u otro centro pueden ser la contraparte de una compra o venta: en
+// vez de escribir el nombre a mano, se elige la cuenta registrada — esto es
+// lo que permite trazar el lote (quién se lo vendió a quién).
+let ventaCompradorId = null;
+let compradorDirectorio = [];
+async function openCompradorDrawer() {
+  document.getElementById('compradorDrawerOverlay').classList.add('open');
+  document.getElementById('compradorDrawer').classList.add('open');
+  document.getElementById('compradorDrawerList').innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px">Cargando…</div>';
+  document.getElementById('compradorDrawerSearch').value = '';
+  compradorDirectorio = await fetchDirectorio().catch(() => []);
+  renderCompradorDrawerList('');
+}
+function closeCompradorDrawer() {
+  document.getElementById('compradorDrawerOverlay').classList.remove('open');
+  document.getElementById('compradorDrawer').classList.remove('open');
+}
+function filterCompradorDrawer(q) { renderCompradorDrawerList(q); }
+function renderCompradorDrawerList(q) {
+  const list = document.getElementById('compradorDrawerList');
+  if (!compradorDirectorio.length) {
+    list.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px">Aún no hay otras cuentas registradas en la red. Puedes escribir el nombre a mano.</div>';
+    return;
+  }
+  const filtered = compradorDirectorio.filter(c => c.name.toLowerCase().includes(q.trim().toLowerCase()));
+  list.innerHTML = filtered.length ? filtered.map(c => `
+    <div onclick="selectComprador('${c.id}')" style="padding:12px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600">${escHtml(c.name)}</div>
+  `).join('') : '<div style="padding:16px;color:var(--text-muted);font-size:13px">Sin resultados.</div>';
+}
+function selectComprador(id) {
+  const c = compradorDirectorio.find(x => x.id === id);
+  if (!c) return;
+  ventaCompradorId = c.id;
+  document.getElementById('compradorInput').value = c.name;
+  closeCompradorDrawer();
+  updateVentaUI();
+}
+
+let origenCentroSeleccionado = null;
+let origenDirectorio = [];
+async function openOrigenDrawer() {
+  document.getElementById('origenDrawerOverlay').classList.add('open');
+  document.getElementById('origenDrawer').classList.add('open');
+  document.getElementById('origenDrawerList').innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px">Cargando…</div>';
+  document.getElementById('origenDrawerSearch').value = '';
+  origenDirectorio = await fetchDirectorio().catch(() => []);
+  renderOrigenDrawerList('');
+}
+function closeOrigenDrawer() {
+  document.getElementById('origenDrawerOverlay').classList.remove('open');
+  document.getElementById('origenDrawer').classList.remove('open');
+}
+function filterOrigenDrawer(q) { renderOrigenDrawerList(q); }
+function renderOrigenDrawerList(q) {
+  const list = document.getElementById('origenDrawerList');
+  if (!origenDirectorio.length) {
+    list.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px">Aún no hay otras cuentas registradas en la red.</div>';
+    return;
+  }
+  const filtered = origenDirectorio.filter(c => c.name.toLowerCase().includes(q.trim().toLowerCase()));
+  list.innerHTML = filtered.length ? filtered.map(c => `
+    <div onclick="selectOrigenCentro('${c.id}')" style="padding:12px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600">${escHtml(c.name)}</div>
+  `).join('') : '<div style="padding:16px;color:var(--text-muted);font-size:13px">Sin resultados.</div>';
+}
+function selectOrigenCentro(id) {
+  const c = origenDirectorio.find(x => x.id === id);
+  if (!c) return;
+  origenCentroSeleccionado = c;
+  entradaState.reciclador = { id: null, name: c.name, color: '#0F172A', phone: null };
+  document.getElementById('recPlaceholder').style.display = 'none';
+  document.getElementById('recAvatar').style.display = 'flex';
+  document.getElementById('recAvatar').style.background = '#0F172A';
+  document.getElementById('recAvatar').textContent = initials(c.name);
+  document.getElementById('recInfoEl').style.display = 'block';
+  document.getElementById('recNameEl').textContent  = c.name;
+  document.getElementById('recPhoneEl').textContent = '🏭 Cuenta registrada de la red';
+  document.getElementById('recBtn').classList.add('selected');
+  closeOrigenDrawer();
+  updateEntradaUI();
 }
 
 // ── MATERIALES ───────────────────────────────────────────
@@ -1156,6 +1376,7 @@ function initResumen() {
   loadMatPrices();
   const stats = calcStats();
   renderResumenHero(stats);
+  renderResumenValorPotencial(stats);
   renderResumenStock(stats);
   renderResumenActividad(stats);
 }
@@ -1172,12 +1393,20 @@ function calcStats() {
   const kgVend   = ventas.reduce((s,v)=>s+v.kg,0);
   const allE = DB.getEntradas(), allV = DB.getVentas();
   const stock = {};
+  const valorPotencial = {};
+  let valorPotencialTotal = 0;
   MATERIALES.forEach(m => {
     const comp = allE.filter(e=>e.matId===m.id).reduce((s,e)=>s+e.kg,0);
     const vend = allV.filter(v=>v.matId===m.id).reduce((s,v)=>s+v.kg,0);
     stock[m.id] = Math.max(0, comp - vend);
+    // Precio de venta potencial = promedio histórico de tus propias ventas de esta
+    // materia. Si nunca la vendiste, no se estima (para no inventar un número).
+    const ventasMat = allV.filter(v=>v.matId===m.id && v.precioKg>0);
+    const precioProm = ventasMat.length ? ventasMat.reduce((s,v)=>s+v.precioKg,0)/ventasMat.length : null;
+    valorPotencial[m.id] = precioProm != null ? stock[m.id] * precioProm : null;
+    if (valorPotencial[m.id] != null) valorPotencialTotal += valorPotencial[m.id];
   });
-  return { gastos, ingresos, margen, kgComp, kgVend, entradas, ventas, stock };
+  return { gastos, ingresos, margen, kgComp, kgVend, entradas, ventas, stock, valorPotencial, valorPotencialTotal };
 }
 
 function renderResumenHero(stats) {
@@ -1210,18 +1439,35 @@ function renderResumenHero(stats) {
 }
 
 function renderResumenStock(stats) {
-  const { stock } = stats;
+  const { stock, valorPotencial } = stats;
   const allE = DB.getEntradas(), allV = DB.getVentas();
   document.getElementById('stockList').innerHTML = MATERIALES.map(m => {
     const kg   = stock[m.id] || 0;
     const allEkg = allE.filter(e=>e.matId===m.id).reduce((s,e)=>s+e.kg,0);
     const allVkg = allV.filter(v=>v.matId===m.id).reduce((s,v)=>s+v.kg,0);
+    const valor = valorPotencial[m.id];
     return `<div class="stock-card${kg===0?' zero':''}">
       <div class="stock-icon">${m.emoji}</div>
       <div class="stock-info"><div class="stock-name">${m.name}</div><div class="stock-sub">Comprado: ${allEkg} kg · Vendido: ${allVkg} kg</div></div>
-      <div class="stock-right"><span class="stock-kg">${kg}</span><span class="stock-kg-unit">kg</span><span class="stock-badge ${kg===0?'vacio':'ok'}">${kg===0?'Sin stock':'En stock'}</span></div>
+      <div class="stock-right">
+        <span class="stock-kg">${kg}</span><span class="stock-kg-unit">kg</span>
+        ${kg>0 && valor!=null ? `<span class="stock-valor">≈ ${fmt(valor)}</span>` : ''}
+        <span class="stock-badge ${kg===0?'vacio':'ok'}">${kg===0?'Sin stock':'En stock'}</span>
+      </div>
     </div>`;
   }).join('');
+}
+
+function renderResumenValorPotencial(stats) {
+  const card = document.getElementById('valorPotencialCard');
+  const totalStock = Object.values(stats.stock).reduce((s,kg)=>s+kg,0);
+  if (totalStock <= 0 || stats.valorPotencialTotal <= 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('valorPotencialVal').textContent = stats.valorPotencialTotal.toFixed(2);
+  const faltaHistorial = MATERIALES.some(m => (stats.stock[m.id]||0) > 0 && stats.valorPotencial[m.id] == null);
+  document.getElementById('valorPotencialSub').textContent = faltaHistorial
+    ? 'Según tu precio promedio de venta — algunas materias sin ventas previas no están incluidas'
+    : 'Según tu precio promedio de venta de cada materia';
 }
 
 function renderResumenActividad(stats) {
@@ -1254,6 +1500,7 @@ function navegarMes(dir) {
   loadMatPrices();
   const stats = calcStats();
   renderResumenHero(stats);
+  renderResumenValorPotencial(stats);
   renderResumenStock(stats);
   renderResumenActividad(stats);
 }
@@ -1295,6 +1542,28 @@ function renderEntradaMats() {
     </button>`).join('');
 }
 
+let entradaOrigenTipo = 'reciclador'; // 'reciclador' | 'centro'
+function setEntradaOrigenTipo(tipo) {
+  entradaOrigenTipo = tipo;
+  const recBtn = document.getElementById('origenTipoRec'), centroBtn = document.getElementById('origenTipoCentro');
+  recBtn.style.background    = tipo === 'reciclador' ? 'var(--accent)' : 'var(--surface)';
+  recBtn.style.color         = tipo === 'reciclador' ? 'white' : 'var(--text-secondary)';
+  recBtn.style.borderColor   = tipo === 'reciclador' ? 'var(--accent)' : 'var(--border)';
+  centroBtn.style.background = tipo === 'centro' ? 'var(--accent)' : 'var(--surface)';
+  centroBtn.style.color      = tipo === 'centro' ? 'white' : 'var(--text-secondary)';
+  centroBtn.style.borderColor= tipo === 'centro' ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('recPlaceholderText').textContent = tipo === 'centro' ? 'Seleccionar centro de la red...' : 'Seleccionar reciclador...';
+  entradaState.reciclador = null;
+  origenCentroSeleccionado = null;
+  document.getElementById('recPlaceholder').style.display = 'block';
+  document.getElementById('recAvatar').style.display = 'none';
+  document.getElementById('recInfoEl').style.display = 'none';
+  document.getElementById('recBtn').classList.remove('selected');
+  updateEntradaUI();
+}
+function openEntradaOrigenSelector() {
+  if (entradaOrigenTipo === 'centro') openOrigenDrawer(); else openEntradaDrawer();
+}
 function openEntradaDrawer() {
   showEntradaChoosePanel();
   document.getElementById('entradaDrawerOverlay').classList.add('open');
@@ -1311,6 +1580,7 @@ function closeEntradaDrawer() {
 function filterEntradaRecs(val) { renderEntradaDrawerList(val); }
 
 function selectDesconocido() {
+  origenCentroSeleccionado = null;
   entradaState.reciclador = { id: null, name: 'Desconocido', color: '#94A3B8', phone: null };
   document.getElementById('recPlaceholder').style.display = 'none';
   document.getElementById('recAvatar').style.display = 'flex';
@@ -1353,6 +1623,7 @@ function renderEntradaDrawerList(filter='') {
 }
 
 function selectEntradaRec(id) {
+  origenCentroSeleccionado = null;
   entradaState.reciclador = entradaRecs.find(r=>r.id===id);
   const r = entradaState.reciclador;
   document.getElementById('recPlaceholder').style.display = 'none';
@@ -1465,7 +1736,7 @@ function confirmEntrada() {
   const peso=parseFloat(entradaState.weightStr)||0, mat=entradaState.material, rec=entradaState.reciclador;
   if (!rec||!mat||peso<=0) return;
   const total = peso * mat.precio;
-  DB.addEntrada({ fecha:new Date().toISOString(), recId:rec.id, recName:rec.name, recColor:rec.color, matId:mat.id, matName:mat.name, kg:peso, precioKg:mat.precio, total });
+  DB.addEntrada({ fecha:new Date().toISOString(), recId:rec.id, recName:rec.name, recColor:rec.color, matId:mat.id, matName:mat.name, kg:peso, precioKg:mat.precio, total, origenCentroId: origenCentroSeleccionado ? origenCentroSeleccionado.id : null });
   document.getElementById('successAmountEntrada').textContent = fmt(total);
   document.getElementById('successSubEntrada').textContent = `${rec.name} · ${peso} kg de ${mat.name}`;
   document.getElementById('successEntrada').classList.add('show');
@@ -1473,6 +1744,7 @@ function confirmEntrada() {
 
 function resetEntrada() {
   entradaState = { reciclador:null, material:null, weightStr:'0' };
+  origenCentroSeleccionado = null;
   document.getElementById('recPlaceholder').style.display='block';
   document.getElementById('recAvatar').style.display='none';
   document.getElementById('recInfoEl').style.display='none';
@@ -1557,7 +1829,7 @@ function confirmVenta() {
   const kg=parseFloat(ventaState.kgStr)||0, pv=parseFloat(ventaState.precioStr)||0, mat=ventaState.material;
   if (!mat||kg<=0||pv<=0) return;
   const ingreso=kg*pv, margen=ingreso-kg*mat.precio, comprador=document.getElementById('compradorInput').value.trim();
-  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg:mat.precio, total:ingreso, margen, comprador:comprador||null });
+  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg:mat.precio, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null });
   document.getElementById('successAmountVenta').textContent = fmt(ingreso);
   document.getElementById('successMargenVenta').textContent = 'Margen: '+(margen>=0?'+':'')+fmt(margen);
   document.getElementById('successSubVenta').textContent    = `${kg} kg de ${mat.name}${comprador?' → '+comprador:''}`;
@@ -1570,6 +1842,7 @@ function resetVenta() {
   document.getElementById('dispKg').innerHTML='0<span class="cursor"></span>';
   document.getElementById('dispPrecio').innerHTML='0<span class="cursor"></span>';
   document.getElementById('compradorInput').value='';
+  ventaCompradorId = null;
   document.getElementById('successVenta').classList.remove('show');
   setVentaActive('kg');
   updateVentaUI();
@@ -1913,8 +2186,8 @@ function showRecsToast(msg) {
 // BOOT
 // ════════════════════════════════════════════════════════════
 updateCentroDisplay();
-if (!DB.getCentro()) { openCentroSetup(false); }
 goTo('resumen');
+// La cuenta (login/registro) se maneja en auth.onAuthStateChanged, más arriba.
 
 // Sincronización: al cargar, al recuperar conexión, y cada 20s por si acaso.
 flushSyncQueue();
