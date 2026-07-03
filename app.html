@@ -632,7 +632,7 @@
       <div class="material-grid" id="matGridEntrada"></div>
     </div>
     <div>
-      <div class="section-label">Peso (kg)</div>
+      <div class="section-label" id="entradaPesoLabel">Peso (kg)</div>
       <div class="weight-card">
         <div class="weight-row">
           <div class="weight-display" id="weightDisplay">0</div>
@@ -1112,6 +1112,7 @@ const DB = {
       queueSync(`centros/${rec.compradorId}/entradas_pendientes/${rec.id}`, {
         id: rec.id, vendedorId: c.id, vendedorName: c.name,
         matId: rec.matId, matName: rec.matName, kg: rec.kg,
+        unidades: rec.unidades != null ? rec.unidades : null,
         precioKg: rec.precioKg, total: rec.total, fecha: rec.fecha,
         estado: 'pendiente',
       });
@@ -1323,7 +1324,7 @@ function renderPendientesDrawerList() {
         <div class="pend-item-emoji">${mat ? mat.emoji : '📦'}</div>
         <div style="flex:1;min-width:0">
           <div class="pend-item-name">${escHtml(p.vendedorName || 'Cuenta de la red')}</div>
-          <div class="pend-item-sub">${p.matName || (mat ? mat.name : p.matId)} · ${p.kg} kg · S/${(p.precioKg || 0).toFixed(2)}/kg · ${fechaLabel(p.fecha)}</div>
+          <div class="pend-item-sub">${p.matName || (mat ? mat.name : p.matId)} · ${p.unidades != null ? p.unidades + ' und' : p.kg + ' kg'} · S/${(p.precioKg || 0).toFixed(2)}/${p.unidades != null ? 'und' : 'kg'} · ${fechaLabel(p.fecha)}</div>
         </div>
         <div class="pend-item-total">${fmt(p.total || 0)}</div>
       </div>
@@ -2995,6 +2996,8 @@ function selectEntradaMat(id) {
   const und = matUnidad(entradaState.material);
   const unitEl = document.querySelector('#screen-entrada .weight-unit');
   if (unitEl) unitEl.textContent = und;
+  const lblEl = document.getElementById('entradaPesoLabel');
+  if (lblEl) lblEl.textContent = und === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)';
   updateEntradaUI();
 }
 
@@ -3078,6 +3081,8 @@ function resetEntrada() {
   document.getElementById('recBtn').classList.remove('selected');
   document.querySelectorAll('#matGridEntrada .mat-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('weightDisplay').textContent='0';
+  const eu = document.querySelector('#screen-entrada .weight-unit'); if (eu) eu.textContent = 'kg';
+  const el = document.getElementById('entradaPesoLabel'); if (el) el.textContent = 'Peso (kg)';
   document.getElementById('successEntrada').classList.remove('show');
   updateEntradaUI();
 }
@@ -3194,6 +3199,7 @@ function resetVenta() {
   document.getElementById('compradorInput').value='';
   ventaCompradorId = null;
   ventaCompradorTipo = null;
+  aplicarUnidadVenta(null);
   document.getElementById('successVenta').classList.remove('show');
   setVentaActive('kg');
   updateVentaUI();
