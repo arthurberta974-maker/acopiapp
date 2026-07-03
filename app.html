@@ -682,6 +682,10 @@
 <div id="screen-venta" class="screen">
   <div class="scroll-area">
     <div>
+      <div class="section-label">¿A qué acopiador le vendes?</div>
+      <input class="comprador-input" id="compradorInput" type="text" placeholder="Seleccionar acopiador de la red..." autocomplete="off" readonly onclick="openCompradorDrawer()" style="width:100%;cursor:pointer">
+    </div>
+    <div>
       <div class="section-label">Material</div>
       <div class="material-grid" id="matGridVenta"></div>
     </div>
@@ -713,10 +717,6 @@
       <button class="np-btn decimal" onclick="numpadVenta('.')">·</button>
       <button class="np-btn" onclick="numpadVenta('0')">0</button>
       <button class="np-btn del" onclick="numpadVenta('del')">⌫</button>
-    </div>
-    <div>
-      <div class="section-label">¿A qué acopiador le vendes?</div>
-      <input class="comprador-input" id="compradorInput" type="text" placeholder="Seleccionar acopiador de la red..." autocomplete="off" readonly onclick="openCompradorDrawer()" style="width:100%;cursor:pointer">
     </div>
     <div class="total-card-venta" id="totalCardVenta">
       <div class="total-rows">
@@ -1782,7 +1782,7 @@ async function fetchDirectorio() {
   const me = DB.getCentro();
   return Object.entries(data || {})
     .filter(([id]) => !me || id !== me.id)
-    .map(([id, c]) => ({ id, name: (c.meta && c.meta.name) || id, telefono: (c.meta && c.meta.telefono) || null }))
+    .map(([id, c]) => ({ id, name: (c.meta && c.meta.name) || id, telefono: (c.meta && c.meta.telefono) || null, tipo: (c.meta && c.meta.tipo) || 'centro' }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 function mergeById(localList, remoteObj) {
@@ -1961,7 +1961,7 @@ function confirmEditPerfil() {
 }
 function logoutCentro() {
   auth.signOut();
-  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos'].forEach(k => localStorage.removeItem(k));
+  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos','acopi_vpend_resueltos','acopi_canjes_estados','acopi_canjes_vistos'].forEach(k => localStorage.removeItem(k));
   location.reload();
 }
 
@@ -1983,6 +1983,20 @@ async function resetMisDatos() {
   resetEnCurso = true;
   const btn = document.getElementById('centroSetupReset');
   if (btn) { btn.disabled = true; btn.textContent = '🗑️ Borrando…'; }
+  // Capturar mis transacciones ANTES de vaciar lo local: cada venta mía dejó
+  // una "entrada pendiente" en el nodo del comprador, y cada compra mía a la
+  // red dejó una "venta pendiente" en el nodo del vendedor. Si no las borro
+  // también, la contraparte se queda con validaciones fantasma que apuntan a
+  // datos que ya no existen (era el bug conocido del "reset cruzado").
+  const misEntradas = DB.getEntradas();
+  const misVentas   = DB.getVentas();
+  const rastrosCruzados = [];
+  misVentas.forEach(v => {
+    if (v.compradorId) rastrosCruzados.push(`centros/${v.compradorId}/entradas_pendientes/${v.id}`);
+  });
+  misEntradas.forEach(e => {
+    if (e.origenCentroId && !e.pendienteId) rastrosCruzados.push(`centros/${e.origenCentroId}/ventas_pendientes/${e.id}`);
+  });
   try {
     // 1. Suspender lo que pueda estar escribiendo y limpiar lo local.
     localStorage.removeItem('acopi_sync_queue');
@@ -2005,6 +2019,8 @@ async function resetMisDatos() {
       `centros/${centro.id}/entradas_pendientes`,
       `centros/${centro.id}/ventas_pendientes`,
       `sinbapuntos/${centro.id}`,
+      // Rastros que dejé en las cuentas de mis contrapartes (borrado cruzado).
+      ...rastrosCruzados,
     ];
     for (const path of paths) {
       let ok = false;
@@ -2074,6 +2090,7 @@ auth.onAuthStateChanged(user => {
 // vez de escribir el nombre a mano, se elige la cuenta registrada — esto es
 // lo que permite trazar el lote (quién se lo vendió a quién).
 let ventaCompradorId = null;
+let ventaCompradorTipo = null;   // 'centro' | 'sinba' — futuro: filtrar materiales según el comprador
 let compradorDirectorio = [];
 async function openCompradorDrawer() {
   document.getElementById('compradorDrawerOverlay').classList.add('open');
@@ -2103,9 +2120,28 @@ function selectComprador(id) {
   const c = compradorDirectorio.find(x => x.id === id);
   if (!c) return;
   ventaCompradorId = c.id;
+  ventaCompradorTipo = c.tipo || 'centro';
   document.getElementById('compradorInput').value = c.name;
   closeCompradorDrawer();
+  refreshVentaMatsForComprador();
   updateVentaUI();
+}
+
+// Hook para el futuro: la lista de materiales podrá depender del comprador
+// elegido (ej: SinBa compra botellas Backus Pilsen/Cusqueña, pero no todos
+// los centros las compran). Por ahora se muestra el catálogo completo — el
+// filtrado por comprador se implementará aquí, usando ventaCompradorId /
+// ventaCompradorTipo. Se conserva la selección de material si sigue siendo
+// válida tras re-renderizar.
+function refreshVentaMatsForComprador() {
+  const prev = ventaState.material ? ventaState.material.id : null;
+  renderVentaMats();
+  if (prev && ventaMats().some(m => m.id === prev)) {
+    const btn = document.getElementById('vmat-' + prev);
+    if (btn) btn.classList.add('selected');
+  } else {
+    ventaState.material = null;
+  }
 }
 
 let origenCentroSeleccionado = null;
@@ -2159,15 +2195,13 @@ function selectOrigenCentro(id) {
 //   (con sinbapuntos por kg — o por unidad para las botellas Backus) y 26
 //   categorías de VENTA (más que de compra, porque SinBa hace un sobre-
 //   clasificado/surtri después de recibir el material).
-const MATERIALES_CENTRO = [
-  { id: 'pet',      emoji: '🧴', name: 'PET Transparente', hint: 'Botellas transparentes', precio: 0.80 },
-  { id: 'petColor', emoji: '🟣', name: 'PET Color',        hint: 'Botellas de color',      precio: 0.50 },
-  { id: 'carton',   emoji: '📦', name: 'Cartón',           hint: 'Cajas, empaques',         precio: 0.35 },
-  { id: 'aluminio', emoji: '🥫', name: 'Aluminio',         hint: 'Latas, perfiles',         precio: 3.50 },
-  { id: 'papel',    emoji: '📰', name: 'Papel',            hint: 'Periódico, papel blanco', precio: 0.15 },
-  { id: 'vidrio',   emoji: '🍶', name: 'Vidrio',           hint: 'Botellas, frascos',       precio: 0.10 },
-  { id: 'tetrapak', emoji: '🧃', name: 'Tetrapak',         hint: 'Envases de bebida (leche, jugo)', precio: 0.20 },
-];
+// NOMENCLATURA UNIFICADA (2026-07-03, pedido por Arthur): los acopiadores
+// "clásicos" ya NO tienen su propio catálogo. Usan la MISMA nomenclatura de
+// compra que SinBa (SINBA_COMPRA) como referencia única — así, cuando un
+// centro le vende a SinBa (o a otro centro), las categorías coinciden
+// directamente y no hace falta traducir de un catálogo a otro.
+// (Antes existía MATERIALES_CENTRO con ids propios: pet, carton, aluminio…
+//  Se eliminó para tener una sola fuente de verdad: SINBA_COMPRA, más abajo.)
 
 // puntos = sinbapuntos por kg (o por unidad si unidad:'und'). precio 0.00 por
 // defecto — cada planta fija sus precios reales en la pantalla Precios.
@@ -2220,22 +2254,19 @@ const SINBA_VENTA = [
   { id: 'sbv_otros',             emoji: '📦', name: 'Otros',                    hint: '', precio: 0, unidad: 'kg' },
 ];
 
-// Materia del centro → categoría de compra SinBa (pre-llenado al validar).
-const CENTRO_A_SINBA = {
-  pet: 'sbc_pet_botellas', petColor: 'sbc_pet_1color', carton: 'sbc_carton',
-  aluminio: 'sbc_aluminio', papel: 'sbc_papel_mixto', vidrio: 'sbc_vidrio',
-  tetrapak: 'sbc_tetrabrik',
-};
-// Y el mapa inverso: categoría SinBa → materia del centro. Se usa cuando el
-// centro confirma una compra que SinBa registró — la venta se anota en los
-// libros del centro con SU propia materia (para que su stock baje bien).
-// Las categorías sin equivalente (ej: botellas Backus) se quedan tal cual.
-const SINBA_A_CENTRO = Object.fromEntries(Object.entries(CENTRO_A_SINBA).map(([k, v]) => [v, k]));
+// Con la nomenclatura unificada ya NO hace falta traducir: el centro y SinBa
+// usan los mismos ids (sbc_…). Estos mapas quedan VACÍOS a propósito — el
+// código que los consulta (`CENTRO_A_SINBA[x] || x`) simplemente deja pasar
+// el id tal cual. Se conservan como puntos de extensión por si en el futuro
+// algún centro necesita un catálogo distinto al de SinBa.
+const CENTRO_A_SINBA = {};
+const SINBA_A_CENTRO = {};
 
 function isSinba() { const c = DB.getCentro(); return !!(c && c.tipo === 'sinba'); }
 // El catálogo activo se decide al cargar la página (cambiar de cuenta ya
-// recarga la página, así que siempre está al día).
-const MATERIALES = isSinba() ? SINBA_COMPRA : MATERIALES_CENTRO;
+// recarga la página, así que siempre está al día). Nomenclatura unificada:
+// centros y SinBa comparten el catálogo de COMPRA (SINBA_COMPRA).
+const MATERIALES = SINBA_COMPRA;
 // Catálogo de la pantalla Venta (SinBa vende con la nomenclatura de surtri).
 function ventaMats() { return isSinba() ? SINBA_VENTA : MATERIALES; }
 function matUnidad(m) { return (m && m.unidad) === 'und' ? 'und' : 'kg'; }
@@ -3150,6 +3181,7 @@ function resetVenta() {
   document.getElementById('dispPrecio').innerHTML='0<span class="cursor"></span>';
   document.getElementById('compradorInput').value='';
   ventaCompradorId = null;
+  ventaCompradorTipo = null;
   document.getElementById('successVenta').classList.remove('show');
   setVentaActive('kg');
   updateVentaUI();
