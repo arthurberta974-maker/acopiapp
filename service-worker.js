@@ -1,5 +1,5 @@
 // AcopiApp Service Worker — cache offline
-const CACHE_NAME = 'acopiapp-v3';
+const CACHE_NAME = 'acopiapp-v5';
 const ASSETS = [
   './app.html',
   './manifest.json',
@@ -32,6 +32,17 @@ self.addEventListener('fetch', event => {
   // Ignorer les requêtes non-GET et non-http(s)
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
+
+  // ⚠️ NE JAMAIS toucher aux appels de données Firebase (RTDB) ni au flux
+  // temps réel (EventSource). Le service worker les laissait en cache et
+  // renvoyait des réponses PÉRIMÉES : l'app ne se mettait à jour qu'après
+  // avoir fermé/rouvert la session (validations, paiements, sinbapuntos,
+  // demandes de canje). On les laisse passer directement au réseau.
+  if (event.request.url.includes('firebaseio.com') ||
+      event.request.url.includes('firebase') ||
+      event.request.url.includes('googleapis.com')) {
+    return; // pas de respondWith → le navigateur gère la requête normalement (réseau)
+  }
 
   const isAppShell = event.request.mode === 'navigate' || event.request.url.includes('app.html');
 

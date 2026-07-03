@@ -1128,8 +1128,14 @@ const DB = {
 // tarde — nunca bloquea el uso de la app.
 async function authQuery() {
   const user = auth.currentUser;
-  if (!user) return '';
-  try { return '?auth=' + await user.getIdToken(); } catch { return ''; }
+  // Cache-bust: cada petición lleva un parámetro único (_=timestamp) para que
+  // NUNCA se sirva una respuesta vieja — ni desde el service worker, ni desde
+  // un proxy o la caché del navegador. Era la causa de que las validaciones /
+  // pagos / sinbapuntos / canjes solo aparecieran tras cerrar y reabrir.
+  // (Firebase RTDB acepta parámetros extra y los ignora.)
+  const bust = '_=' + Date.now();
+  if (!user) return '?' + bust;
+  try { return '?auth=' + await user.getIdToken() + '&' + bust; } catch { return '?' + bust; }
 }
 
 function newQueueId() { return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); }
@@ -1645,7 +1651,7 @@ async function startPendientesStream() {
 
   const abrir = (nodo, onCambio) => {
     let es;
-    try { es = new EventSource(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(c.id)}/${nodo}.json?auth=${token}`); } catch { return null; }
+    try { es = new EventSource(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(c.id)}/${nodo}.json?auth=${token}&_=${Date.now()}`); } catch { return null; }
     // El primer evento "put" es la foto inicial completa — no debe sonar.
     let esFotoInicial = true;
     const onData = () => {
@@ -3570,9 +3576,17 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 setInterval(periodicSync, 20000);
 
 // ── SERVICE WORKER ────────────────────────────────────────
+// updateViaCache:'none' → el navegador revalida SIEMPRE el script del SW (no
+// lo sirve de su caché HTTP), así una versión nueva se instala de inmediato.
+// Se fuerza además un update() al cargar y cuando la app vuelve a primer plano.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' })
+      .then(reg => {
+        reg.update();
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
+      })
+      .catch(() => {});
   });
 }
 

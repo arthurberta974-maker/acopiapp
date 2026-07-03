@@ -1,3 +1,17 @@
 {
-  "rewrites": [{ "source": "/", "destination": "/app.html" }]
+  "rewrites": [{ "source": "/", "destination": "/app.html" }],
+  "headers": [
+    {
+      "source": "/service-worker.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/app.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ]
 }
