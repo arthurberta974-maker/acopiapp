@@ -693,14 +693,14 @@
       <div class="section-label">Cantidad y precio de venta</div>
       <div class="input-grid">
         <div class="field-card active" id="fieldKg" onclick="setVentaActive('kg')">
-          <div class="field-label-v">Peso</div>
+          <div class="field-label-v" id="vFieldKgLabel">Peso</div>
           <div class="field-val" id="dispKg">0<span class="cursor"></span></div>
-          <div class="field-unit">kg</div>
+          <div class="field-unit" id="vUnitKg">kg</div>
         </div>
         <div class="field-card" id="fieldPrecio" onclick="setVentaActive('precio')">
           <div class="field-label-v">Precio venta</div>
           <div class="field-val" id="dispPrecio">0<span class="cursor"></span></div>
-          <div class="field-unit">S/ por kg</div>
+          <div class="field-unit" id="vUnitPrecio">S/ por kg</div>
         </div>
       </div>
     </div>
@@ -3110,7 +3110,17 @@ function selectVentaMat(id) {
   ventaState.material = ventaMats().find(m=>m.id===id);
   document.querySelectorAll('#matGridVenta .mat-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('vmat-'+id).classList.add('selected');
+  aplicarUnidadVenta(ventaState.material);
   updateVentaUI();
+}
+
+// Ajusta las etiquetas de la pantalla Venta según la unidad del material: las
+// botellas (Backus Pilsen/Cusqueña) se venden POR UNIDAD, no por kilo.
+function aplicarUnidadVenta(mat) {
+  const esUnd = matUnidad(mat) === 'und';
+  document.getElementById('vFieldKgLabel').textContent = esUnd ? 'Cantidad' : 'Peso';
+  document.getElementById('vUnitKg').textContent       = esUnd ? 'und' : 'kg';
+  document.getElementById('vUnitPrecio').textContent   = 'S/ por ' + (esUnd ? 'unidad' : 'kg');
 }
 
 function setVentaActive(field) {
@@ -3152,7 +3162,8 @@ function updateVentaUI() {
       mc.classList.add('visible');
       document.getElementById('margenVal').textContent   = (margen>=0?'+ ':'− ') + fmt(Math.abs(margen));
       document.getElementById('margenVal').style.color   = margen>=0 ? 'var(--blue)' : 'var(--red)';
-      document.getElementById('margenDetail').textContent= `S/${margenKg>=0?'+':''}${margenKg.toFixed(2)}/kg sobre precio de compra (S/${mat.precio.toFixed(2)}/kg)`;
+      const u = matUnidad(mat);
+      document.getElementById('margenDetail').textContent= `S/${margenKg>=0?'+':''}${margenKg.toFixed(2)}/${u} sobre precio de compra (S/${mat.precio.toFixed(2)}/${u})`;
     }
     btn.disabled=false; btn.textContent=`✅ Confirmar venta — ${fmt(ingreso)}`;
   } else {
@@ -3166,11 +3177,12 @@ function confirmVenta() {
   const kg=parseFloat(ventaState.kgStr)||0, pv=parseFloat(ventaState.precioStr)||0, mat=ventaState.material;
   if (!mat||kg<=0||pv<=0||!ventaCompradorId) return;
   const costoKg = isSinba() ? 0 : mat.precio;
+  const esUnd = matUnidad(mat) === 'und';
   const ingreso=kg*pv, margen=ingreso-kg*costoKg, comprador=document.getElementById('compradorInput').value.trim();
-  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null, estadoConfirmacion: ventaCompradorId ? 'pendiente' : null });
+  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, unidades: esUnd ? kg : null, precioKg:pv, costoKg, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null, estadoConfirmacion: ventaCompradorId ? 'pendiente' : null });
   document.getElementById('successAmountVenta').textContent = fmt(ingreso);
   document.getElementById('successMargenVenta').textContent = 'Margen: '+(margen>=0?'+':'')+fmt(margen);
-  document.getElementById('successSubVenta').textContent    = `${kg} kg de ${mat.name}${comprador?' → '+comprador:''}`;
+  document.getElementById('successSubVenta').textContent    = `${kg} ${matUnidad(mat)} de ${mat.name}${comprador?' → '+comprador:''}`;
   document.getElementById('successVenta').classList.add('show');
 }
 
