@@ -580,10 +580,6 @@
       <div class="valor-potencial-val">S/ <span id="valorPotencialVal">0.00</span></div>
       <div class="valor-potencial-sub" id="valorPotencialSub">Según tu precio promedio de venta de cada materia</div>
     </div>
-    <div id="pagosHoyCard" style="display:none">
-      <div class="section-label">💵 Pagos de hoy — recepciones validadas</div>
-      <div id="pagosHoyList"></div>
-    </div>
     <!-- SinbaPuntos: tarjeta del CENTRO (su saldo, toca para canjear) -->
     <div class="sp-card" id="spCardCentro" style="display:none" onclick="openSpDrawer()">
       <div class="sp-card-lbl">⭐ Tus SinbaPuntos</div>
@@ -618,16 +614,10 @@
 <div id="screen-entrada" class="screen">
   <div class="scroll-area">
     <div>
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
-        <span>¿A quién le compraste?</span>
-        <span style="display:flex;gap:6px">
-          <button type="button" id="origenTipoRec" onclick="setEntradaOrigenTipo('reciclador')" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1.5px solid var(--accent);background:var(--accent);color:white;cursor:pointer">Reciclador</button>
-          <button type="button" id="origenTipoCentro" onclick="setEntradaOrigenTipo('centro')" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);cursor:pointer">Otro centro</button>
-        </span>
-      </div>
-      <button class="rec-selector" id="recBtn" onclick="openEntradaOrigenSelector()">
+      <div class="section-label">¿A qué acopiador le compras?</div>
+      <button class="rec-selector" id="recBtn" onclick="openOrigenDrawer()">
         <div class="rec-avatar" id="recAvatar" style="background:#CBD5E1;display:none">??</div>
-        <div id="recPlaceholder" style="flex:1"><span class="rec-placeholder" id="recPlaceholderText">Seleccionar reciclador...</span></div>
+        <div id="recPlaceholder" style="flex:1"><span class="rec-placeholder" id="recPlaceholderText">Seleccionar acopiador...</span></div>
         <div id="recInfoEl" class="rec-info" style="display:none">
           <div class="rec-name-el" id="recNameEl">—</div>
           <div class="rec-phone-el" id="recPhoneEl">—</div>
@@ -723,11 +713,8 @@
       <button class="np-btn del" onclick="numpadVenta('del')">⌫</button>
     </div>
     <div>
-      <div class="section-label">Comprador <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></div>
-      <div style="display:flex;gap:8px">
-        <input class="comprador-input" id="compradorInput" type="text" placeholder="Ej: Industrias Papelera Lima S.A." autocomplete="off" autocorrect="off" oninput="ventaCompradorId=null" style="flex:1">
-        <button type="button" onclick="openCompradorDrawer()" style="flex-shrink:0;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:0 14px;font-size:13px;font-weight:700;color:var(--text-secondary);cursor:pointer">🔗 Red</button>
-      </div>
+      <div class="section-label">¿A qué acopiador le vendes?</div>
+      <input class="comprador-input" id="compradorInput" type="text" placeholder="Seleccionar acopiador de la red..." autocomplete="off" readonly onclick="openCompradorDrawer()" style="width:100%;cursor:pointer">
     </div>
     <div class="total-card-venta" id="totalCardVenta">
       <div class="total-rows">
@@ -874,13 +861,28 @@
 </div>
 
 <!-- ── BOTTOM NAV ── -->
+<!-- ══════════════════════════════════ SCREEN: PAGOS ══════════════════════════════════ -->
+<div id="screen-pagos" class="screen">
+  <div class="scroll-area" style="padding-bottom:80px">
+    <div>
+      <div class="section-label">⬇ Por pagar — tus compras a la red</div>
+      <div id="pagosPorPagarList"></div>
+    </div>
+    <div>
+      <div class="section-label">⬆ Por cobrar — tus ventas a la red</div>
+      <div id="pagosPorCobrarList"></div>
+    </div>
+    <div class="nota"><strong>💡 Cómo funciona</strong><br>El que COMPRA marca cada línea como pagada cuando entrega el dinero. El vendedor ve el cambio en su columna "por cobrar" automáticamente.</div>
+  </div>
+</div>
+
 <nav class="bottom-nav">
   <button class="nav-btn active" data-screen="resumen" onclick="goTo('resumen')"><span class="nav-icon">📊</span><span class="nav-label">Resumen</span></button>
   <button class="nav-btn" data-screen="entrada" onclick="goTo('entrada')"><span class="nav-icon">➕</span><span class="nav-label">Entrada</span></button>
   <button class="nav-btn" data-screen="venta" onclick="goTo('venta')"><span class="nav-icon">📤</span><span class="nav-label">Venta</span></button>
   <button class="nav-btn" data-screen="precios" onclick="goTo('precios')"><span class="nav-icon">💰</span><span class="nav-label">Precios</span></button>
   <button class="nav-btn" data-screen="whatsapp" onclick="goTo('whatsapp')"><span class="nav-icon">📲</span><span class="nav-label">WhatsApp</span></button>
-  <button class="nav-btn" data-screen="recs" onclick="goTo('recs')"><span class="nav-icon">👷</span><span class="nav-label">Recicladores</span></button>
+  <button class="nav-btn" data-screen="pagos" onclick="goTo('pagos')"><span class="nav-icon">💵</span><span class="nav-label">Pagos</span></button>
 </nav>
 
 <!-- ── ENTRADA: RECICLADOR DRAWER ── -->
@@ -973,7 +975,7 @@
 <div class="drawer-overlay" id="origenDrawerOverlay" onclick="closeOrigenDrawer()"></div>
 <div class="drawer" id="origenDrawer">
   <div class="drawer-handle"></div>
-  <div class="drawer-header">Elegir cuenta de la red</div>
+  <div class="drawer-header">Elegir acopiador de la red</div>
   <input class="drawer-search" id="origenDrawerSearch" placeholder="🔍 Buscar por nombre..." oninput="filterOrigenDrawer(this.value)">
   <div class="drawer-list" id="origenDrawerList" style="padding:0 16px 16px;max-height:50vh;overflow-y:auto"></div>
 </div>
@@ -1492,7 +1494,8 @@ function confirmVentaPend(id) {
   DB.addVenta({
     fecha: p.fecha || new Date().toISOString(),
     matId, matName: matLocal ? matLocal.name : (p.matName || matId),
-    kg: p.kg, precioKg: p.precioKg, costoKg, total,
+    kg: p.kg, unidades: p.unidades != null ? p.unidades : null,
+    precioKg: p.precioKg, costoKg, total,
     margen: total - (Number(p.kg) || 0) * costoKg,
     comprador: p.compradorName || 'Cuenta de la red', compradorId: p.compradorId || null,
     // Ya validada por ambas partes — y viaConfirmacion evita reenviarle al
@@ -1623,6 +1626,7 @@ async function syncMisVentasEstado() {
   if (changed) {
     localStorage.setItem('acopi_ventas', JSON.stringify(local));
     if (currentScreen === 'resumen') initResumen();
+    if (currentScreen === 'pagos') renderPagos();
   }
 }
 // ── TIEMPO REAL + AVISOS (SSE de Firebase) ────────────────
@@ -1764,6 +1768,7 @@ async function syncMisComprasEstado() {
   if (changed) {
     localStorage.setItem('acopi_entradas', JSON.stringify(local));
     if (currentScreen === 'resumen') initResumen();
+    if (currentScreen === 'pagos') renderPagos();
   }
 }
 
@@ -1777,7 +1782,7 @@ async function fetchDirectorio() {
   const me = DB.getCentro();
   return Object.entries(data || {})
     .filter(([id]) => !me || id !== me.id)
-    .map(([id, c]) => ({ id, name: (c.meta && c.meta.name) || id }))
+    .map(([id, c]) => ({ id, name: (c.meta && c.meta.name) || id, telefono: (c.meta && c.meta.telefono) || null }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 function mergeById(localList, remoteObj) {
@@ -2096,7 +2101,7 @@ function selectOrigenCentro(id) {
   document.getElementById('recAvatar').textContent = initials(c.name);
   document.getElementById('recInfoEl').style.display = 'block';
   document.getElementById('recNameEl').textContent  = c.name;
-  document.getElementById('recPhoneEl').textContent = '🏭 Cuenta registrada de la red';
+  document.getElementById('recPhoneEl').textContent = '🤝 Acopiador de la red';
   document.getElementById('recBtn').classList.add('selected');
   closeOrigenDrawer();
   updateEntradaUI();
@@ -2222,7 +2227,8 @@ const SCREEN_CFG = {
   venta:    { title: '📤 Nueva Venta',       sub: 'Venta a industria',           back: true,  add: false },
   precios:  { title: '💰 Precios de compra', sub: 'Toca un material para editar',back: true,  add: false },
   whatsapp: { title: '📲 Enviar Precios',    sub: 'Difunde tus precios por WhatsApp', back: true, add: false },
-  recs:     { title: '👷 Recicladores',      sub: '',                            back: true,  add: true  },
+  pagos:    { title: '💵 Pagos',             sub: 'Por pagar y por cobrar',      back: true,  add: false },
+  recs:     { title: '👷 Recicladores',      sub: '',                            back: true,  add: true  }, // pantalla retirada de la navegación (sin recicladores desde 2026-07-02)
 };
 
 let currentScreen = 'resumen';
@@ -2260,6 +2266,7 @@ function goTo(id) {
   if (id === 'venta')    initVenta();
   if (id === 'precios')  initPrecios();
   if (id === 'whatsapp') initWhatsapp();
+  if (id === 'pagos')    initPagos();
   if (id === 'recs')     renderRecs();
 }
 
@@ -2400,70 +2407,95 @@ function renderResumenActividad(stats) {
     <div class="act-info"><div class="act-title">${i.tipo==='entrada'?'⬇ ':'⬆ '}${i.title}${i.badge}</div><div class="act-sub">${i.sub}</div></div>
     <div class="act-right"><div class="act-total ${i.tipo}">${i.tipo==='entrada'?'−':'+'}${fmt(i.total)}</div><div class="act-fecha">${fechaLabel(i.fecha)}</div></div>
   </div>`).join('');
-  renderPagosHoy();
 }
 
-// ── PAGOS DE HOY (lado comprador — SinBa paga a diario) ───
-// Agrupa las recepciones VALIDADAS hoy que vinieron de cuentas de la red,
-// por centro vendedor, con el total en S/ a pagar. "Marcar pagado" deja
-// constancia en Firebase y el centro vendedor lo ve como 💵 en su app.
-function renderPagosHoy() {
-  const card = document.getElementById('pagosHoyCard');
-  if (!card) return;
-  const hoy = new Date().toDateString();
-  // "Hoy" = validadas hoy (aunque la venta se haya registrado antes) — es lo
-  // que SinBa debe pagar en el día.
-  const deHoy = DB.getEntradas().filter(e => e.origenCentroId && new Date(e.validadoAt || e.fecha).toDateString() === hoy);
-  if (!deHoy.length) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  const grupos = {};
-  deHoy.forEach(e => {
-    const g = grupos[e.origenCentroId] = grupos[e.origenCentroId] || { id: e.origenCentroId, name: e.recName || 'Centro de la red', n: 0, kg: 0, total: 0, sinPagar: 0 };
-    g.n++; g.kg += Number(e.kg) || 0; g.total += Number(e.total) || 0;
-    if (e.pago !== 'pagado') g.sinPagar++;
-  });
-  document.getElementById('pagosHoyList').innerHTML = Object.values(grupos).map(g => `
-    <div class="pago-row">
+// ════════════════════════════════════════════════════════════
+// SCREEN: PAGOS — línea por línea, en ambos sentidos
+//   POR PAGAR  = mis compras a acopiadores de la red (yo debo pagar)
+//   POR COBRAR = mis ventas a acopiadores de la red (me deben pagar)
+// El COMPRADOR marca cada línea como pagada; el vendedor lo ve reflejado
+// automáticamente (lee el campo "pago" del nodo del comprador).
+// ════════════════════════════════════════════════════════════
+let pagosDirectorio = null;
+
+async function initPagos() {
+  renderPagos();
+  // Teléfonos: se sacan del directorio de la red (meta de cada cuenta).
+  try { pagosDirectorio = await fetchDirectorio(); } catch { pagosDirectorio = pagosDirectorio || []; }
+  renderPagos();
+}
+
+function telefonoDe(centroId) {
+  const d = (pagosDirectorio || []).find(x => x.id === centroId);
+  return d && d.telefono ? d.telefono : null;
+}
+function cantidadLabel(x) { return x.unidades != null ? `${x.unidades} und` : `${x.kg || 0} kg`; }
+
+function renderPagos() {
+  const porPagarEl = document.getElementById('pagosPorPagarList');
+  const porCobrarEl = document.getElementById('pagosPorCobrarList');
+  if (!porPagarEl) return;
+
+  // POR PAGAR: toda entrada cuyo origen es un acopiador de la red.
+  const compras = DB.getEntradas().filter(e => e.origenCentroId && e.estadoConfirmacion !== 'rechazado').sort((a, b) => b.id - a.id);
+  porPagarEl.innerHTML = compras.length ? compras.map(e => {
+    const tel = telefonoDe(e.origenCentroId);
+    const sinConfirmar = !e.pendienteId && (e.estadoConfirmacion || 'pendiente') === 'pendiente';
+    return `<div class="pago-row">
       <div class="pago-info">
-        <div class="pago-name">${escHtml(g.name)}</div>
-        <div class="pago-sub">${g.n === 1 ? '1 transacción validada' : g.n + ' transacciones validadas'} hoy · ${Math.round(g.kg * 10) / 10} kg</div>
+        <div class="pago-name">${escHtml(e.recName || 'Acopiador')}</div>
+        <div class="pago-sub">${escHtml(e.matName || e.matId)} · ${cantidadLabel(e)} · ${fechaLabel(e.fecha)}${tel ? ' · 📱 ' + escHtml(tel) : ''}${sinConfirmar ? ' · ⏳ sin confirmar por el vendedor' : ''}</div>
       </div>
       <div class="pago-right">
-        <div class="pago-total">${fmt(g.total)}</div>
-        ${g.sinPagar
-          ? `<button class="pago-btn" onclick="marcarPagado('${g.id}')">💵 Marcar pagado</button>`
-          : `<div class="pago-done">✅ Pagado</div>`}
+        <div class="pago-total">${fmt(e.total || 0)}</div>
+        ${e.pago === 'pagado'
+          ? `<div class="pago-done">✅ Pagado</div>`
+          : `<button class="pago-btn" onclick="marcarPagadoLinea(${e.id})">💵 Marcar pagado</button>`}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('') : '<div class="mini-empty" style="background:var(--surface);border:1.5px dashed var(--border);border-radius:12px;padding:16px;text-align:center;color:var(--text-muted);font-size:12px">No tienes compras a la red todavía.</div>';
+
+  // POR COBRAR: toda venta mía a un acopiador de la red.
+  const ventas = DB.getVentas().filter(v => v.compradorId && v.estadoConfirmacion !== 'rechazado').sort((a, b) => b.id - a.id);
+  porCobrarEl.innerHTML = ventas.length ? ventas.map(v => {
+    const tel = telefonoDe(v.compradorId);
+    const sinValidar = (v.estadoConfirmacion || 'pendiente') === 'pendiente';
+    return `<div class="pago-row">
+      <div class="pago-info">
+        <div class="pago-name">${escHtml(v.comprador || 'Acopiador')}</div>
+        <div class="pago-sub">${escHtml(v.matName || v.matId)} · ${cantidadLabel(v)} · ${fechaLabel(v.fecha)}${tel ? ' · 📱 ' + escHtml(tel) : ''}${sinValidar ? ' · ⏳ sin validar por el comprador' : ''}</div>
+      </div>
+      <div class="pago-right">
+        <div class="pago-total">${fmt(v.total || 0)}</div>
+        ${v.estadoPago === 'pagado'
+          ? `<div class="pago-done">✅ Pagado</div>`
+          : `<div class="pago-done" style="background:var(--amber-light,#FFFBEB);color:#D97706">⏳ Por cobrar</div>`}
+      </div>
+    </div>`;
+  }).join('') : '<div class="mini-empty" style="background:var(--surface);border:1.5px dashed var(--border);border-radius:12px;padding:16px;text-align:center;color:var(--text-muted);font-size:12px">No tienes ventas a la red todavía.</div>';
 }
 
-function marcarPagado(centroId) {
+// El comprador paga UNA transacción y la marca. El vendedor lee este campo
+// (syncMisVentasEstado) y su línea pasa a "Pagado" sola.
+function marcarPagadoLinea(id) {
   const c = DB.getCentro();
   if (!c) return;
-  if (!confirm('¿Marcar como pagadas todas las transacciones validadas hoy de este centro?')) return;
-  const hoy = new Date().toDateString();
-  const ahora = new Date().toISOString();
   const list = DB.getEntradas();
-  list.forEach(e => {
-    if (e.origenCentroId === centroId && new Date(e.validadoAt || e.fecha).toDateString() === hoy && e.pago !== 'pagado') {
-      e.pago = 'pagado'; e.pagadoAt = ahora;
-      // Se escribe en MI propio nodo (nunca en el del vendedor): en la copia
-      // de la entrada y en la entrada pendiente original — el vendedor LEE
-      // ese campo desde su app (ver syncMisVentasEstado). pendienteId es el
-      // id original de la transacción, el mismo que consulta el vendedor.
-      queueSync(`centros/${c.id}/entradas/${e.id}/pago`, 'pagado');
-      queueSync(`centros/${c.id}/entradas/${e.id}/pagadoAt`, ahora);
-      // Solo si la entrada nació de una venta del centro (flujo pendiente):
-      // ahí el vendedor lee el pago en MI entrada pendiente. En el flujo
-      // inverso (compra manual) lo lee directamente en MI entrada.
-      if (e.pendienteId) {
-        queueSync(`centros/${c.id}/entradas_pendientes/${e.pendienteId}/pago`, 'pagado');
-        queueSync(`centros/${c.id}/entradas_pendientes/${e.pendienteId}/pagadoAt`, ahora);
-      }
-    }
-  });
+  const e = list.find(x => x.id === id);
+  if (!e || e.pago === 'pagado') return;
+  if (!confirm(`¿Marcar como pagado?\n\n${e.recName} · ${e.matName} · ${cantidadLabel(e)} · ${fmt(e.total || 0)}`)) return;
+  const ahora = new Date().toISOString();
+  e.pago = 'pagado'; e.pagadoAt = ahora;
+  queueSync(`centros/${c.id}/entradas/${e.id}/pago`, 'pagado');
+  queueSync(`centros/${c.id}/entradas/${e.id}/pagadoAt`, ahora);
+  // Flujo "el centro me vendió": el vendedor lee el pago en MI entrada
+  // pendiente. Flujo "yo registré la compra": lo lee en MI entrada directa.
+  if (e.pendienteId) {
+    queueSync(`centros/${c.id}/entradas_pendientes/${e.pendienteId}/pago`, 'pagado');
+    queueSync(`centros/${c.id}/entradas_pendientes/${e.pendienteId}/pagadoAt`, ahora);
+  }
   localStorage.setItem('acopi_entradas', JSON.stringify(list));
-  renderPagosHoy();
+  renderPagos();
   showRecsToast('💵 Pago registrado');
 }
 
@@ -2729,9 +2761,7 @@ let entradaAddColor = PALETTE[0];
 
 function initEntrada() {
   loadMatPrices();
-  loadEntradaRecs();
   renderEntradaMats();
-  renderEntradaDrawerList();
   updateEntradaUI();
 }
 
@@ -2757,28 +2787,11 @@ function renderEntradaMats() {
     </button>`).join('');
 }
 
-let entradaOrigenTipo = 'reciclador'; // 'reciclador' | 'centro'
-function setEntradaOrigenTipo(tipo) {
-  entradaOrigenTipo = tipo;
-  const recBtn = document.getElementById('origenTipoRec'), centroBtn = document.getElementById('origenTipoCentro');
-  recBtn.style.background    = tipo === 'reciclador' ? 'var(--accent)' : 'var(--surface)';
-  recBtn.style.color         = tipo === 'reciclador' ? 'white' : 'var(--text-secondary)';
-  recBtn.style.borderColor   = tipo === 'reciclador' ? 'var(--accent)' : 'var(--border)';
-  centroBtn.style.background = tipo === 'centro' ? 'var(--accent)' : 'var(--surface)';
-  centroBtn.style.color      = tipo === 'centro' ? 'white' : 'var(--text-secondary)';
-  centroBtn.style.borderColor= tipo === 'centro' ? 'var(--accent)' : 'var(--border)';
-  document.getElementById('recPlaceholderText').textContent = tipo === 'centro' ? 'Seleccionar centro de la red...' : 'Seleccionar reciclador...';
-  entradaState.reciclador = null;
-  origenCentroSeleccionado = null;
-  document.getElementById('recPlaceholder').style.display = 'block';
-  document.getElementById('recAvatar').style.display = 'none';
-  document.getElementById('recInfoEl').style.display = 'none';
-  document.getElementById('recBtn').classList.remove('selected');
-  updateEntradaUI();
-}
-function openEntradaOrigenSelector() {
-  if (entradaOrigenTipo === 'centro') openOrigenDrawer(); else openEntradaDrawer();
-}
+// NOTA (2026-07-02): ya no existen "recicladores" en la app — solo
+// acopiadores registrados en la red. Toda compra elige un acopiador del
+// directorio (openOrigenDrawer), lo que garantiza la doble validación en el
+// 100% de las transacciones. El código del antiguo directorio de
+// recicladores queda abajo sin uso (la pantalla ya no es accesible).
 function openEntradaDrawer() {
   showEntradaChoosePanel();
   document.getElementById('entradaDrawerOverlay').classList.add('open');
@@ -2942,18 +2955,20 @@ function updateEntradaUI() {
     btn.disabled = false; btn.innerHTML = `✅ Confirmar — ${fmt(total)}`;
   } else if (mat && peso>0 && !rec) {
     card.classList.add('visible','no-price');
-    lbl.textContent='👆 Selecciona un reciclador'; amt.style.fontSize='20px'; amt.textContent='Falta el reciclador'; det.textContent='';
-    btn.disabled=true; btn.textContent='Selecciona un reciclador';
+    lbl.textContent='👆 Selecciona un acopiador'; amt.style.fontSize='20px'; amt.textContent='Falta el acopiador'; det.textContent='';
+    btn.disabled=true; btn.textContent='Selecciona un acopiador';
   } else {
     card.classList.remove('visible');
     btn.disabled=true;
-    btn.textContent = !mat ? 'Elige el material' : !rec ? 'Selecciona reciclador' : 'Ingresa el peso';
+    btn.textContent = !mat ? 'Elige el material' : !rec ? 'Selecciona acopiador' : 'Ingresa el peso';
   }
 }
 
 function confirmEntrada() {
   const peso=parseFloat(entradaState.weightStr)||0, mat=entradaState.material, rec=entradaState.reciclador;
-  if (!rec||!mat||peso<=0) return;
+  // La compra SIEMPRE es a un acopiador registrado — sin eso no hay doble
+  // validación ni trazabilidad.
+  if (!rec||!mat||peso<=0||!origenCentroSeleccionado) return;
   const total = peso * mat.precio;
   const nuevaEntrada = DB.addEntrada({ fecha:new Date().toISOString(), recId:rec.id, recName:rec.name, recColor:rec.color, matId:mat.id, matName:mat.name, kg:peso, precioKg:mat.precio, total, unidades: matUnidad(mat)==='und' ? peso : null, origenCentroId: origenCentroSeleccionado ? origenCentroSeleccionado.id : null });
   // Planta SinBa comprando a un centro de la red: los sinbapuntos se
@@ -3046,7 +3061,9 @@ function numpadVenta(key) {
 
 function updateVentaUI() {
   const kg=parseFloat(ventaState.kgStr)||0, pv=parseFloat(ventaState.precioStr)||0, mat=ventaState.material;
-  const ready = mat && kg>0 && pv>0;
+  // El comprador SIEMPRE es un acopiador registrado — así el otro lado
+  // recibe la transacción y la valida (doble verificación en el 100%).
+  const ready = mat && kg>0 && pv>0 && !!ventaCompradorId;
   const tc=document.getElementById('totalCardVenta'), mc=document.getElementById('margenCard'), btn=document.getElementById('confirmBtnVenta');
   if (ready) {
     const costoKg = isSinba() ? 0 : mat.precio;
@@ -3066,13 +3083,13 @@ function updateVentaUI() {
   } else {
     tc.classList.remove('visible'); mc.classList.remove('visible');
     btn.disabled=true;
-    btn.textContent = !mat?'Elige el material':kg===0?'Ingresa el peso':'Ingresa el precio de venta';
+    btn.textContent = !mat?'Elige el material':kg===0?'Ingresa el peso':pv===0?'Ingresa el precio de venta':'Elige el comprador';
   }
 }
 
 function confirmVenta() {
   const kg=parseFloat(ventaState.kgStr)||0, pv=parseFloat(ventaState.precioStr)||0, mat=ventaState.material;
-  if (!mat||kg<=0||pv<=0) return;
+  if (!mat||kg<=0||pv<=0||!ventaCompradorId) return;
   const costoKg = isSinba() ? 0 : mat.precio;
   const ingreso=kg*pv, margen=ingreso-kg*costoKg, comprador=document.getElementById('compradorInput').value.trim();
   DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null, estadoConfirmacion: ventaCompradorId ? 'pendiente' : null });
