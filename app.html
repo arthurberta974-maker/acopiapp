@@ -198,6 +198,52 @@
     .venta-estado-badge.pendiente { background: var(--amber-light); color: var(--amber); }
     .venta-estado-badge.confirmado { background: var(--green-light); color: var(--green); }
     .venta-estado-badge.rechazado { background: var(--red-light); color: var(--red); }
+    .venta-estado-badge.pagado { background: var(--green-light); color: var(--green); }
+
+    /* ── PAGOS DE HOY (lado comprador: SinBa) ── */
+    .pago-row { background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 13px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .pago-info { flex: 1; min-width: 0; }
+    .pago-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pago-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .pago-right { text-align: right; flex-shrink: 0; }
+    .pago-total { font-size: 15px; font-weight: 900; margin-bottom: 6px; }
+    .pago-btn { background: var(--green); color: white; border: none; border-radius: 8px; padding: 9px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .pago-btn:active { opacity: 0.85; }
+    .pago-done { display: inline-block; background: var(--green-light); color: var(--green); border-radius: 8px; padding: 9px 12px; font-size: 12px; font-weight: 700; }
+
+    /* ── VALIDACIÓN SINBA (categoría + sinbapuntos) ── */
+    .pend-sinba-cat { margin-top: 10px; padding: 10px 12px; background: var(--bg); border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .pend-sinba-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .pend-sinba-select { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 600; color: var(--text-primary); font-family: inherit; }
+    .pend-sinba-und { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .pend-sinba-und input { width: 90px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-weight: 700; font-family: inherit; text-align: center; }
+    .pend-sinba-pts { font-size: 12px; font-weight: 700; color: #B45309; }
+
+    /* ── SINBAPUNTOS ── */
+    .sp-card { background: linear-gradient(135deg, #F59E0B, #D97706); border-radius: 16px; padding: 18px 20px; color: white; cursor: pointer; }
+    .sp-card-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,0.75); }
+    .sp-card-val { font-size: 34px; font-weight: 900; line-height: 1.15; }
+    .sp-card-val span { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.8); }
+    .sp-card-sub { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 4px; font-weight: 600; }
+    .sp-row { background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .sp-row-info { flex: 1; min-width: 0; }
+    .sp-row-name { font-size: 14px; font-weight: 700; }
+    .sp-row-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .sp-row-pts { font-size: 16px; font-weight: 900; color: #B45309; flex-shrink: 0; }
+    .sp-mov { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .sp-mov-pts { font-weight: 800; flex-shrink: 0; }
+    .sp-mov-pts.pos { color: var(--green); } .sp-mov-pts.neg { color: var(--red); }
+    .canje-item { background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+    .canje-estado { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 12px; white-space: nowrap; }
+    .canje-estado.pendiente { background: var(--amber-light, #FFFBEB); color: #D97706; }
+    .canje-estado.aprobado { background: var(--green-light); color: var(--green); }
+    .canje-estado.rechazado { background: var(--red-light); color: var(--red); }
+    .canje-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .canje-btn-ok { flex: 1; background: var(--green); color: white; border: none; border-radius: 8px; padding: 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .canje-btn-no { flex: 1; background: var(--surface); color: var(--red); border: 1.5px solid var(--red); border-radius: 8px; padding: 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .canje-form-input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px; font-size: 14px; font-family: inherit; color: var(--text-primary); }
+    .canje-send-btn { width: 100%; background: #D97706; color: white; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .canje-send-btn:disabled { opacity: 0.5; }
     .actividad-list { display: flex; flex-direction: column; gap: 6px; }
     .act-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 11px 14px; display: flex; align-items: center; gap: 12px; }
     .act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -460,6 +506,9 @@
     <input class="centro-setup-input" id="csDireccion" type="text" placeholder="Dirección" autocomplete="off" autocorrect="off" oninput="onCentroFormInput()">
     <input class="centro-setup-input" id="csTelefono" type="tel" placeholder="Teléfono (Ej: 987654321)" autocomplete="off" inputmode="numeric" oninput="onCentroFormInput()">
     <input class="centro-setup-input" id="csPassword" type="password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="off" oninput="onCentroFormInput()">
+    <label id="csSinbaWrap" style="display:none;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--text-secondary);padding:4px 2px;cursor:pointer">
+      <input type="checkbox" id="csSinba" style="width:18px;height:18px;accent-color:#0F172A"> 🏭 Esta cuenta es una planta SinBa
+    </label>
 
     <div class="centro-setup-error" id="centroSetupError" style="display:none"></div>
     <button class="confirm-btn" id="centroSetupBtn" disabled>Crear cuenta</button>
@@ -494,8 +543,8 @@
     <div class="pend-banner" id="pendBanner" onclick="openPendientesDrawer()">
       <div class="pend-banner-icon">🔔</div>
       <div class="pend-banner-text">
-        <div class="pend-banner-title" id="pendBannerTitle">Tienes 1 venta por confirmar</div>
-        <div class="pend-banner-sub">Un centro dice haberte vendido material — confírmalo para sumarlo a tu stock</div>
+        <div class="pend-banner-title" id="pendBannerTitle">Tienes 1 transacción por validar</div>
+        <div class="pend-banner-sub">Un centro dice haberte vendido material — valídalo para sumarlo a tu stock</div>
       </div>
       <div class="pend-banner-chevron">›</div>
     </div>
@@ -530,6 +579,23 @@
       <div class="valor-potencial-lbl">💰 Valor potencial de tu stock</div>
       <div class="valor-potencial-val">S/ <span id="valorPotencialVal">0.00</span></div>
       <div class="valor-potencial-sub" id="valorPotencialSub">Según tu precio promedio de venta de cada materia</div>
+    </div>
+    <div id="pagosHoyCard" style="display:none">
+      <div class="section-label">💵 Pagos de hoy — recepciones validadas</div>
+      <div id="pagosHoyList"></div>
+    </div>
+    <!-- SinbaPuntos: tarjeta del CENTRO (su saldo, toca para canjear) -->
+    <div class="sp-card" id="spCardCentro" style="display:none" onclick="openSpDrawer()">
+      <div class="sp-card-lbl">⭐ Tus SinbaPuntos</div>
+      <div class="sp-card-val"><span id="spBalanceVal">0</span> <span>puntos</span></div>
+      <div class="sp-card-sub">Ganas puntos entregando material a SinBa · Toca para canjear por equipos ›</div>
+    </div>
+    <!-- SinbaPuntos: vista de la PLANTA SINBA (saldo por centro + canjes) -->
+    <div id="spCardSinba" style="display:none">
+      <div class="section-label">⭐ SinbaPuntos por centro de acopio</div>
+      <div id="spCentrosList"></div>
+      <div class="section-label" style="margin-top:14px" id="spCanjesLbl">🎁 Solicitudes de canje</div>
+      <div id="spCanjesSinbaList"></div>
     </div>
     <div>
       <div class="section-label">Stock actual</div>
@@ -917,10 +983,44 @@
 <div class="drawer historial-drawer" id="pendientesDrawer">
   <div class="drawer-handle"></div>
   <div class="historial-drawer-header">
-    <div class="historial-drawer-title">🔔 Por confirmar</div>
+    <div class="historial-drawer-title">🔔 Por validar</div>
     <button class="historial-close-btn" onclick="closePendientesDrawer()">✕</button>
   </div>
   <div class="historial-body" id="pendientesList" style="padding:16px"></div>
+</div>
+
+<!-- ── SINBAPUNTOS DRAWER (lado centro: saldo, canje, movimientos) ── -->
+<div class="drawer-overlay" id="spDrawerOverlay" onclick="closeSpDrawer()"></div>
+<div class="drawer historial-drawer" id="spDrawer">
+  <div class="drawer-handle"></div>
+  <div class="historial-drawer-header">
+    <div class="historial-drawer-title">⭐ Tus SinbaPuntos</div>
+    <button class="historial-close-btn" onclick="closeSpDrawer()">✕</button>
+  </div>
+  <div class="historial-body" style="padding:16px;display:flex;flex-direction:column;gap:16px">
+    <div class="sp-card" style="cursor:default">
+      <div class="sp-card-lbl">Saldo disponible</div>
+      <div class="sp-card-val"><span id="spDrawerBalance">0</span> <span>puntos</span></div>
+      <div class="sp-card-sub">Se acreditan cuando SinBa valida tus entregas</div>
+    </div>
+    <div>
+      <div class="section-label">🎁 Canjear por un equipo</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input class="canje-form-input" id="canjeEquipo" type="text" placeholder="¿Qué equipo necesitas? (Ej: balanza, carrito)" autocomplete="off" oninput="updateCanjeBtn()">
+        <input class="canje-form-input" id="canjePuntos" type="number" inputmode="numeric" min="1" placeholder="Puntos a canjear" oninput="updateCanjeBtn()">
+        <button class="canje-send-btn" id="canjeSendBtn" disabled onclick="enviarCanje()">Enviar solicitud a SinBa</button>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5">SinBa revisará tu solicitud. Los puntos se descuentan cuando SinBa la aprueba.</div>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Tus solicitudes</div>
+      <div id="spCanjesCentroList"></div>
+    </div>
+    <div>
+      <div class="section-label">Movimientos</div>
+      <div id="spMovsList"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ── HISTORIAL DRAWER (A3) ── -->
@@ -1141,7 +1241,7 @@ function renderPendBanner() {
   const n = pendientesList.length;
   banner.classList.toggle('show', n > 0);
   if (n > 0) {
-    document.getElementById('pendBannerTitle').textContent = n === 1 ? 'Tienes 1 venta por confirmar' : `Tienes ${n} ventas por confirmar`;
+    document.getElementById('pendBannerTitle').textContent = n === 1 ? 'Tienes 1 transacción por validar' : `Tienes ${n} transacciones por validar`;
   }
 }
 
@@ -1157,11 +1257,30 @@ function closePendientesDrawer() {
 function renderPendientesDrawerList() {
   const list = document.getElementById('pendientesList');
   if (!pendientesList.length) {
-    list.innerHTML = '<div class="pend-empty">No tienes ventas por confirmar.</div>';
+    list.innerHTML = '<div class="pend-empty">No tienes transacciones por validar.</div>';
     return;
   }
   list.innerHTML = pendientesList.map(p => {
     const mat = MATERIALES.find(m => m.id === p.matId);
+    // Bloque extra para cuentas SinBa: elegir la categoría de compra SinBa
+    // (pre-llenada según la materia del centro) — de ella dependen los
+    // sinbapuntos que se le acreditan al centro al validar.
+    let sinbaExtra = '';
+    if (isSinba()) {
+      const preId = SINBA_COMPRA.some(m => m.id === p.matId) ? p.matId : (CENTRO_A_SINBA[p.matId] || 'sbc_tetrabrik');
+      sinbaExtra = `
+      <div class="pend-sinba-cat">
+        <div class="pend-sinba-lbl">Categoría de compra SinBa</div>
+        <select class="pend-sinba-select" id="pcat-${p.id}" onchange="onPendCatChange(${p.id})">
+          ${SINBA_COMPRA.map(m => `<option value="${m.id}" ${m.id === preId ? 'selected' : ''}>${m.emoji} ${m.name} (${fmtPts(m.puntos)} pts/${m.unidad})</option>`).join('')}
+        </select>
+        <div class="pend-sinba-und" id="pundwrap-${p.id}" style="display:none">
+          <span>Unidades recibidas:</span>
+          <input type="number" inputmode="numeric" id="pund-${p.id}" value="0" min="0" oninput="onPendCatChange(${p.id})">
+        </div>
+        <div class="pend-sinba-pts" id="ppts-${p.id}"></div>
+      </div>`;
+    }
     return `<div class="pend-item">
       <div class="pend-item-top">
         <div class="pend-item-emoji">${mat ? mat.emoji : '📦'}</div>
@@ -1171,12 +1290,41 @@ function renderPendientesDrawerList() {
         </div>
         <div class="pend-item-total">${fmt(p.total || 0)}</div>
       </div>
+      ${sinbaExtra}
       <div class="pend-item-actions">
         <button class="pend-btn-reject" onclick="rechazarPendiente(${p.id})">❌ Rechazar</button>
-        <button class="pend-btn-confirm" onclick="confirmPendiente(${p.id})">✅ Confirmar recepción</button>
+        <button class="pend-btn-confirm" onclick="confirmPendiente(${p.id})">✅ Validar recepción</button>
       </div>
     </div>`;
   }).join('');
+  if (isSinba()) pendientesList.forEach(p => onPendCatChange(p.id));
+}
+
+// Recalcula (y muestra) los sinbapuntos de una transacción pendiente según
+// la categoría elegida — y muestra el campo "unidades" si la categoría se
+// compra por unidad (botellas Backus).
+function calcPendPuntos(id) {
+  const p = pendientesList.find(x => x.id === id);
+  const sel = document.getElementById('pcat-' + id);
+  if (!p || !sel) return { cat: null, puntos: 0, unidades: null };
+  const cat = SINBA_COMPRA.find(m => m.id === sel.value);
+  if (!cat) return { cat: null, puntos: 0, unidades: null };
+  let base = Number(p.kg) || 0, unidades = null;
+  if (matUnidad(cat) === 'und') {
+    unidades = parseFloat(document.getElementById('pund-' + id)?.value) || 0;
+    base = unidades;
+  }
+  return { cat, puntos: Math.round(cat.puntos * base * 100) / 100, unidades };
+}
+function onPendCatChange(id) {
+  const sel = document.getElementById('pcat-' + id);
+  if (!sel) return;
+  const cat = SINBA_COMPRA.find(m => m.id === sel.value);
+  const undWrap = document.getElementById('pundwrap-' + id);
+  if (undWrap) undWrap.style.display = matUnidad(cat) === 'und' ? 'flex' : 'none';
+  const { puntos } = calcPendPuntos(id);
+  const pts = document.getElementById('ppts-' + id);
+  if (pts) pts.textContent = puntos > 0 ? `⭐ Se acreditarán ${fmtPts(puntos)} sinbapuntos al centro` : 'Esta categoría no genera sinbapuntos';
 }
 
 function confirmPendiente(id) {
@@ -1186,13 +1334,45 @@ function confirmPendiente(id) {
   const p = pendientesList.find(x => x.id === id);
   const c = DB.getCentro();
   if (!p || !c) return;
+  // Cuenta SinBa: la recepción se registra con la CATEGORÍA DE COMPRA SinBa
+  // elegida en el drawer, y se calculan los sinbapuntos a acreditar.
+  let matId = p.matId, matName = p.matName, spInfo = null;
+  if (isSinba()) {
+    const { cat, puntos, unidades } = calcPendPuntos(id);
+    if (cat) {
+      if (matUnidad(cat) === 'und' && !(unidades > 0)) { alert('Ingresa el número de unidades recibidas.'); return; }
+      matId = cat.id; matName = cat.name;
+      spInfo = { cat, puntos, unidades };
+    }
+  }
   addPendResuelto(id); // se marca ANTES de tocar la red, para que ningún refresco posterior pueda volver a colarlo
   DB.addEntrada({
     fecha: p.fecha || new Date().toISOString(),
     recId: null, recName: p.vendedorName || 'Cuenta de la red', recColor: '#0F172A',
-    matId: p.matId, matName: p.matName, kg: p.kg, precioKg: p.precioKg, total: p.total,
+    matId, matName, kg: p.kg, precioKg: p.precioKg, total: p.total,
+    unidades: spInfo && spInfo.unidades != null ? spInfo.unidades : null,
     origenCentroId: p.vendedorId || null,
+    // pendienteId conserva el id ORIGINAL de la transacción (addEntrada le
+    // asigna un id nuevo a la copia local) — es la llave que permite marcar
+    // el pago sobre la entrada pendiente correcta, la misma que lee el
+    // vendedor. validadoAt = cuándo se validó (para "Pagos de hoy").
+    pendienteId: p.id,
+    validadoAt: new Date().toISOString(),
   });
+  // Crédito de sinbapuntos al centro vendedor: un movimiento en el libro
+  // global sinbapuntos/{centroId}/movs. El saldo del centro = suma de sus
+  // movimientos (créditos por entregas − canjes aprobados).
+  if (spInfo && spInfo.puntos > 0 && p.vendedorId) {
+    queueSync(`sinbapuntos/${p.vendedorId}/movs/cr_${p.id}`, {
+      id: 'cr_' + p.id, tipo: 'credito', puntos: spInfo.puntos,
+      fecha: new Date().toISOString(),
+      centroId: p.vendedorId, centroName: p.vendedorName || null,
+      sinbaId: c.id, sinbaName: c.name,
+      matId: spInfo.cat.id, matName: spInfo.cat.name,
+      kg: p.kg || null, unidades: spInfo.unidades,
+      refId: p.id,
+    });
+  }
   // Solo escribimos en NUESTRO propio nodo (entradas_pendientes de mi
   // cuenta). El vendedor no recibe ningún PATCH — él mismo lee este mismo
   // campo cuando quiere saber el estado (ver syncMisVentasEstado). Así,
@@ -1203,7 +1383,7 @@ function confirmPendiente(id) {
   renderPendientesDrawerList();
   renderPendBanner();
   if (currentScreen === 'resumen') initResumen();
-  showRecsToast('✅ Recepción confirmada — sumada a tu stock');
+  showRecsToast('✅ Transacción validada — sumada a tu stock');
 }
 
 function rechazarPendiente(id) {
@@ -1211,13 +1391,13 @@ function rechazarPendiente(id) {
   const p = pendientesList.find(x => x.id === id);
   const c = DB.getCentro();
   if (!p || !c) return;
-  if (!confirm('¿Rechazar esta venta? El otro centro verá que no confirmaste la recepción.')) return;
+  if (!confirm('¿Rechazar esta transacción? El otro centro verá que no validaste la recepción.')) return;
   addPendResuelto(id);
   queueSync(`centros/${c.id}/entradas_pendientes/${id}/estado`, 'rechazado');
   pendientesList = pendientesList.filter(x => x.id !== id);
   renderPendientesDrawerList();
   renderPendBanner();
-  showRecsToast('❌ Venta rechazada');
+  showRecsToast('❌ Transacción rechazada');
 }
 
 // ── SINCRONIZACIÓN ENTRE DISPOSITIVOS DE LA MISMA CUENTA ──
@@ -1234,6 +1414,14 @@ async function syncOwnData() {
   try {
     const remote = await fetchCentroRemote(c.id);
     if (!remote) return;
+    // Propaga el TIPO de cuenta entre dispositivos: si en otro aparato se
+    // marcó "planta SinBa" (o se desmarcó), este dispositivo adopta el
+    // cambio y recarga para aplicar el catálogo de materias correcto.
+    if (remote.meta && (remote.meta.tipo || 'centro') !== (c.tipo || 'centro')) {
+      DB.setCentroCache({ ...c, tipo: remote.meta.tipo || 'centro' });
+      location.reload();
+      return;
+    }
     if (remote.entradas) localStorage.setItem('acopi_entradas', JSON.stringify(mergeById(DB.getEntradas(), remote.entradas)));
     if (remote.ventas) {
       const localVentas = DB.getVentas();
@@ -1244,6 +1432,7 @@ async function syncOwnData() {
         // esta misma fusión pisaría hacia atrás un "confirmado" ya resuelto.
         const prev = localVentas.find(lv => lv.id === v.id);
         if (prev && prev.estadoConfirmacion && prev.estadoConfirmacion !== 'pendiente') v.estadoConfirmacion = prev.estadoConfirmacion;
+        if (prev && prev.estadoPago === 'pagado') { v.estadoPago = 'pagado'; v.pagadoAt = prev.pagadoAt || null; }
         return v;
       });
       localStorage.setItem('acopi_ventas', JSON.stringify(merged));
@@ -1264,17 +1453,28 @@ async function syncMisVentasEstado() {
   const c = DB.getCentro();
   if (!c || !auth.currentUser || !navigator.onLine) return;
   const local = DB.getVentas();
-  const porRevisar = local.filter(v => v.compradorId && (v.estadoConfirmacion || 'pendiente') === 'pendiente');
+  // Se revisan: las ventas aún sin validar, y las validadas que todavía no
+  // figuran como pagadas (para captar el "Marcar pagado" del comprador).
+  const porRevisar = local.filter(v => v.compradorId && (
+    (v.estadoConfirmacion || 'pendiente') === 'pendiente' ||
+    (v.estadoConfirmacion === 'confirmado' && v.estadoPago !== 'pagado')
+  ));
   if (!porRevisar.length) return;
   const qs = await authQuery();
   let changed = false;
   for (const v of porRevisar) {
     try {
-      const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(v.compradorId)}/entradas_pendientes/${v.id}/estado.json${qs}`, { cache: 'no-store' });
+      const res = await fetch(`${FIREBASE_DB_URL}/centros/${encodeURIComponent(v.compradorId)}/entradas_pendientes/${v.id}.json${qs}`, { cache: 'no-store' });
       if (!res.ok) continue;
-      const estado = await res.json();
+      const nodo = await res.json();
+      const estado = nodo && nodo.estado;
       if (estado && estado !== 'pendiente' && estado !== v.estadoConfirmacion) {
         v.estadoConfirmacion = estado;
+        changed = true;
+      }
+      if (nodo && nodo.pago === 'pagado' && v.estadoPago !== 'pagado') {
+        v.estadoPago = 'pagado';
+        v.pagadoAt = nodo.pagadoAt || null;
         changed = true;
       }
     } catch { /* se reintenta en el próximo ciclo */ }
@@ -1284,6 +1484,89 @@ async function syncMisVentasEstado() {
     if (currentScreen === 'resumen') initResumen();
   }
 }
+// ── TIEMPO REAL + AVISOS (SSE de Firebase) ────────────────
+// Escucha en vivo el nodo entradas_pendientes de MI cuenta. En cuanto otra
+// cuenta me vende algo, llega un evento al instante (sin esperar los 20s del
+// periodicSync): suena un aviso y se muestra una notificación del navegador.
+// Es lo que le permite a SinBa validar y pagar el mismo día sin estar
+// refrescando la app a mano.
+let pendStream = null;
+let pendStreamRestartTimer = null;
+
+async function startPendientesStream() {
+  const c = DB.getCentro();
+  if (!c || !auth.currentUser || !navigator.onLine) return;
+  if (pendStream) { try { pendStream.close(); } catch {} pendStream = null; }
+  let token = '';
+  try { token = await auth.currentUser.getIdToken(); } catch { return; }
+  const url = `${FIREBASE_DB_URL}/centros/${encodeURIComponent(c.id)}/entradas_pendientes.json?auth=${token}`;
+  let es;
+  try { es = new EventSource(url); } catch { return; }
+  pendStream = es;
+  // El primer evento "put" es la foto inicial completa — no debe sonar.
+  let esFotoInicial = true;
+  const onData = () => {
+    if (esFotoInicial) { esFotoInicial = false; refreshPendientes(); return; }
+    const antes = pendientesList.length;
+    refreshPendientes().then(() => {
+      if (pendientesList.length > antes) notifyNuevaTransaccion();
+    });
+  };
+  es.addEventListener('put', onData);
+  es.addEventListener('patch', onData);
+  es.addEventListener('auth_revoked', scheduleStreamRestart);
+  es.onerror = scheduleStreamRestart;
+}
+function scheduleStreamRestart() {
+  if (pendStream) { try { pendStream.close(); } catch {} pendStream = null; }
+  clearTimeout(pendStreamRestartTimer);
+  pendStreamRestartTimer = setTimeout(startPendientesStream, 5000);
+}
+// El token de auth caduca (~1h): se renueva el stream antes de que pase.
+setInterval(() => { if (pendStream) startPendientesStream(); }, 50 * 60 * 1000);
+
+function notifyNuevaTransaccion() {
+  playAvisoSound();
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const p = pendientesList[0];
+      new Notification('AcopiApp — Nueva transacción por validar', {
+        body: p ? `${p.vendedorName || 'Un centro'} · ${p.matName || ''} · ${p.kg} kg · S/ ${(p.total || 0).toFixed(2)}` : 'Tienes una transacción por validar.',
+        icon: './icon-192.png',
+        tag: 'acopi-pendiente',
+      });
+    }
+  } catch { /* algunos navegadores restringen esto — el banner igual se muestra */ }
+}
+
+// Sonido de aviso (dos notas, sin archivos externos). El AudioContext se
+// "despierta" con el primer toque del usuario — requisito de los navegadores.
+let avisoCtx = null;
+function wakeAudio() {
+  try {
+    avisoCtx = avisoCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (avisoCtx.state === 'suspended') avisoCtx.resume();
+  } catch {}
+}
+document.addEventListener('touchstart', wakeAudio, { once: true, passive: true });
+document.addEventListener('click', wakeAudio, { once: true });
+function playAvisoSound() {
+  try {
+    wakeAudio();
+    if (!avisoCtx) return;
+    const t0 = avisoCtx.currentTime;
+    [880, 1174.66].forEach((freq, i) => {
+      const o = avisoCtx.createOscillator(), g = avisoCtx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0 + i * 0.18);
+      g.gain.exponentialRampToValueAtTime(0.28, t0 + i * 0.18 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.18 + 0.5);
+      o.connect(g); g.connect(avisoCtx.destination);
+      o.start(t0 + i * 0.18); o.stop(t0 + i * 0.18 + 0.55);
+    });
+  } catch {}
+}
+
 // Directorio de cuentas de la red (para elegir contraparte al comprar/vender
 // entre centros — incluye a SinBa si se registra como una cuenta más).
 async function fetchDirectorio() {
@@ -1305,7 +1588,7 @@ function mergeById(localList, remoteObj) {
 }
 function mergeRemoteCentro(uid, remote) {
   const meta = (remote && remote.meta) || {};
-  const centro = { id: uid, name: meta.name || 'Mi centro', direccion: meta.direccion || '', telefono: meta.telefono || '', createdAt: meta.createdAt || new Date().toISOString() };
+  const centro = { id: uid, name: meta.name || 'Mi centro', direccion: meta.direccion || '', telefono: meta.telefono || '', tipo: meta.tipo || 'centro', createdAt: meta.createdAt || new Date().toISOString() };
   DB.setCentroCache(centro);
 
   // Fusiona local + remoto, y re-etiqueta TODO con la cuenta activa — cubre el
@@ -1364,6 +1647,9 @@ function renderCentroSetupMode() {
   ['csNombre','csDireccion','csTelefono','csPassword'].forEach(id => {
     document.getElementById(id).style.display = CS_FIELDS[centroSetupMode].includes(id) ? 'block' : 'none';
   });
+  // Casilla "planta SinBa": visible al crear cuenta y al editar (no al iniciar sesión).
+  document.getElementById('csSinbaWrap').style.display = centroSetupMode === 'login' ? 'none' : 'flex';
+  document.getElementById('csSinba').checked = centroSetupMode === 'edit' && centro ? centro.tipo === 'sinba' : false;
 
   if (centroSetupMode === 'register') {
     document.getElementById('centroSetupTitle').textContent = 'Bienvenido a AcopiApp';
@@ -1421,12 +1707,15 @@ async function confirmRegister() {
   try {
     const cred = await auth.createUserWithEmailAndPassword(phoneToEmail(telefono), password);
     const uid = cred.user.uid;
-    const centro = { id: uid, name: nombre, direccion, telefono, createdAt: new Date().toISOString() };
+    const tipo = document.getElementById('csSinba').checked ? 'sinba' : 'centro';
+    const centro = { id: uid, name: nombre, direccion, telefono, tipo, createdAt: new Date().toISOString() };
     DB.setCentroCache(centro);
     queueSync(`centros/${uid}/meta`, centro);
     reclaimLocalDataFor(uid, nombre);
     document.getElementById('centroSetupOverlay').classList.remove('show');
     updateCentroDisplay();
+    // Una cuenta SinBa usa otro catálogo de materias → recargar para aplicarlo.
+    if (tipo === 'sinba') setTimeout(() => location.reload(), 400);
   } catch (e) {
     err.textContent = authErrorMessage(e); err.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Crear cuenta';
@@ -1456,11 +1745,14 @@ function confirmEditPerfil() {
     name: document.getElementById('csNombre').value.trim(),
     direccion: document.getElementById('csDireccion').value.trim(),
     telefono: document.getElementById('csTelefono').value.trim(),
+    tipo: document.getElementById('csSinba').checked ? 'sinba' : 'centro',
   };
   DB.setCentroCache(centro);
   queueSync(`centros/${centro.id}/meta`, centro);
   document.getElementById('centroSetupOverlay').classList.remove('show');
   updateCentroDisplay();
+  // Si cambió el tipo de cuenta, el catálogo de materias cambia → recargar.
+  if ((existing.tipo || 'centro') !== centro.tipo) setTimeout(() => location.reload(), 400);
 }
 function logoutCentro() {
   auth.signOut();
@@ -1510,6 +1802,17 @@ auth.onAuthStateChanged(user => {
   refreshPendientes();
   syncOwnData();
   syncMisVentasEstado();
+  startPendientesStream();
+  // Permiso de notificaciones del navegador (para el aviso de nuevas
+  // transacciones). Si el navegador exige un gesto del usuario, se vuelve
+  // a intentar en el primer toque.
+  try {
+    if ('Notification' in window && Notification.permission === 'default') {
+      const pedir = () => { try { Notification.requestPermission(); } catch {} };
+      pedir();
+      document.addEventListener('click', () => { if (Notification.permission === 'default') pedir(); }, { once: true });
+    }
+  } catch {}
 });
 
 // ── DIRECTORIO DE LA RED (elegir contraparte al comprar/vender) ──
@@ -1595,7 +1898,14 @@ function selectOrigenCentro(id) {
 }
 
 // ── MATERIALES ───────────────────────────────────────────
-const MATERIALES = [
+// Dos catálogos según el tipo de cuenta:
+// · Cuenta CENTRO DE ACOPIO → lista corta de siempre (7 materias).
+// · Cuenta PLANTA SINBA → nomenclatura oficial SinBa (fuente: "SINBA -
+//   Categorías de materiales y sinbapuntos.xlsx"): 15 categorías de COMPRA
+//   (con sinbapuntos por kg — o por unidad para las botellas Backus) y 26
+//   categorías de VENTA (más que de compra, porque SinBa hace un sobre-
+//   clasificado/surtri después de recibir el material).
+const MATERIALES_CENTRO = [
   { id: 'pet',      emoji: '🧴', name: 'PET Transparente', hint: 'Botellas transparentes', precio: 0.80 },
   { id: 'petColor', emoji: '🟣', name: 'PET Color',        hint: 'Botellas de color',      precio: 0.50 },
   { id: 'carton',   emoji: '📦', name: 'Cartón',           hint: 'Cajas, empaques',         precio: 0.35 },
@@ -1605,9 +1915,77 @@ const MATERIALES = [
   { id: 'tetrapak', emoji: '🧃', name: 'Tetrapak',         hint: 'Envases de bebida (leche, jugo)', precio: 0.20 },
 ];
 
+// puntos = sinbapuntos por kg (o por unidad si unidad:'und'). precio 0.00 por
+// defecto — cada planta fija sus precios reales en la pantalla Precios.
+const SINBA_COMPRA = [
+  { id: 'sbc_pet_botellas',   emoji: '🧴', name: 'PET botellas',              hint: 'Botellas PET',              precio: 0, puntos: 2.0,  unidad: 'kg'  },
+  { id: 'sbc_pet_1color',     emoji: '🟣', name: 'PET 1 color',               hint: 'PET de un solo color',      precio: 0, puntos: 2.0,  unidad: 'kg'  },
+  { id: 'sbc_carton',         emoji: '📦', name: 'Cartón',                    hint: 'Cajas, empaques',           precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_tetrabrik',      emoji: '🧃', name: 'Tetra brik',                hint: 'Envases de bebida',         precio: 0, puntos: 2.0,  unidad: 'kg'  },
+  { id: 'sbc_vidrio',         emoji: '🍶', name: 'Vidrio',                    hint: 'Botellas, frascos',         precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_plastico_duro',  emoji: '🪣', name: 'Plástico duro',             hint: 'Baldes, sillas, juguetes',  precio: 0, puntos: 1.0,  unidad: 'kg'  },
+  { id: 'sbc_film_limpio',    emoji: '🎞️', name: 'Film limpio',               hint: 'Plástico film sin residuos',precio: 0, puntos: 2.0,  unidad: 'kg'  },
+  { id: 'sbc_papel_blanco',   emoji: '📄', name: 'Papel blanco',              hint: 'Papel bond',                precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_papel_couche',   emoji: '🗞️', name: 'Papel couché',              hint: 'Revistas, brillante',       precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_papel_mixto',    emoji: '📰', name: 'Papel mixto',               hint: 'Periódico, mezclado',       precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_chatarra',       emoji: '⚙️', name: 'Chatarra',                  hint: 'Fierro, metal ferroso',     precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_aluminio',       emoji: '🥫', name: 'Aluminio',                  hint: 'Latas, perfiles',           precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_backus_pilsen',  emoji: '🍺', name: 'Botellas Backus - Pilsen',  hint: 'Por unidad',                precio: 0, puntos: 0.25, unidad: 'und' },
+  { id: 'sbc_backus_cusquena',emoji: '🍺', name: 'Botellas Backus - Cusqueña',hint: 'Por unidad',                precio: 0, puntos: 0.25, unidad: 'und' },
+  { id: 'sbc_uco',            emoji: '🛢️', name: 'Aceite vegetal usado',      hint: 'UCO',                       precio: 0, puntos: 0,    unidad: 'kg'  },
+];
+
+// Las categorías que existen igual en compra reutilizan el MISMO id — así el
+// stock de la planta baja correctamente cuando se vende esa categoría.
+const SINBA_VENTA = [
+  { id: 'sbv_carton_suelto',     emoji: '📦', name: 'Cartón - suelto',          hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_carton_compactado', emoji: '🧱', name: 'Cartón - compactado',      hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_papel_blanco',      emoji: '📄', name: 'Papel blanco',             hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_papel_couche',      emoji: '🗞️', name: 'Papel couché',             hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_papel_color',       emoji: '🟨', name: 'Papel color',              hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_pet_transparente',  emoji: '🧴', name: 'PET transparente',         hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_pet_limpieza',      emoji: '🧼', name: 'PET limpieza',             hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_pet_pvc',           emoji: '🏷️', name: 'PET con etiqueta PVC',     hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_pet_mixto',         emoji: '🧩', name: 'PET mixto',                hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_pet_aceite',        emoji: '🫗', name: 'PET aceite',               hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_pet_color',         emoji: '🟣', name: 'PET color',                hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_film_limpio',       emoji: '🎞️', name: 'Film limpio',              hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_film_sucio',        emoji: '🌫️', name: 'Film sucio',               hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_plastico_duro',     emoji: '🪣', name: 'Plástico duro',            hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_pet_1color',        emoji: '🟪', name: 'PET 1 color',              hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_vidrio_transp',     emoji: '🍶', name: 'Vidrio transparente',      hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_vidrio_color',      emoji: '🍾', name: 'Vidrio color',             hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_vidrio_andea',      emoji: '💧', name: 'Vidrio Andea',             hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_vidrio_pilsen',     emoji: '🍺', name: 'Vidrio Backus - Pilsen',   hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_vidrio_cusquena',   emoji: '🍺', name: 'Vidrio Backus - Cusqueña', hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_chatarra',          emoji: '⚙️', name: 'Chatarra',                 hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_aluminio',          emoji: '🥫', name: 'Aluminio',                 hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_tetrabrik',         emoji: '🧃', name: 'Tetra brik',               hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_maiz',              emoji: '🌽', name: 'Grano de maíz',            hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbc_uco',               emoji: '🛢️', name: 'UCO - Aceite vegetal usado', hint: '', precio: 0, unidad: 'kg' },
+  { id: 'sbv_otros',             emoji: '📦', name: 'Otros',                    hint: '', precio: 0, unidad: 'kg' },
+];
+
+// Materia del centro → categoría de compra SinBa (pre-llenado al validar).
+const CENTRO_A_SINBA = {
+  pet: 'sbc_pet_botellas', petColor: 'sbc_pet_1color', carton: 'sbc_carton',
+  aluminio: 'sbc_aluminio', papel: 'sbc_papel_mixto', vidrio: 'sbc_vidrio',
+  tetrapak: 'sbc_tetrabrik',
+};
+
+function isSinba() { const c = DB.getCentro(); return !!(c && c.tipo === 'sinba'); }
+// El catálogo activo se decide al cargar la página (cambiar de cuenta ya
+// recarga la página, así que siempre está al día).
+const MATERIALES = isSinba() ? SINBA_COMPRA : MATERIALES_CENTRO;
+// Catálogo de la pantalla Venta (SinBa vende con la nomenclatura de surtri).
+function ventaMats() { return isSinba() ? SINBA_VENTA : MATERIALES; }
+function matUnidad(m) { return (m && m.unidad) === 'und' ? 'und' : 'kg'; }
+function fmtPts(n) { return (Math.round(n * 100) / 100).toLocaleString('es-PE'); }
+
 function loadMatPrices() {
   const saved = DB.getPrecios();
   MATERIALES.forEach(m => { if (saved[m.id] != null) m.precio = saved[m.id]; });
+  if (isSinba()) SINBA_VENTA.forEach(m => { if (saved[m.id] != null) m.precio = saved[m.id]; });
 }
 
 const PALETTE = ['#3B82F6','#10B981','#F59E0B','#8B5CF6','#EF4444','#EC4899','#06B6D4','#84CC16'];
@@ -1688,6 +2066,7 @@ function initResumen() {
   renderResumenActividad(stats);
   renderPendBanner();
   refreshPendientes();
+  refreshSinbapuntos();
 }
 
 function isMesSel(iso) { const d=new Date(iso); return d.getMonth()===resumenMes.month && d.getFullYear()===resumenMes.year; }
@@ -1786,7 +2165,8 @@ function renderResumenActividad(stats) {
   const estadoBadge = v => {
     if (!v.compradorId) return '';
     const e = v.estadoConfirmacion || 'pendiente';
-    const lbl = e === 'confirmado' ? '✅ Confirmado' : e === 'rechazado' ? '❌ Rechazado' : '⏳ Por confirmar';
+    if (e === 'confirmado' && v.estadoPago === 'pagado') return `<span class="venta-estado-badge pagado">💵 Validado y pagado</span>`;
+    const lbl = e === 'confirmado' ? '✅ Validado' : e === 'rechazado' ? '❌ Rechazado' : '⏳ Por validar';
     return `<span class="venta-estado-badge ${e}">${lbl}</span>`;
   };
   const items = [
@@ -1802,7 +2182,305 @@ function renderResumenActividad(stats) {
     <div class="act-info"><div class="act-title">${i.tipo==='entrada'?'⬇ ':'⬆ '}${i.title}${i.badge}</div><div class="act-sub">${i.sub}</div></div>
     <div class="act-right"><div class="act-total ${i.tipo}">${i.tipo==='entrada'?'−':'+'}${fmt(i.total)}</div><div class="act-fecha">${fechaLabel(i.fecha)}</div></div>
   </div>`).join('');
+  renderPagosHoy();
 }
+
+// ── PAGOS DE HOY (lado comprador — SinBa paga a diario) ───
+// Agrupa las recepciones VALIDADAS hoy que vinieron de cuentas de la red,
+// por centro vendedor, con el total en S/ a pagar. "Marcar pagado" deja
+// constancia en Firebase y el centro vendedor lo ve como 💵 en su app.
+function renderPagosHoy() {
+  const card = document.getElementById('pagosHoyCard');
+  if (!card) return;
+  const hoy = new Date().toDateString();
+  // "Hoy" = validadas hoy (aunque la venta se haya registrado antes) — es lo
+  // que SinBa debe pagar en el día.
+  const deHoy = DB.getEntradas().filter(e => e.origenCentroId && new Date(e.validadoAt || e.fecha).toDateString() === hoy);
+  if (!deHoy.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const grupos = {};
+  deHoy.forEach(e => {
+    const g = grupos[e.origenCentroId] = grupos[e.origenCentroId] || { id: e.origenCentroId, name: e.recName || 'Centro de la red', n: 0, kg: 0, total: 0, sinPagar: 0 };
+    g.n++; g.kg += Number(e.kg) || 0; g.total += Number(e.total) || 0;
+    if (e.pago !== 'pagado') g.sinPagar++;
+  });
+  document.getElementById('pagosHoyList').innerHTML = Object.values(grupos).map(g => `
+    <div class="pago-row">
+      <div class="pago-info">
+        <div class="pago-name">${escHtml(g.name)}</div>
+        <div class="pago-sub">${g.n === 1 ? '1 transacción validada' : g.n + ' transacciones validadas'} hoy · ${Math.round(g.kg * 10) / 10} kg</div>
+      </div>
+      <div class="pago-right">
+        <div class="pago-total">${fmt(g.total)}</div>
+        ${g.sinPagar
+          ? `<button class="pago-btn" onclick="marcarPagado('${g.id}')">💵 Marcar pagado</button>`
+          : `<div class="pago-done">✅ Pagado</div>`}
+      </div>
+    </div>`).join('');
+}
+
+function marcarPagado(centroId) {
+  const c = DB.getCentro();
+  if (!c) return;
+  if (!confirm('¿Marcar como pagadas todas las transacciones validadas hoy de este centro?')) return;
+  const hoy = new Date().toDateString();
+  const ahora = new Date().toISOString();
+  const list = DB.getEntradas();
+  list.forEach(e => {
+    if (e.origenCentroId === centroId && new Date(e.validadoAt || e.fecha).toDateString() === hoy && e.pago !== 'pagado') {
+      e.pago = 'pagado'; e.pagadoAt = ahora;
+      // Se escribe en MI propio nodo (nunca en el del vendedor): en la copia
+      // de la entrada y en la entrada pendiente original — el vendedor LEE
+      // ese campo desde su app (ver syncMisVentasEstado). pendienteId es el
+      // id original de la transacción, el mismo que consulta el vendedor.
+      queueSync(`centros/${c.id}/entradas/${e.id}/pago`, 'pagado');
+      queueSync(`centros/${c.id}/entradas/${e.id}/pagadoAt`, ahora);
+      const pid = e.pendienteId || e.id;
+      queueSync(`centros/${c.id}/entradas_pendientes/${pid}/pago`, 'pagado');
+      queueSync(`centros/${c.id}/entradas_pendientes/${pid}/pagadoAt`, ahora);
+    }
+  });
+  localStorage.setItem('acopi_entradas', JSON.stringify(list));
+  renderPagosHoy();
+  showRecsToast('💵 Pago registrado');
+}
+
+// ════════════════════════════════════════════════════════════
+// SINBAPUNTOS — libro global en Firebase
+//   sinbapuntos/{centroId}/movs/{movId} → créditos (entregas validadas por
+//   SinBa) y débitos (canjes aprobados). Saldo = suma de movimientos.
+//   canjes/{canjeId} → solicitudes de canje de equipos (centro pide → SinBa
+//   aprueba/rechaza; al aprobar se descuentan los puntos).
+// ════════════════════════════════════════════════════════════
+let spMovs = [];        // centro: mis movimientos
+let spMisCanjes = [];   // centro: mis solicitudes
+let spSaldosRed = {};   // sinba: { centroId: { name, saldo, kg } }
+let spCanjesRed = [];   // sinba: todas las solicitudes
+
+function spBalance(movs) { return Math.round(movs.reduce((s, m) => s + (Number(m.puntos) || 0), 0) * 100) / 100; }
+
+async function fetchJson(path) {
+  const qs = await authQuery();
+  const res = await fetch(`${FIREBASE_DB_URL}/${path}.json${qs}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP_' + res.status);
+  return res.json();
+}
+
+// ── Lado CENTRO ───────────────────────────────────────────
+async function refreshSpCentro() {
+  const c = DB.getCentro();
+  if (!c || !auth.currentUser || !navigator.onLine) return;
+  try {
+    const movs = await fetchJson(`sinbapuntos/${encodeURIComponent(c.id)}/movs`);
+    spMovs = Object.values(movs || {}).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  } catch { /* siguiente ciclo */ }
+  try {
+    const all = await fetchJson('canjes');
+    const nuevos = Object.values(all || {}).filter(x => x && x.centroId === c.id).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    detectarCambiosCanje(nuevos);
+    spMisCanjes = nuevos;
+  } catch { /* siguiente ciclo */ }
+  renderSpCentro();
+}
+
+// Aviso al centro cuando SinBa resuelve una de sus solicitudes.
+function detectarCambiosCanje(nuevos) {
+  let estados = {};
+  try { estados = JSON.parse(localStorage.getItem('acopi_canjes_estados')) || {}; } catch {}
+  let changed = false;
+  nuevos.forEach(cj => {
+    const prev = estados[cj.id];
+    if (prev && prev === 'pendiente' && cj.estado !== 'pendiente') {
+      playAvisoSound();
+      const msg = cj.estado === 'aprobado'
+        ? `🎁 SinBa aprobó tu canje: ${cj.equipo} (−${fmtPts(cj.puntos)} pts)`
+        : `❌ SinBa rechazó tu canje: ${cj.equipo}`;
+      showRecsToast(msg);
+      try { if ('Notification' in window && Notification.permission === 'granted') new Notification('AcopiApp — Canje ' + cj.estado, { body: `${cj.equipo} · ${fmtPts(cj.puntos)} puntos`, icon: './icon-192.png', tag: 'acopi-canje-' + cj.id }); } catch {}
+    }
+    if (estados[cj.id] !== cj.estado) { estados[cj.id] = cj.estado; changed = true; }
+  });
+  if (changed) localStorage.setItem('acopi_canjes_estados', JSON.stringify(estados));
+}
+
+function renderSpCentro() {
+  const card = document.getElementById('spCardCentro');
+  if (!card || isSinba()) return;
+  const saldo = spBalance(spMovs);
+  // La tarjeta aparece en cuanto hay actividad de puntos (o solicitudes).
+  card.style.display = (spMovs.length || spMisCanjes.length) ? 'block' : 'none';
+  document.getElementById('spBalanceVal').textContent = fmtPts(saldo);
+  document.getElementById('spDrawerBalance').textContent = fmtPts(saldo);
+
+  const cjList = document.getElementById('spCanjesCentroList');
+  cjList.innerHTML = spMisCanjes.length ? spMisCanjes.slice(0, 10).map(cj => `
+    <div class="canje-item">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700">${escHtml(cj.equipo || 'Equipo')}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${fmtPts(cj.puntos)} puntos · ${fechaLabel(cj.fecha)}</div>
+        </div>
+        <span class="canje-estado ${cj.estado}">${cj.estado === 'aprobado' ? '✅ Aprobado' : cj.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente'}</span>
+      </div>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--text-muted);padding:8px 2px">Aún no has solicitado ningún canje.</div>';
+
+  const mvList = document.getElementById('spMovsList');
+  mvList.innerHTML = spMovs.length ? spMovs.slice(0, 15).map(m => `
+    <div class="sp-mov">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700">${m.tipo === 'canje' ? '🎁 Canje: ' + escHtml(m.equipo || 'equipo') : '⬆ Entrega: ' + escHtml(m.matName || 'material')}</div>
+        <div style="color:var(--text-muted);font-size:11px;margin-top:1px">${m.tipo === 'canje' ? '' : (m.unidades != null ? m.unidades + ' und · ' : (m.kg || 0) + ' kg · ')}${fechaLabel(m.fecha)}</div>
+      </div>
+      <div class="sp-mov-pts ${(Number(m.puntos) || 0) >= 0 ? 'pos' : 'neg'}">${(Number(m.puntos) || 0) >= 0 ? '+' : ''}${fmtPts(Number(m.puntos) || 0)}</div>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--text-muted);padding:8px 2px">Todavía no tienes movimientos de puntos.</div>';
+}
+
+function openSpDrawer() {
+  document.getElementById('spDrawerOverlay').classList.add('open');
+  document.getElementById('spDrawer').classList.add('open');
+  renderSpCentro();
+}
+function closeSpDrawer() {
+  document.getElementById('spDrawerOverlay').classList.remove('open');
+  document.getElementById('spDrawer').classList.remove('open');
+}
+function updateCanjeBtn() {
+  const eq = document.getElementById('canjeEquipo').value.trim();
+  const pts = parseFloat(document.getElementById('canjePuntos').value) || 0;
+  const btn = document.getElementById('canjeSendBtn');
+  const saldo = spBalance(spMovs);
+  btn.disabled = !(eq.length >= 2 && pts > 0 && pts <= saldo);
+  btn.textContent = pts > saldo ? `Saldo insuficiente (tienes ${fmtPts(saldo)} pts)` : 'Enviar solicitud a SinBa';
+}
+function enviarCanje() {
+  const c = DB.getCentro();
+  if (!c) return;
+  const equipo = document.getElementById('canjeEquipo').value.trim();
+  const puntos = Math.round((parseFloat(document.getElementById('canjePuntos').value) || 0) * 100) / 100;
+  if (!equipo || puntos <= 0 || puntos > spBalance(spMovs)) return;
+  const id = 'cj_' + Date.now();
+  const canje = { id, centroId: c.id, centroName: c.name, equipo, puntos, estado: 'pendiente', fecha: new Date().toISOString() };
+  queueSync(`canjes/${id}`, canje);
+  spMisCanjes.unshift(canje);
+  // Registrar el estado local para que la próxima resolución dispare el aviso.
+  try {
+    const estados = JSON.parse(localStorage.getItem('acopi_canjes_estados')) || {};
+    estados[id] = 'pendiente';
+    localStorage.setItem('acopi_canjes_estados', JSON.stringify(estados));
+  } catch {}
+  document.getElementById('canjeEquipo').value = '';
+  document.getElementById('canjePuntos').value = '';
+  updateCanjeBtn();
+  renderSpCentro();
+  showRecsToast('🎁 Solicitud enviada a SinBa');
+}
+
+// ── Lado SINBA ────────────────────────────────────────────
+async function refreshSpSinba() {
+  if (!isSinba() || !auth.currentUser || !navigator.onLine) return;
+  try {
+    const all = await fetchJson('sinbapuntos');
+    spSaldosRed = {};
+    Object.entries(all || {}).forEach(([centroId, nodo]) => {
+      const movs = Object.values((nodo && nodo.movs) || {});
+      const kg = movs.filter(m => m.tipo === 'credito').reduce((s, m) => s + (Number(m.kg) || 0), 0);
+      const name = (movs.find(m => m.centroName) || {}).centroName || centroId;
+      spSaldosRed[centroId] = { name, saldo: spBalance(movs), kg, n: movs.filter(m => m.tipo === 'credito').length };
+    });
+  } catch { /* siguiente ciclo */ }
+  try {
+    const all = await fetchJson('canjes');
+    const lista = Object.values(all || {}).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    // Aviso sonoro para solicitudes nuevas.
+    let vistos = [];
+    try { vistos = JSON.parse(localStorage.getItem('acopi_canjes_vistos')) || []; } catch {}
+    const nuevas = lista.filter(cj => cj.estado === 'pendiente' && !vistos.includes(cj.id));
+    if (nuevas.length && spCanjesRed.length) { // no avisar en la primera carga
+      playAvisoSound();
+      showRecsToast(`🎁 ${nuevas.length === 1 ? 'Nueva solicitud de canje' : nuevas.length + ' nuevas solicitudes de canje'}`);
+      try { if ('Notification' in window && Notification.permission === 'granted') new Notification('AcopiApp — Solicitud de canje', { body: nuevas.map(x => `${x.centroName}: ${x.equipo} (${fmtPts(x.puntos)} pts)`).join('\n'), icon: './icon-192.png', tag: 'acopi-canje-nuevo' }); } catch {}
+    }
+    if (nuevas.length) localStorage.setItem('acopi_canjes_vistos', JSON.stringify([...vistos, ...nuevas.map(x => x.id)].slice(-300)));
+    spCanjesRed = lista;
+  } catch { /* siguiente ciclo */ }
+  renderSpSinba();
+}
+
+function renderSpSinba() {
+  const card = document.getElementById('spCardSinba');
+  if (!card) return;
+  if (!isSinba()) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const entries = Object.entries(spSaldosRed).sort((a, b) => b[1].saldo - a[1].saldo);
+  document.getElementById('spCentrosList').innerHTML = entries.length ? entries.map(([id, c]) => `
+    <div class="sp-row">
+      <div class="sp-row-info">
+        <div class="sp-row-name">${escHtml(c.name)}</div>
+        <div class="sp-row-sub">${c.n} entrega(s) con puntos · ${Math.round(c.kg * 10) / 10} kg aportados</div>
+      </div>
+      <div class="sp-row-pts">⭐ ${fmtPts(c.saldo)}</div>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--text-muted);padding:8px 2px">Ningún centro tiene sinbapuntos todavía — se acreditan al validar entregas.</div>';
+
+  const pendientes = spCanjesRed.filter(cj => cj.estado === 'pendiente');
+  document.getElementById('spCanjesLbl').textContent = `🎁 Solicitudes de canje${pendientes.length ? ' (' + pendientes.length + ' pendiente' + (pendientes.length > 1 ? 's' : '') + ')' : ''}`;
+  const resueltas = spCanjesRed.filter(cj => cj.estado !== 'pendiente').slice(0, 5);
+  document.getElementById('spCanjesSinbaList').innerHTML = (pendientes.length || resueltas.length)
+    ? pendientes.map(cj => {
+        const saldo = (spSaldosRed[cj.centroId] || {}).saldo || 0;
+        return `<div class="canje-item">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700">${escHtml(cj.centroName || 'Centro')} pide: ${escHtml(cj.equipo || 'equipo')}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${fmtPts(cj.puntos)} puntos · saldo del centro: ${fmtPts(saldo)} · ${fechaLabel(cj.fecha)}</div>
+            </div>
+            <span class="canje-estado pendiente">⏳</span>
+          </div>
+          <div class="canje-actions">
+            <button class="canje-btn-no" onclick="resolverCanje('${cj.id}','rechazado')">❌ Rechazar</button>
+            <button class="canje-btn-ok" onclick="resolverCanje('${cj.id}','aprobado')">✅ Aprobar canje</button>
+          </div>
+        </div>`;
+      }).join('') + resueltas.map(cj => `
+        <div class="canje-item" style="opacity:0.7">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700">${escHtml(cj.centroName || 'Centro')} · ${escHtml(cj.equipo || '')}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${fmtPts(cj.puntos)} puntos · ${fechaLabel(cj.fecha)}</div>
+            </div>
+            <span class="canje-estado ${cj.estado}">${cj.estado === 'aprobado' ? '✅ Aprobado' : '❌ Rechazado'}</span>
+          </div>
+        </div>`).join('')
+    : '<div style="font-size:12px;color:var(--text-muted);padding:8px 2px">Sin solicitudes de canje.</div>';
+}
+
+function resolverCanje(id, estado) {
+  const c = DB.getCentro();
+  const cj = spCanjesRed.find(x => x.id === id);
+  if (!c || !cj || cj.estado !== 'pendiente') return;
+  const saldo = (spSaldosRed[cj.centroId] || {}).saldo || 0;
+  if (estado === 'aprobado') {
+    if (cj.puntos > saldo && !confirm(`Ojo: el centro solo tiene ${fmtPts(saldo)} puntos y pide canjear ${fmtPts(cj.puntos)}. ¿Aprobar igual?`)) return;
+    if (!confirm(`¿Aprobar el canje de "${cj.equipo}" por ${fmtPts(cj.puntos)} puntos de ${cj.centroName}?\n\nSe descontarán del saldo del centro.`)) return;
+    // Débito en el libro de puntos del centro.
+    queueSync(`sinbapuntos/${cj.centroId}/movs/${id}`, {
+      id, tipo: 'canje', puntos: -Math.abs(cj.puntos), equipo: cj.equipo,
+      fecha: new Date().toISOString(), centroId: cj.centroId, centroName: cj.centroName || null,
+      sinbaId: c.id, sinbaName: c.name, refId: id,
+    });
+  } else {
+    if (!confirm(`¿Rechazar la solicitud de "${cj.equipo}" de ${cj.centroName}?`)) return;
+  }
+  queueSync(`canjes/${id}/estado`, estado);
+  queueSync(`canjes/${id}/resueltoAt`, new Date().toISOString());
+  queueSync(`canjes/${id}/resueltoPor`, c.name);
+  cj.estado = estado;
+  if (estado === 'aprobado' && spSaldosRed[cj.centroId]) spSaldosRed[cj.centroId].saldo = Math.round((spSaldosRed[cj.centroId].saldo - cj.puntos) * 100) / 100;
+  renderSpSinba();
+  showRecsToast(estado === 'aprobado' ? '✅ Canje aprobado — puntos descontados' : '❌ Solicitud rechazada');
+}
+
+function refreshSinbapuntos() { if (isSinba()) refreshSpSinba(); else refreshSpCentro(); }
 
 function navegarMes(dir) {
   let { year, month } = resumenMes;
@@ -1853,7 +2531,7 @@ function renderEntradaMats() {
     <button class="mat-btn" id="emat-${m.id}" onclick="selectEntradaMat('${m.id}')">
       <span class="mat-emoji">${m.emoji}</span>
       <span class="mat-name">${m.name}</span>
-      <span class="mat-price">S/${m.precio.toFixed(2)}/kg</span>
+      <span class="mat-price">S/${m.precio.toFixed(2)}/${matUnidad(m)}</span>
     </button>`).join('');
 }
 
@@ -2003,6 +2681,10 @@ function selectEntradaMat(id) {
   entradaState.material = MATERIALES.find(m=>m.id===id);
   document.querySelectorAll('#matGridEntrada .mat-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('emat-'+id).classList.add('selected');
+  // Las botellas Backus se compran POR UNIDAD, no por kilo.
+  const und = matUnidad(entradaState.material);
+  const unitEl = document.querySelector('#screen-entrada .weight-unit');
+  if (unitEl) unitEl.textContent = und;
   updateEntradaUI();
 }
 
@@ -2034,7 +2716,7 @@ function updateEntradaUI() {
     card.classList.add('visible'); card.classList.remove('no-price');
     lbl.textContent = '💰 Total a pagar';
     amt.style.fontSize = '42px'; amt.textContent = fmt(total);
-    det.textContent = `${peso} kg × S/${mat.precio.toFixed(2)} — ${mat.name}`;
+    det.textContent = `${peso} ${matUnidad(mat)} × S/${mat.precio.toFixed(2)} — ${mat.name}`;
     btn.disabled = false; btn.innerHTML = `✅ Confirmar — ${fmt(total)}`;
   } else if (mat && peso>0 && !rec) {
     card.classList.add('visible','no-price');
@@ -2053,7 +2735,7 @@ function confirmEntrada() {
   const total = peso * mat.precio;
   DB.addEntrada({ fecha:new Date().toISOString(), recId:rec.id, recName:rec.name, recColor:rec.color, matId:mat.id, matName:mat.name, kg:peso, precioKg:mat.precio, total, origenCentroId: origenCentroSeleccionado ? origenCentroSeleccionado.id : null });
   document.getElementById('successAmountEntrada').textContent = fmt(total);
-  document.getElementById('successSubEntrada').textContent = `${rec.name} · ${peso} kg de ${mat.name}`;
+  document.getElementById('successSubEntrada').textContent = `${rec.name} · ${peso} ${matUnidad(mat)} de ${mat.name}`;
   document.getElementById('successEntrada').classList.add('show');
 }
 
@@ -2083,16 +2765,19 @@ function initVenta() {
 }
 
 function renderVentaMats() {
-  document.getElementById('matGridVenta').innerHTML = MATERIALES.map(m => `
+  // SinBa vende con su nomenclatura de surtri (26 categorías) — sin precio de
+  // compra de referencia, porque la categoría vendida no siempre coincide con
+  // la comprada.
+  document.getElementById('matGridVenta').innerHTML = ventaMats().map(m => `
     <button class="mat-btn" id="vmat-${m.id}" onclick="selectVentaMat('${m.id}')">
       <span class="mat-emoji">${m.emoji}</span>
       <span class="mat-name">${m.name}</span>
-      <span class="mat-price">Compra: S/${m.precio.toFixed(2)}/kg</span>
+      ${isSinba() ? '' : `<span class="mat-price">Compra: S/${m.precio.toFixed(2)}/kg</span>`}
     </button>`).join('');
 }
 
 function selectVentaMat(id) {
-  ventaState.material = MATERIALES.find(m=>m.id===id);
+  ventaState.material = ventaMats().find(m=>m.id===id);
   document.querySelectorAll('#matGridVenta .mat-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('vmat-'+id).classList.add('selected');
   updateVentaUI();
@@ -2124,14 +2809,19 @@ function updateVentaUI() {
   const ready = mat && kg>0 && pv>0;
   const tc=document.getElementById('totalCardVenta'), mc=document.getElementById('margenCard'), btn=document.getElementById('confirmBtnVenta');
   if (ready) {
-    const ingreso=kg*pv, costo=kg*mat.precio, margen=ingreso-costo, margenKg=pv-mat.precio;
+    const costoKg = isSinba() ? 0 : mat.precio;
+    const ingreso=kg*pv, costo=kg*costoKg, margen=ingreso-costo, margenKg=pv-costoKg;
     tc.classList.add('visible');
     document.getElementById('totalIngresoVenta').textContent = fmt(ingreso);
     document.getElementById('totalAmountVenta').textContent  = fmt(ingreso);
-    mc.classList.add('visible');
-    document.getElementById('margenVal').textContent   = (margen>=0?'+ ':'− ') + fmt(Math.abs(margen));
-    document.getElementById('margenVal').style.color   = margen>=0 ? 'var(--blue)' : 'var(--red)';
-    document.getElementById('margenDetail').textContent= `S/${margenKg>=0?'+':''}${margenKg.toFixed(2)}/kg sobre precio de compra (S/${mat.precio.toFixed(2)}/kg)`;
+    // Para SinBa el margen por materia no aplica (el surtri cruza categorías).
+    if (isSinba()) { mc.classList.remove('visible'); }
+    else {
+      mc.classList.add('visible');
+      document.getElementById('margenVal').textContent   = (margen>=0?'+ ':'− ') + fmt(Math.abs(margen));
+      document.getElementById('margenVal').style.color   = margen>=0 ? 'var(--blue)' : 'var(--red)';
+      document.getElementById('margenDetail').textContent= `S/${margenKg>=0?'+':''}${margenKg.toFixed(2)}/kg sobre precio de compra (S/${mat.precio.toFixed(2)}/kg)`;
+    }
     btn.disabled=false; btn.textContent=`✅ Confirmar venta — ${fmt(ingreso)}`;
   } else {
     tc.classList.remove('visible'); mc.classList.remove('visible');
@@ -2143,8 +2833,9 @@ function updateVentaUI() {
 function confirmVenta() {
   const kg=parseFloat(ventaState.kgStr)||0, pv=parseFloat(ventaState.precioStr)||0, mat=ventaState.material;
   if (!mat||kg<=0||pv<=0) return;
-  const ingreso=kg*pv, margen=ingreso-kg*mat.precio, comprador=document.getElementById('compradorInput').value.trim();
-  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg:mat.precio, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null, estadoConfirmacion: ventaCompradorId ? 'pendiente' : null });
+  const costoKg = isSinba() ? 0 : mat.precio;
+  const ingreso=kg*pv, margen=ingreso-kg*costoKg, comprador=document.getElementById('compradorInput').value.trim();
+  DB.addVenta({ fecha:new Date().toISOString(), matId:mat.id, matName:mat.name, kg, precioKg:pv, costoKg, total:ingreso, margen, comprador:comprador||null, compradorId:ventaCompradorId||null, estadoConfirmacion: ventaCompradorId ? 'pendiente' : null });
   document.getElementById('successAmountVenta').textContent = fmt(ingreso);
   document.getElementById('successMargenVenta').textContent = 'Margen: '+(margen>=0?'+':'')+fmt(margen);
   document.getElementById('successSubVenta').textContent    = `${kg} kg de ${mat.name}${comprador?' → '+comprador:''}`;
@@ -2182,7 +2873,7 @@ function renderPreciosList() {
       <div class="mat-price-badge">
         <span class="mat-price-sol">S/</span>
         <span class="mat-price-val" id="pval-${m.id}">${m.precio.toFixed(2)}</span>
-        <span class="mat-price-kg">/kg</span>
+        <span class="mat-price-kg">/${matUnidad(m)}</span>
       </div>
       <span class="mat-edit-icon">✏️</span>
     </div>`).join('');
@@ -2196,7 +2887,8 @@ function openSheet(id) {
   document.getElementById('pcard-'+id).classList.add('active');
   document.getElementById('sheetIcon').textContent  = mat.emoji;
   document.getElementById('sheetName').textContent  = mat.name;
-  document.getElementById('sheetCurrentPrice').textContent = `Precio actual: S/${mat.precio.toFixed(2)}/kg`;
+  document.getElementById('sheetCurrentPrice').textContent = `Precio actual: S/${mat.precio.toFixed(2)}/${matUnidad(mat)}`;
+  document.querySelector('#sheet .price-display-unit').textContent = '/' + matUnidad(mat);
   document.getElementById('priceDisplay').textContent = '0';
   document.getElementById('sheetOverlay').classList.add('open');
   document.getElementById('sheet').classList.add('open');
@@ -2236,7 +2928,7 @@ function savePrice() {
 function sendPreciosWA() {
   const today = new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long'});
   const fecha = today.charAt(0).toUpperCase()+today.slice(1);
-  const lines = MATERIALES.map(m=>`${m.emoji} ${m.name}: *S/${m.precio.toFixed(2)}/kg*`).join('\n');
+  const lines = MATERIALES.map(m=>`${m.emoji} ${m.name}: *S/${m.precio.toFixed(2)}/${matUnidad(m)}*`).join('\n');
   const msg = `📦 *Precios de hoy — ${fecha}*\n\n${lines}\n\n✅ Estamos comprando hoy. ¡Tráenos tu material!`;
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
@@ -2274,7 +2966,7 @@ function buildWAMessage(savedPrecios) {
   const fecha=`${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]}`;
   const lineas = MATERIALES.map(m => {
     const p = savedPrecios[m.id]!=null ? savedPrecios[m.id] : m.precio;
-    return `${m.emoji} ${m.name}: S/${p.toFixed(2)}/kg`;
+    return `${m.emoji} ${m.name}: S/${p.toFixed(2)}/${matUnidad(m)}`;
   });
   return `📢 *Precios de compra — ${fecha}*\n\n${lineas.join('\n')}`;
 }
@@ -2515,6 +3207,9 @@ function periodicSync() {
   refreshPendientes();
   syncOwnData();
   syncMisVentasEstado();
+  refreshSinbapuntos();
+  // Si el stream en vivo se cayó (pérdida de red, token vencido), se levanta de nuevo.
+  if (auth.currentUser && (!pendStream || pendStream.readyState === 2)) startPendientesStream();
 }
 periodicSync();
 window.addEventListener('online', periodicSync);
