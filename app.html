@@ -540,14 +540,16 @@
 <!-- ══════════════════════════════════ SCREEN: RESUMEN ══════════════════════════════════ -->
 <div id="screen-resumen" class="screen active">
   <div class="scroll-area">
-    <div class="pend-banner" id="pendBanner" onclick="openPendientesDrawer()">
+    <div class="pend-banner" id="pendBanner" style="cursor:default">
       <div class="pend-banner-icon">🔔</div>
       <div class="pend-banner-text">
         <div class="pend-banner-title" id="pendBannerTitle">Tienes 1 transacción por validar</div>
-        <div class="pend-banner-sub">Un centro dice haberte vendido material — valídalo para sumarlo a tu stock</div>
+        <div class="pend-banner-sub">Valídalas aquí abajo — cada transacción necesita la confirmación de ambas partes</div>
       </div>
-      <div class="pend-banner-chevron">›</div>
     </div>
+    <!-- Las transacciones por validar se muestran DIRECTAMENTE en el Resumen
+         (antes estaban escondidas en un cajón y era fácil no verlas). -->
+    <div id="pendInline" style="display:none"><div id="pendientesList"></div></div>
     <div class="hero-card">
       <div class="mes-nav">
         <button id="btnMesPrev" class="mes-nav-btn" onclick="navegarMes(-1)">‹</button>
@@ -980,16 +982,7 @@
   <div class="drawer-list" id="origenDrawerList" style="padding:0 16px 16px;max-height:50vh;overflow-y:auto"></div>
 </div>
 
-<!-- ── PENDIENTES DE CONFIRMACIÓN DRAWER (recepción de material de otra cuenta) ── -->
-<div class="drawer-overlay" id="pendientesDrawerOverlay" onclick="closePendientesDrawer()"></div>
-<div class="drawer historial-drawer" id="pendientesDrawer">
-  <div class="drawer-handle"></div>
-  <div class="historial-drawer-header">
-    <div class="historial-drawer-title">🔔 Por validar</div>
-    <button class="historial-close-btn" onclick="closePendientesDrawer()">✕</button>
-  </div>
-  <div class="historial-body" id="pendientesList" style="padding:16px"></div>
-</div>
+<!-- (El antiguo drawer "Por validar" fue reemplazado por la lista inline en el Resumen.) -->
 
 <!-- ── SINBAPUNTOS DRAWER (lado centro: saldo, canje, movimientos) ── -->
 <div class="drawer-overlay" id="spDrawerOverlay" onclick="closeSpDrawer()"></div>
@@ -1252,7 +1245,7 @@ async function fetchPendientes() {
 async function refreshPendientes() {
   pendientesList = await fetchPendientes();
   renderPendBanner();
-  if (document.getElementById('pendientesDrawer')?.classList.contains('open')) renderPendientesDrawerList();
+  renderPendientesDrawerList();
 }
 
 function renderPendBanner() {
@@ -1269,21 +1262,19 @@ function renderPendBanner() {
   }
 }
 
-function openPendientesDrawer() {
-  document.getElementById('pendientesDrawerOverlay').classList.add('open');
-  document.getElementById('pendientesDrawer').classList.add('open');
-  renderPendientesDrawerList();
-}
-function closePendientesDrawer() {
-  document.getElementById('pendientesDrawerOverlay').classList.remove('open');
-  document.getElementById('pendientesDrawer').classList.remove('open');
-}
+// Renderiza las transacciones por validar DIRECTAMENTE en el Resumen (lista
+// inline debajo del banner) — la validación es el paso clave del proceso y
+// tiene que estar a la vista, no escondida en un cajón.
 function renderPendientesDrawerList() {
   const list = document.getElementById('pendientesList');
+  const wrap = document.getElementById('pendInline');
+  if (!list || !wrap) return;
   if (!pendientesList.length && !ventasPendList.length) {
-    list.innerHTML = '<div class="pend-empty">No tienes transacciones por validar.</div>';
+    wrap.style.display = 'none';
+    list.innerHTML = '';
     return;
   }
+  wrap.style.display = 'block';
   // Sección 1 — "te compraron": el comprador (ej: SinBa) registró una compra
   // contigo como origen; confírmala para que quede anotada como TU venta.
   const comprasHtml = ventasPendList.map(p => `
@@ -1417,6 +1408,8 @@ function confirmPendiente(id) {
       kg: p.kg || null, unidades: spInfo.unidades,
       refId: p.id,
     });
+    // Refresca de inmediato la vista de puntos por centro (lado SinBa).
+    setTimeout(refreshSinbapuntos, 1500);
   }
   // Solo escribimos en NUESTRO propio nodo (entradas_pendientes de mi
   // cuenta). El vendedor no recibe ningún PATCH — él mismo lee este mismo
@@ -1476,7 +1469,7 @@ async function fetchVentasPendientes() {
 async function refreshVentasPendientes() {
   ventasPendList = await fetchVentasPendientes();
   renderPendBanner();
-  if (document.getElementById('pendientesDrawer')?.classList.contains('open')) renderPendientesDrawerList();
+  renderPendientesDrawerList();
 }
 
 function confirmVentaPend(id) {
