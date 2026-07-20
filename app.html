@@ -3,8 +3,8 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 3.0                                                 -->
-  <!-- Date    : 15/07/2026                                          -->
+  <!-- Version : 4.0                                                 -->
+  <!-- Date    : 20/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
   <meta charset="UTF-8">
@@ -541,6 +541,46 @@
     .cs-tipo-opt { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; padding: 8px 10px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); }
     .cs-tipo-opt input { width: 17px; height: 17px; accent-color: #0F172A; flex-shrink: 0; }
 
+    /* ── v4.0 : LOTES — padres resaltados + botón trazabilidad ── */
+    .lote-padres { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; align-items: center; }
+    .lote-padres-lbl { font-size: 10px; font-weight: 700; color: var(--text-secondary); }
+    .padre-chip { background: #EDE9FE; color: #6D28D9; border: 1.5px solid #C4B5FD; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 12px; }
+    .traza-btn { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 13px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; text-align: left; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--text-primary); -webkit-tap-highlight-color: transparent; }
+    .traza-btn:active { border-color: var(--accent); }
+
+    /* ── v4.0 : TRAZABILIDAD ── */
+    .traza-hero { background: linear-gradient(135deg, #7C3AED, #5B21B6); border-radius: 16px; padding: 20px; color: white; }
+    .traza-paso { font-size: 11.5px; color: var(--text-secondary); margin-top: 8px; line-height: 1.7; border-top: 1px dashed var(--border); padding-top: 8px; }
+    .traza-paso b { color: var(--text-primary); }
+
+    /* ── v4.0 : NOTIFICACIONES (campana topbar + drawer) ── */
+    .notif-bell { position: relative; background: rgba(255,255,255,0.15); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+    .notif-bell:active { background: rgba(255,255,255,0.28); }
+    .notif-badge { position: absolute; top: -3px; right: -3px; background: var(--red); color: white; font-size: 10px; font-weight: 800; min-width: 17px; height: 17px; border-radius: 9px; display: none; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--accent); line-height: 1; }
+    .notif-badge.show { display: flex; }
+    .notif-item { display: flex; gap: 10px; padding: 12px 6px; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .notif-item.nueva { background: var(--blue-light); border-radius: 10px; border-bottom-color: transparent; padding: 12px 10px; }
+    .notif-icon { font-size: 20px; flex-shrink: 0; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-title { font-size: 13px; font-weight: 700; line-height: 1.35; }
+    .notif-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.45; }
+    .notif-fecha { font-size: 10px; color: var(--text-muted); flex-shrink: 0; padding-top: 2px; }
+
+    /* ── v4.0 : RESUMEN — síntesis del mes + stock por materia ── */
+    .sintesis-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .sintesis-cell { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 11px 6px; text-align: center; }
+    .sintesis-val { font-size: 18px; font-weight: 900; line-height: 1.1; }
+    .sintesis-lbl { font-size: 9.5px; color: var(--text-muted); font-weight: 600; margin-top: 3px; letter-spacing: 0.2px; }
+    .stock-row-mini { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 10px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .stock-row-mini .srm-emoji { font-size: 22px; width: 28px; text-align: center; flex-shrink: 0; }
+    .stock-row-mini .srm-name { font-size: 13px; font-weight: 700; flex: 1; min-width: 0; }
+    .stock-row-mini .srm-kg { font-size: 16px; font-weight: 900; }
+    .stock-row-mini .srm-unit { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+    /* ── v4.0 : STOCK (pantalla Precios → Stock y precios) ── */
+    .mat-stock-line { font-size: 11px; font-weight: 700; color: var(--green); margin-top: 3px; }
+    .mat-stock-line.cero { color: var(--text-muted); font-weight: 500; }
+
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
@@ -588,6 +628,8 @@
       <div class="topbar-sub" id="tb-sub">—</div>
     </div>
     <button id="tb-add" class="topbar-add-btn" style="display:none" onclick="openRecsDrawer()">+</button>
+    <!-- v4.0 : campana de notificaciones — visible en todas las pantallas -->
+    <button id="tb-notif" class="notif-bell" onclick="openNotifs()">🔔<span class="notif-badge" id="notifBadge">0</span></button>
   </div>
 </div>
 
@@ -640,9 +682,18 @@
       <div class="section-label" style="margin-top:14px" id="spCanjesLbl">🎁 Solicitudes de canje</div>
       <div id="spCanjesSinbaList"></div>
     </div>
+    <!-- v4.0 : síntesis del mes (kilos, lotes, transacciones — sin soles,
+         el dinero vive en Finanzas) -->
     <div>
-      <div class="section-label">Stock actual</div>
+      <div class="section-label">📋 Síntesis del mes</div>
+      <div class="sintesis-grid" id="sintesisGrid"></div>
+    </div>
+    <!-- v4.0 : una línea por materia con su logo — el detalle completo
+         (suelto vs lotes, precios) vive en la pestaña 🗃️ Stock -->
+    <div>
+      <div class="section-label">Stock por materia</div>
       <div class="stock-list" id="stockList"></div>
+      <button class="ver-historial-btn" onclick="goTo('precios')">Ver detalle y precios ›</button>
     </div>
     <div>
       <div class="section-label">Actividad reciente</div>
@@ -661,7 +712,8 @@
     <div>
       <div class="section-label">¿De dónde viene el material?</div>
       <div class="origen-grid">
-        <button class="origen-btn" id="og-desconocido" onclick="setOrigenTipo('desconocido')"><span class="og-emoji">👤</span><span class="og-name">Recolector desconocido</span></button>
+        <!-- v4.0 : libellé « externo » (l'id interne reste desconocido pour les données) -->
+        <button class="origen-btn" id="og-desconocido" onclick="setOrigenTipo('desconocido')"><span class="og-emoji">👤</span><span class="og-name">Recolector externo</span></button>
         <button class="origen-btn" id="og-interna" onclick="setOrigenTipo('interna')"><span class="og-emoji">🏠</span><span class="og-name">Recolección interna</span></button>
         <button class="origen-btn" id="og-red" onclick="setOrigenTipo('red')"><span class="og-emoji">🤝</span><span class="og-name">Compra en red (lote)</span></button>
       </div>
@@ -777,6 +829,12 @@
      eligiendo el lote — el número de lote es la llave de la trazabilidad. -->
 <div id="screen-lotes" class="screen">
   <div class="scroll-area" style="padding-bottom:160px">
+    <!-- v4.0 : accès à l'écran Trazabilidad (lotes cerrados + parcours) -->
+    <button class="traza-btn" onclick="goTo('traza')">
+      <span style="font-size:20px">⛓</span>
+      <span style="flex:1">Trazabilidad — historial de lotes<span id="trazaBtnSub" style="display:block;font-size:11px;font-weight:500;color:var(--text-muted);margin-top:2px">Lotes vendidos, fusionados y transformados</span></span>
+      <span class="chevron">›</span>
+    </button>
     <div id="lotesRecibidosWrap" style="display:none">
       <div class="section-label">📥 Lotes recibidos de la red</div>
       <div id="lotesRecibidosList"></div>
@@ -792,14 +850,44 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════ SCREEN: TRAZABILIDAD (v4.0) ══════════════════════════════════ -->
+<!-- Historial de lotes cerrados (vendidos / fusionados / transformados) con
+     su parcours completo — hero card con los indicadores de la cadena. -->
+<div id="screen-traza" class="screen">
+  <div class="scroll-area" style="padding-bottom:80px">
+    <div class="traza-hero">
+      <div class="hero-label" style="color:rgba(255,255,255,0.7)">⛓ Cadena de custodia</div>
+      <div class="hero-amount"><span id="trazaKgCerrado">0</span><span class="hero-kg-unit">kg</span></div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:2px;font-weight:600">transformados — cadena cerrada de punta a punta</div>
+      <div class="hero-stats" style="border-top-color:rgba(255,255,255,0.25)">
+        <div class="hero-stat"><div class="hero-stat-val" id="trazaNTransf">0</div><div class="hero-stat-lbl" style="color:rgba(255,255,255,0.6)">Transformados</div></div>
+        <div class="hero-stat"><div class="hero-stat-val" id="trazaNVend">0</div><div class="hero-stat-lbl" style="color:rgba(255,255,255,0.6)">Vendidos</div></div>
+        <div class="hero-stat"><div class="hero-stat-val" id="trazaNFus">0</div><div class="hero-stat-lbl" style="color:rgba(255,255,255,0.6)">Fusionados</div></div>
+        <div class="hero-stat"><div class="hero-stat-val" id="trazaPctDoc">—</div><div class="hero-stat-lbl" style="color:rgba(255,255,255,0.6)">Origen documentado</div></div>
+      </div>
+    </div>
+    <div id="trazaRecibWrap" style="display:none">
+      <div class="section-label">♻️ Lotes que transformaste</div>
+      <div id="trazaRecibList"></div>
+    </div>
+    <div>
+      <div class="section-label">🔒 Mis lotes cerrados</div>
+      <div id="trazaList"></div>
+    </div>
+    <div class="nota"><strong>💡 ¿Qué veo aquí?</strong><br>Cada lote cerrado con su parcours: cuándo se creó, de qué orígenes viene, a quién se vendió, en qué lote se fusionó o quién lo transformó. Es la evidencia de trazabilidad de tu centro.</div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════ SCREEN: PRECIOS ══════════════════════════════════ -->
+<!-- v4.0 : Precios devient « Stock y precios » — une ligne par matière avec
+     logo, stock (suelto + lotes) et prix de compra modifiable. -->
 <div id="screen-precios" class="screen">
   <div class="scroll-area">
     <div>
-      <div class="section-label">Precio actual por kilo</div>
+      <div class="section-label">Stock y precio por materia</div>
       <div class="price-list-precios" id="priceListPrecios"></div>
     </div>
-    <div class="nota"><strong>💡 Precio de compra</strong><br>Estos precios se usan en <em>Nueva Entrada</em> y se envían a recicladores por WhatsApp.</div>
+    <div class="nota"><strong>💡 Stock y precios</strong><br>Cada línea muestra tu stock (suelto + lotes disponibles) y tu precio de compra — toca para editarlo. Los precios se usan en <em>Nueva Entrada</em> y se difunden por WhatsApp.</div>
   </div>
   <div class="bottom-cta">
     <!-- v3.0 : ouvre l'écran WhatsApp (aperçu + édition du message) — il n'est
@@ -964,7 +1052,7 @@
   <button class="nav-btn active" data-screen="resumen" onclick="goTo('resumen')"><span class="nav-icon">📊</span><span class="nav-label">Resumen</span></button>
   <button class="nav-btn" data-screen="entrada" onclick="goTo('entrada')"><span class="nav-icon">➕</span><span class="nav-label">Entrada</span></button>
   <button class="nav-btn" data-screen="lotes" onclick="goTo('lotes')"><span class="nav-icon">📦</span><span class="nav-label">Lotes</span></button>
-  <button class="nav-btn" data-screen="precios" onclick="goTo('precios')"><span class="nav-icon">💰</span><span class="nav-label">Precios</span></button>
+  <button class="nav-btn" data-screen="precios" onclick="goTo('precios')"><span class="nav-icon">🗃️</span><span class="nav-label">Stock</span></button>
   <button class="nav-btn" data-screen="finanzas" onclick="goTo('finanzas')"><span class="nav-icon">📈</span><span class="nav-label">Finanzas</span></button>
   <button class="nav-btn" data-screen="pagos" onclick="goTo('pagos')"><span class="nav-icon">💵</span><span class="nav-label">Pagos</span></button>
 </nav>
@@ -1095,6 +1183,17 @@
       <div id="spMovsList"></div>
     </div>
   </div>
+</div>
+
+<!-- ── NOTIFICACIONES DRAWER (v4.0) ── -->
+<div class="drawer-overlay" id="notifsOverlay" onclick="closeNotifs()"></div>
+<div class="drawer historial-drawer" id="notifsDrawer">
+  <div class="drawer-handle"></div>
+  <div class="historial-drawer-header">
+    <div class="historial-drawer-title">🔔 Notificaciones</div>
+    <button class="historial-close-btn" onclick="closeNotifs()">✕</button>
+  </div>
+  <div class="historial-body" id="notifsList"></div>
 </div>
 
 <!-- ── HISTORIAL DRAWER (A3) ── -->
@@ -1298,6 +1397,12 @@ async function refreshReclamos() {
     const data = await fetchJson(`centros/${encodeURIComponent(c.id)}/reclamos`);
     reclamosList = Object.values(data || {}).filter(r => r && r.estado === 'activo').sort((a, b) => b.id - a.id);
   } catch { return; }
+  // v4.0 — notificación por reclamo recibido (solo eventos posteriores a la
+  // instalación de la campana; addNotif es idempotente por id).
+  const desde = notifsDesde();
+  reclamosList.forEach(r => {
+    if ((r.fecha || '') > desde) addNotif({ id: 'nr_' + r.id, tipo: 'reclamo', icon: '⚠️', titulo: `Reclamo de ${escHtml(r.deName || 'un vendedor')}`, sub: `No reconoce una compra: ${escHtml(r.matName || '')}${r.loteNumero ? ' · lote ' + escHtml(r.loteNumero) : ''} · ${fmt(r.total || 0)}` });
+  });
   renderReclamos();
   if (currentScreen === 'pagos') renderPagos();
 }
@@ -1463,6 +1568,13 @@ async function procesarVentasEntrantes() {
 }
 
 function notifyVentaEntrante(p) {
+  // v4.0 — el mismo id que usa syncOwnData para la transición del lote
+  // (nvl_loteId) → nunca dos notificaciones para la misma venta.
+  addNotif({
+    id: 'nvl_' + (p.loteId || 'c' + p.id), tipo: 'venta', icon: '💰',
+    titulo: `${escHtml(p.compradorName || 'Una cuenta')} te compró ${p.loteNumero ? 'el lote ' + escHtml(p.loteNumero) : 'material suelto'}`,
+    sub: `${escHtml(p.matName || '')} · ${p.unidades != null ? p.unidades + ' und' : (p.kg || 0) + ' kg'} · ${fmt(p.total || 0)} — revisa Pagos`,
+  });
   playAvisoSound();
   showRecsToast(`💰 ${p.compradorName || 'Una cuenta'} te compró ${p.loteNumero ? 'el lote ' + p.loteNumero : 'material'} — ${fmt(p.total || 0)}`);
   try {
@@ -1538,6 +1650,14 @@ async function syncOwnData() {
           lt.estado = prev.estado;
           if (prev.compradorId) { lt.compradorId = prev.compradorId; lt.compradorName = prev.compradorName; lt.vendidoAt = prev.vendidoAt || null; }
         }
+        // v4.0 — notificaciones por transición de estado (idempotentes por id):
+        // el reciclador transformó mi lote / otro dispositivo registró la venta.
+        if (prev && prev.estado !== 'transformado' && lt.estado === 'transformado') {
+          if (addNotif({ id: 'nt_' + lt.id, tipo: 'transformado', icon: '♻️', titulo: `Tu lote ${escHtml(lt.numero || '#' + lt.id)} fue transformado`, sub: `${escHtml(lt.transformadoPor || 'Un reciclador')} cerró la cadena de custodia — ${lt.kg || 0} ${lt.unidad === 'und' ? 'und' : 'kg'} de ${escHtml(lt.matName || '')}` })) playAvisoSound();
+        }
+        if (prev && prev.estado === 'disponible' && lt.estado === 'vendido') {
+          addNotif({ id: 'nvl_' + lt.id, tipo: 'venta', icon: '💰', titulo: `${escHtml(lt.compradorName || 'Una cuenta')} te compró el lote ${escHtml(lt.numero || '#' + lt.id)}`, sub: `${escHtml(lt.matName || '')} · ${lt.kg || 0} ${lt.unidad === 'und' ? 'und' : 'kg'}${lt.precioTotal ? ' · ' + fmt(lt.precioTotal) : ''}` });
+        }
         return lt;
       });
       DB.saveLotes(mergedL);
@@ -1570,6 +1690,7 @@ async function syncMisVentasEstado() {
             v.estadoPago = 'pagado';
             v.pagadoAt = nodo.pagadoAt || null;
             changed = true;
+            addNotif({ id: 'np_' + v.id, tipo: 'pago', icon: '✅', titulo: `Pago recibido de ${escHtml(v.comprador || 'la red')}`, sub: `${escHtml(v.matName || '')}${v.loteNumero ? ' · lote ' + escHtml(v.loteNumero) : ''} · ${fmt(v.total || 0)}` });
           }
         }
       }
@@ -1583,6 +1704,7 @@ async function syncMisVentasEstado() {
             v.reclamo = 'resuelto';
             changed = true;
             queueSync(`centros/${c.id}/ventas/${v.id}/reclamo`, 'resuelto');
+            addNotif({ id: 'nrr_' + v.id, tipo: 'reclamo', icon: '✔️', titulo: 'Reclamo resuelto', sub: `${escHtml(v.comprador || 'El comprador')} marcó como resuelto tu reclamo (${escHtml(v.matName || '')} · ${fmt(v.total || 0)})` });
           }
         }
       }
@@ -1651,6 +1773,61 @@ function playAvisoSound() {
       o.start(t0 + i * 0.18); o.stop(t0 + i * 0.18 + 0.55);
     });
   } catch {}
+}
+
+// ════════════════════════════════════════════════════════════
+// NOTIFICACIONES (v4.0) — campana en la topbar + panel
+//   Cada evento de red (venta recibida, pago, reclamo, transformación,
+//   sinbapuntos, canjes) deja una notificación en acopi_notifs.
+//   · addNotif es IDEMPOTENTE por id → los hooks pueden repetirse sin duplicar.
+//   · Los hooks que ESCANEAN datos históricos (reclamos, movs de puntos) solo
+//     notifican eventos posteriores a la instalación de la campana
+//     (acopi_notifs_desde) — así el primer arranque no inunda el panel.
+// ════════════════════════════════════════════════════════════
+function getNotifs() { try { return JSON.parse(localStorage.getItem('acopi_notifs')) || []; } catch { return []; } }
+function saveNotifs(l) { localStorage.setItem('acopi_notifs', JSON.stringify(l.slice(0, 100))); }
+function notifsDesde() {
+  let d = localStorage.getItem('acopi_notifs_desde');
+  if (!d) { d = new Date().toISOString(); localStorage.setItem('acopi_notifs_desde', d); }
+  return d;
+}
+function addNotif(n) {
+  const list = getNotifs();
+  if (n.id && list.some(x => x.id === n.id)) return false;
+  list.unshift({ leida: false, fecha: new Date().toISOString(), ...n });
+  saveNotifs(list);
+  renderNotifBadge();
+  return true;
+}
+function renderNotifBadge() {
+  const b = document.getElementById('notifBadge');
+  if (!b) return;
+  const n = getNotifs().filter(x => !x.leida).length;
+  b.classList.toggle('show', n > 0);
+  b.textContent = n > 9 ? '9+' : n;
+}
+function openNotifs() {
+  const list = getNotifs();
+  const el = document.getElementById('notifsList');
+  el.innerHTML = list.length ? list.map(n => `
+    <div class="notif-item${n.leida ? '' : ' nueva'}">
+      <div class="notif-icon">${n.icon || '🔔'}</div>
+      <div class="notif-body">
+        <div class="notif-title">${n.titulo || ''}</div>
+        ${n.sub ? `<div class="notif-sub">${n.sub}</div>` : ''}
+      </div>
+      <div class="notif-fecha">${fechaLabel(n.fecha)}</div>
+    </div>`).join('')
+    : '<div style="text-align:center;color:var(--text-muted);padding:40px 0;font-size:14px">Sin notificaciones todavía.<br><span style="font-size:12px">Aquí verás las ventas, pagos, reclamos y transformaciones de tus lotes.</span></div>';
+  document.getElementById('notifsOverlay').classList.add('open');
+  document.getElementById('notifsDrawer').classList.add('open');
+  // Consultar el panel marca todo como leído (el resaltado azul ya está pintado).
+  if (list.some(x => !x.leida)) { list.forEach(x => { x.leida = true; }); saveNotifs(list); }
+  renderNotifBadge();
+}
+function closeNotifs() {
+  document.getElementById('notifsOverlay').classList.remove('open');
+  document.getElementById('notifsDrawer').classList.remove('open');
 }
 
 // Directorio de cuentas de la red (para elegir contraparte al comprar/vender
@@ -1847,7 +2024,7 @@ function confirmEditPerfil() {
 }
 function logoutCentro() {
   auth.signOut();
-  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_lotes','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos','acopi_vpend_resueltos','acopi_canjes_estados','acopi_canjes_vistos'].forEach(k => localStorage.removeItem(k));
+  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_lotes','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos','acopi_vpend_resueltos','acopi_canjes_estados','acopi_canjes_vistos','acopi_notifs','acopi_notifs_desde'].forEach(k => localStorage.removeItem(k));
   location.reload();
 }
 
@@ -1895,6 +2072,8 @@ async function resetMisDatos() {
     localStorage.removeItem('acopi_vpend_resueltos');
     localStorage.removeItem('acopi_canjes_estados');
     localStorage.removeItem('acopi_canjes_vistos');
+    localStorage.removeItem('acopi_notifs'); // v4.0 — apuntan a datos borrados
+    renderNotifBadge();
     reclamosList = [];
     spMovs = [];
     // Dejar pasar cualquier escritura en vuelo antes de borrar en remoto.
@@ -2108,7 +2287,8 @@ const SCREEN_CFG = {
   resumen:  { title: '📦 AcopiApp',         sub: 'Centro de acopio',            back: false, add: false },
   entrada:  { title: '➕ Nueva Entrada',     sub: 'Registrar compra de material',back: true,  add: false },
   lotes:    { title: '📦 Lotes',             sub: 'Agrupa tu material y véndelo por lote', back: true, add: false },
-  precios:  { title: '💰 Precios de compra', sub: 'Toca un material para editar',back: true,  add: false },
+  traza:    { title: '⛓ Trazabilidad',       sub: 'Historial y cadena de custodia de tus lotes', back: true, add: false },
+  precios:  { title: '🗃️ Stock y precios',   sub: 'Stock por materia · toca para editar el precio', back: true,  add: false },
   whatsapp: { title: '📲 Enviar Precios',    sub: 'Difunde tus precios por WhatsApp', back: true, add: false },
   finanzas: { title: '📈 Finanzas',          sub: 'Gastos, ingresos y ganancia potencial', back: true, add: false },
   pagos:    { title: '💵 Pagos',             sub: 'Por pagar y por cobrar',      back: true,  add: false },
@@ -2118,9 +2298,9 @@ const SCREEN_CFG = {
 let currentScreen = 'resumen';
 let resumenMes = { year: new Date().getFullYear(), month: new Date().getMonth() };
 
-// v3.0 : WhatsApp ya no está en la nav — se llega desde Precios. La flecha
-// ← de esa pantalla vuelve a Precios (las demás vuelven al Resumen).
-function navBack() { goTo(currentScreen === 'whatsapp' ? 'precios' : 'resumen'); }
+// v3.0 : WhatsApp ya no está en la nav — se llega desde Precios (→ Stock en
+// v4.0). v4.0 : Trazabilidad cuelga de Lotes. Las demás vuelven al Resumen.
+function navBack() { goTo(currentScreen === 'whatsapp' ? 'precios' : currentScreen === 'traza' ? 'lotes' : 'resumen'); }
 
 function goTo(id) {
   // hide all success overlays
@@ -2128,8 +2308,8 @@ function goTo(id) {
   // switch screens
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
-  // nav bar (whatsapp cuelga de precios en la nav)
-  const navId = id === 'whatsapp' ? 'precios' : id;
+  // nav bar (whatsapp cuelga de precios/Stock; traza cuelga de lotes)
+  const navId = id === 'whatsapp' ? 'precios' : id === 'traza' ? 'lotes' : id;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.screen === navId));
   // topbar
   const cfg = SCREEN_CFG[id];
@@ -2153,6 +2333,7 @@ function goTo(id) {
   if (id === 'resumen')  initResumen();
   if (id === 'entrada')  initEntrada();
   if (id === 'lotes')    initLotes();
+  if (id === 'traza')    renderTraza();
   if (id === 'precios')  initPrecios();
   if (id === 'whatsapp') initWhatsapp();
   if (id === 'finanzas') initFinanzas();
@@ -2170,6 +2351,7 @@ function initResumen() {
   loadMatPrices();
   const stats = calcStats();
   renderResumenStockHero(stats);
+  renderResumenSintesis(stats);
   renderResumenStock(stats);
   renderResumenActividad(stats);
   renderReclamos();
@@ -2236,26 +2418,35 @@ function renderResumenStockHero(stats) {
   if (totalUnd > 0) document.getElementById('heroStockUnd').textContent = r1(totalUnd);
 }
 
+// v4.0 : una línea compacta por materia CON STOCK (logo + kg). El detalle
+// (suelto vs lotes, precios) vive en la pestaña 🗃️ Stock.
 function renderResumenStock(stats) {
-  // v3.0 : sin precios en el Resumen — el valor estimado vive en Finanzas.
   const { stock } = stats;
-  const sueltosMap = kgSueltosPorMat();
-  const lotesAll = DB.getLotes();
-  document.getElementById('stockList').innerHTML = MATERIALES.map(m => {
-    const kg = stock[m.id] || 0;
-    const u = matUnidad(m);
-    const suelto = Math.round((sueltosMap[m.id] || 0) * 100) / 100;
-    const lotesDisp = lotesAll.filter(l => l.matId === m.id && l.estado === 'disponible');
-    const enLotes = Math.round(lotesDisp.reduce((s, l) => s + (l.kg || 0), 0) * 100) / 100;
-    return `<div class="stock-card${kg===0?' zero':''}">
-      <div class="stock-icon">${m.emoji}</div>
-      <div class="stock-info"><div class="stock-name">${m.name}</div><div class="stock-sub">Suelto: ${suelto} ${u}${enLotes > 0 ? ` · En ${lotesDisp.length} lote${lotesDisp.length > 1 ? 's' : ''}: ${enLotes} ${u}` : ''}</div></div>
-      <div class="stock-right">
-        <span class="stock-kg">${kg}</span><span class="stock-kg-unit">${u}</span>
-        <span class="stock-badge ${kg===0?'vacio':'ok'}">${kg===0?'Sin stock':'En stock'}</span>
-      </div>
-    </div>`;
-  }).join('');
+  const conStock = MATERIALES.filter(m => (stock[m.id] || 0) > 0);
+  document.getElementById('stockList').innerHTML = conStock.length ? conStock.map(m => `
+    <div class="stock-row-mini">
+      <div class="srm-emoji">${m.emoji}</div>
+      <div class="srm-name">${m.name}</div>
+      <span class="srm-kg">${stock[m.id]}</span><span class="srm-unit">${matUnidad(m)}</span>
+    </div>`).join('')
+    : `<div class="empty-state" style="padding:18px"><div class="empty-title">Sin stock por ahora</div><div class="empty-sub">Registra una entrada para empezar.</div></div>`;
+}
+
+// v4.0 : síntesis del mes en curso — kilos, lotes y transacciones (sin soles).
+function renderResumenSintesis(stats) {
+  const el = document.getElementById('sintesisGrid');
+  if (!el) return;
+  const r1 = n => Math.round(n * 10) / 10;
+  const lotesCreados  = DB.getLotes().filter(l => !l.auto && l.creadoAt && isMesSel(l.creadoAt)).length;
+  const lotesVendidos = DB.getLotes().filter(l => l.vendidoAt && isMesSel(l.vendidoAt)).length;
+  const celda = (val, lbl) => `<div class="sintesis-cell"><div class="sintesis-val">${val}</div><div class="sintesis-lbl">${lbl}</div></div>`;
+  el.innerHTML =
+    celda(r1(stats.kgComp) + ' kg', '⬇ Comprados') +
+    celda(r1(stats.kgVend) + ' kg', '⬆ Vendidos') +
+    celda(stats.entradas.length + stats.ventas.length, '🧾 Transacciones') +
+    celda(lotesCreados, '📦 Lotes creados') +
+    celda(lotesVendidos, '📤 Lotes vendidos') +
+    celda(DB.getLotes().filter(l => l.estado === 'disponible').length, '✔ Lotes en stock');
 }
 
 function renderResumenActividad(stats) {
@@ -2273,7 +2464,7 @@ function renderResumenActividad(stats) {
     const og = en.origen || (en.origenCentroId ? 'red' : 'desconocido');
     if (og === 'red') return `<span class="venta-estado-badge confirmado">🤝 Red${en.loteNumero ? ' · ' + escHtml(en.loteNumero) : ''}</span>`;
     if (og === 'interna') return '<span class="venta-estado-badge confirmado">🏠 Interna</span>';
-    return '<span class="venta-estado-badge" style="background:#F1F5F9;color:#64748B">👤 Desconocido</span>';
+    return '<span class="venta-estado-badge" style="background:#F1F5F9;color:#64748B">👤 Externo</span>';
   };
   const items = [
     ...entradas.map(e => ({ tipo:'entrada', fecha:e.fecha, title:e.recName, sub:`${e.matName||matName(e.matId)} · ${e.unidades != null ? e.unidades + ' und' : e.kg + ' kg'}`, total:-e.total, badge:origenBadge(e) })),
@@ -2409,6 +2600,11 @@ async function refreshSpCentro() {
   try {
     const movs = await fetchJson(`sinbapuntos/${encodeURIComponent(c.id)}/movs`);
     spMovs = Object.values(movs || {}).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    // v4.0 — notificación por sinbapuntos acreditados (posteriores a la campana).
+    const desdeSp = notifsDesde();
+    spMovs.forEach(m => {
+      if (m.tipo === 'credito' && (m.fecha || '') > desdeSp) addNotif({ id: 'nsp_' + m.id, tipo: 'puntos', icon: '⭐', titulo: `+${fmtPts(Number(m.puntos) || 0)} sinbapuntos`, sub: `${escHtml(m.matName || 'Entrega')} · ${m.unidades != null ? m.unidades + ' und' : (m.kg || 0) + ' kg'} — de ${escHtml(m.sinbaName || 'SinBa')}` });
+    });
   } catch { /* siguiente ciclo */ }
   try {
     const all = await fetchJson('canjes');
@@ -2432,6 +2628,7 @@ function detectarCambiosCanje(nuevos) {
         ? `🎁 SinBa aprobó tu canje: ${cj.equipo} (−${fmtPts(cj.puntos)} pts)`
         : `❌ SinBa rechazó tu canje: ${cj.equipo}`;
       showRecsToast(msg);
+      addNotif({ id: 'ncj_' + cj.id + '_' + cj.estado, tipo: 'canje', icon: cj.estado === 'aprobado' ? '🎁' : '❌', titulo: `Canje ${cj.estado}: ${escHtml(cj.equipo || '')}`, sub: `${fmtPts(cj.puntos)} puntos` });
       try { if ('Notification' in window && Notification.permission === 'granted') new Notification('AcopiApp — Canje ' + cj.estado, { body: `${cj.equipo} · ${fmtPts(cj.puntos)} puntos`, icon: './icon-192.png', tag: 'acopi-canje-' + cj.id }); } catch {}
     }
     if (estados[cj.id] !== cj.estado) { estados[cj.id] = cj.estado; changed = true; }
@@ -2533,6 +2730,7 @@ async function refreshSpSinba() {
     const nuevas = lista.filter(cj => cj.estado === 'pendiente' && !vistos.includes(cj.id));
     if (nuevas.length && spCanjesRed.length) { // no avisar en la primera carga
       playAvisoSound();
+      nuevas.forEach(x => addNotif({ id: 'ncs_' + x.id, tipo: 'canje', icon: '🎁', titulo: `Solicitud de canje de ${escHtml(x.centroName || 'un centro')}`, sub: `${escHtml(x.equipo || '')} · ${fmtPts(x.puntos)} puntos` }));
       showRecsToast(`🎁 ${nuevas.length === 1 ? 'Nueva solicitud de canje' : nuevas.length + ' nuevas solicitudes de canje'}`);
       try { if ('Notification' in window && Notification.permission === 'granted') new Notification('AcopiApp — Solicitud de canje', { body: nuevas.map(x => `${x.centroName}: ${x.equipo} (${fmtPts(x.puntos)} pts)`).join('\n'), icon: './icon-192.png', tag: 'acopi-canje-nuevo' }); } catch {}
     }
@@ -2782,7 +2980,7 @@ function setOrigenTipo(t) {
   document.getElementById('entradaRedBlock').style.display = t === 'red' ? 'flex' : 'none';
   document.getElementById('entradaLibreBlock').style.display = t === 'red' ? 'none' : 'flex';
   const nota = document.getElementById('entradaNota');
-  if (t === 'desconocido') nota.innerHTML = '<strong>👤 Recolector desconocido</strong><br>Material comprado a un recolector sin la app. El total se calcula con tus precios de compra (pantalla <em>Precios</em>).';
+  if (t === 'desconocido') nota.innerHTML = '<strong>👤 Recolector externo</strong><br>Material comprado a un recolector sin la app (pago en efectivo). El total se calcula con tus precios de compra (pestaña <em>Stock</em>).';
   else if (t === 'interna') nota.innerHTML = '<strong>🏠 Recolección interna</strong><br>Material que tu propio equipo recolectó — se suma al stock sin costo.';
   else nota.innerHTML = '<strong>🤝 Compra en red</strong><br>Por LOTE (recomendado: la trazabilidad viaja con el número) o por KILOS SUELTOS (el stock suelto del vendedor baja solo, en orden de llegada). Él recibe el aviso al instante — sin doble captura.';
   updateEntradaUI();
@@ -2976,10 +3174,21 @@ function updateEntradaUI() {
   }
 }
 
-function confirmEntrada() {
+// v4.0 — candado anti doble registro: un solo confirmEntrada a la vez, y
+// antes de comprar un LOTE se re-verifica su estado en el nodo del vendedor
+// (otro comprador pudo ganarle, o el vendedor pudo fusionarlo).
+let entradaEnCurso = false;
+async function confirmEntrada() {
+  if (entradaEnCurso) return;
   const og = entradaState.origen;
   const c = DB.getCentro();
   if (!og || !c) return;
+  entradaEnCurso = true;
+  try {
+  await confirmEntradaInner(og, c);
+  } finally { entradaEnCurso = false; }
+}
+async function confirmEntradaInner(og, c) {
   if (og === 'red' && entradaState.redModo === 'suelto') {
     // ── COMPRA EN RED de KILOS SUELTOS: yo (n+1) registro; el vendedor
     //    recibe el aviso y SU app consume sus kilos sueltos en FIFO ──
@@ -3030,6 +3239,26 @@ function confirmEntrada() {
     const ct = entradaState.contraparte, l = entradaState.lote;
     const precio = parseFloat(entradaState.precioStr) || 0;
     if (!ct || !l || precio <= 0) return;
+    // v4.0 — verificación remota JUSTO antes de registrar: si el lote ya no
+    // está disponible (vendido / fusionado / transformado), se bloquea la
+    // compra. Si no hay red, se deja pasar (comportamiento offline de siempre;
+    // el filet es el Reclamar del vendedor).
+    const btnE = document.getElementById('confirmBtnEntrada');
+    const btnTxt = btnE.innerHTML;
+    btnE.disabled = true; btnE.textContent = '⏳ Verificando el lote…';
+    let estadoRemoto = null;
+    try { estadoRemoto = await fetchJson(`centros/${encodeURIComponent(ct.id)}/lotes/${l.id}/estado`); } catch { /* offline */ }
+    if (estadoRemoto && estadoRemoto !== 'disponible') {
+      btnE.innerHTML = btnTxt;
+      entradaState.lote = null;
+      document.getElementById('lotePlaceholder').style.display = 'block';
+      document.getElementById('loteInfoEl').style.display = 'none';
+      document.getElementById('loteBtn').classList.remove('selected');
+      updateEntradaUI();
+      showRecsToast(`⚠️ El lote ${l.numero || ''} ya no está disponible (${estadoRemoto})`);
+      return;
+    }
+    btnE.innerHTML = btnTxt; btnE.disabled = false;
     const esUnd = l.unidad === 'und';
     const total = Math.round(precio * (l.kg || 0) * 100) / 100;
     const entrada = DB.addEntrada({
@@ -3089,14 +3318,14 @@ function confirmEntrada() {
     DB.addEntrada({
       fecha: new Date().toISOString(), origen: og,
       recId: null,
-      recName: og === 'interna' ? 'Recolección interna' : 'Recolector desconocido',
+      recName: og === 'interna' ? 'Recolección interna' : 'Recolector externo',
       recColor: og === 'interna' ? '#16A34A' : '#94A3B8',
       matId: mat.id, matName: mat.name, kg: peso,
       unidades: esUnd ? peso : null,
       precioKg, total,
     });
     document.getElementById('successAmountEntrada').textContent = og === 'interna' ? `${peso} ${matUnidad(mat)}` : fmt(total);
-    document.getElementById('successSubEntrada').textContent = `${og === 'interna' ? '🏠 Recolección interna' : '👤 Recolector desconocido'} · ${peso} ${matUnidad(mat)} de ${mat.name}`;
+    document.getElementById('successSubEntrada').textContent = `${og === 'interna' ? '🏠 Recolección interna' : '👤 Recolector externo'} · ${peso} ${matUnidad(mat)} de ${mat.name}`;
   }
   document.getElementById('successEntrada').classList.add('show');
 }
@@ -3201,11 +3430,14 @@ function nuevoNumeroLote() {
 function renderLotes() {
   const list = document.getElementById('lotesList');
   if (!list) return;
-  const lotes = DB.getLotes();
+  // v4.0 — la lista principal solo muestra lotes ACTIVOS (disponible/vendido).
+  // Los fusionados y transformados viven en ⛓ Trazabilidad.
+  const lotes = DB.getLotes().filter(l => l.estado !== 'fusionado' && l.estado !== 'transformado');
   list.innerHTML = lotes.length ? lotes.map(renderLoteCard).join('')
-    : `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin lotes todavía</div><div class="empty-sub">Agrupa tu material suelto en un lote para poder venderlo con trazabilidad.</div></div>`;
-  // Lotes recibidos (mis compras en red) — con cierre de cadena para recicladores.
-  const recibidos = DB.getEntradas().filter(e => e.loteId && e.origenCentroId).sort((a, b) => b.id - a.id);
+    : `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin lotes activos</div><div class="empty-sub">Agrupa tu material suelto en un lote para poder venderlo con trazabilidad. Los lotes cerrados están en ⛓ Trazabilidad.</div></div>`;
+  // Lotes recibidos (mis compras en red) — con cierre de cadena para
+  // recicladores. Los ya transformados se consultan en Trazabilidad.
+  const recibidos = DB.getEntradas().filter(e => e.loteId && e.origenCentroId && !e.transformado).sort((a, b) => b.id - a.id);
   const wrap = document.getElementById('lotesRecibidosWrap');
   if (recibidos.length) {
     wrap.style.display = 'block';
@@ -3213,7 +3445,7 @@ function renderLotes() {
   } else wrap.style.display = 'none';
 }
 
-function renderLoteCard(l) {
+function renderLoteCard(l, extraHtml) {
   const mat = MATERIALES.find(m => m.id === l.matId);
   const chip = l.estado === 'vendido'
     ? `<span class="lote-chip vendido">📤 Vendido${l.compradorName ? ' → ' + escHtml(l.compradorName) : ''}</span>`
@@ -3228,23 +3460,76 @@ function renderLoteCard(l) {
   const seg = k => (r[k] || 0) > 0 ? `<div class="lote-origen-seg ${k}" style="width:${((r[k] || 0) / tot * 100).toFixed(1)}%"></div>` : '';
   const ley = [];
   if (r.red) ley.push(`<span><span style="color:var(--blue)">■</span> Red ${r.red} ${u}</span>`);
-  if (r.desconocido) ley.push(`<span><span style="color:#94A3B8">■</span> Desconocido ${r.desconocido} ${u}</span>`);
+  if (r.desconocido) ley.push(`<span><span style="color:#94A3B8">■</span> Externo ${r.desconocido} ${u}</span>`);
   if (r.interna) ley.push(`<span><span style="color:var(--green)">■</span> Interna ${r.interna} ${u}</span>`);
   if (r.nodoc) ley.push(`<span><span style="color:var(--amber)">■</span> No documentado ${r.nodoc} ${u}</span>`);
   const cadena = (Array.isArray(l.lotesOrigen) && l.lotesOrigen.length)
     ? `<div class="lote-cadena">⛓ Contiene material de ${l.lotesOrigen.length} lote${l.lotesOrigen.length > 1 ? 's' : ''} anterior${l.lotesOrigen.length > 1 ? 'es' : ''}</div>` : '';
+  // v4.0 — los lotes PADRES (fusionados en este lote) se muestran resaltados.
+  const padres = (Array.isArray(l.fusionDe) && l.fusionDe.length)
+    ? `<div class="lote-padres"><span class="lote-padres-lbl">🔗 Fusión de</span>${l.fusionDe.map(p => `<span class="padre-chip">${escHtml(p)}</span>`).join('')}</div>` : '';
   return `<div class="lote-card">
     <div class="lote-top">
       <div style="flex:1;min-width:0">
         <div class="lote-num">${mat ? mat.emoji + ' ' : ''}${escHtml(l.numero || '#' + l.id)}</div>
-        <div class="lote-sub">${escHtml(l.matName || '')} · ${cantidadLote(l)} · ${fechaLabel(l.creadoAt || new Date().toISOString())}${l.auto ? ' · venta suelta (auto)' : ''}${l.fusionDe && l.fusionDe.length ? ' · fusión de ' + l.fusionDe.map(escHtml).join(' + ') : ''}${l.precioTotal ? ' · vendido: ' + fmt(l.precioTotal) : ''}</div>
+        <div class="lote-sub">${escHtml(l.matName || '')} · ${cantidadLote(l)} · ${fechaLabel(l.creadoAt || new Date().toISOString())}${l.auto ? ' · venta suelta (auto)' : ''}${l.precioTotal ? ' · vendido: ' + fmt(l.precioTotal) : ''}</div>
       </div>
       ${chip}
     </div>
     <div class="lote-origen-bar">${seg('red')}${seg('desconocido')}${seg('interna')}${seg('nodoc')}</div>
     <div class="lote-origen-leyenda">${ley.join('')}</div>
+    ${padres}
     ${cadena}
+    ${extraHtml || ''}
   </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// SCREEN: TRAZABILIDAD (v4.0)
+//   Hero con los indicadores de la cadena + parcours de cada lote cerrado.
+// ════════════════════════════════════════════════════════════
+function trazaTimeline(l) {
+  const pasos = [];
+  const f = iso => iso ? fechaLabel(iso) : '';
+  pasos.push(`📦 <b>Creado</b> ${f(l.creadoAt)}${l.auto ? ' (venta suelta automática)' : ''}`);
+  if (l.estado === 'fusionado') pasos.push(`🔗 <b>Fusionado en ${escHtml(l.fusionadoEn || 'otro lote')}</b> ${f(l.fusionadoAt)} — su trazabilidad sigue viva en ese lote`);
+  if (l.vendidoAt || l.compradorName) pasos.push(`📤 <b>Vendido a ${escHtml(l.compradorName || 'la red')}</b> ${f(l.vendidoAt)}${l.precioTotal ? ' · ' + fmt(l.precioTotal) : ''}`);
+  if (l.estado === 'transformado') pasos.push(`♻️ <b>Transformado por ${escHtml(l.transformadoPor || 'un reciclador')}</b> ${f(l.transformadoAt)} — cadena cerrada`);
+  return `<div class="traza-paso">${pasos.join('<br>')}</div>`;
+}
+
+function renderTraza() {
+  const lotes = DB.getLotes();
+  const cerrados = lotes.filter(l => l.estado === 'vendido' || l.estado === 'fusionado' || l.estado === 'transformado')
+    .sort((a, b) => b.id - a.id);
+  const transf = cerrados.filter(l => l.estado === 'transformado');
+  const vend   = cerrados.filter(l => l.estado === 'vendido');
+  const fus    = cerrados.filter(l => l.estado === 'fusionado');
+  // Lotes recibidos que YO transformé (lado reciclador final).
+  const recibTransf = DB.getEntradas().filter(e => e.loteId && e.origenCentroId && e.transformado).sort((a, b) => b.id - a.id);
+  const r1 = n => Math.round(n * 10) / 10;
+  const kgCerrado = transf.reduce((s, l) => s + (l.kg || 0), 0) + recibTransf.reduce((s, e) => s + (e.kg || 0), 0);
+  document.getElementById('trazaKgCerrado').textContent = r1(kgCerrado);
+  document.getElementById('trazaNTransf').textContent = transf.length + recibTransf.length;
+  document.getElementById('trazaNVend').textContent = vend.length;
+  document.getElementById('trazaNFus').textContent = fus.length;
+  // % de origen documentado en los lotes cerrados (todo salvo "no documentado").
+  let totKg = 0, nodocKg = 0;
+  cerrados.forEach(l => {
+    const r = l.origenResumen || {};
+    totKg += (r.desconocido || 0) + (r.interna || 0) + (r.red || 0) + (r.nodoc || 0);
+    nodocKg += r.nodoc || 0;
+  });
+  document.getElementById('trazaPctDoc').textContent = totKg > 0 ? Math.round((totKg - nodocKg) / totKg * 100) + '%' : '—';
+  // Lado reciclador: lotes recibidos y transformados.
+  const rw = document.getElementById('trazaRecibWrap');
+  if (recibTransf.length) {
+    rw.style.display = 'block';
+    document.getElementById('trazaRecibList').innerHTML = recibTransf.map(renderLoteRecibido).join('');
+  } else rw.style.display = 'none';
+  document.getElementById('trazaList').innerHTML = cerrados.length
+    ? cerrados.map(l => renderLoteCard(l, trazaTimeline(l))).join('')
+    : `<div class="empty-state"><div class="empty-icon">⛓</div><div class="empty-title">Sin lotes cerrados aún</div><div class="empty-sub">Cuando un lote se venda, se fusione o se transforme, su parcours completo aparecerá aquí.</div></div>`;
 }
 
 // Lote que ME vendieron (compra en red). El reciclador final puede marcarlo
@@ -3271,12 +3556,37 @@ function renderLoteRecibido(e) {
   </div>`;
 }
 
-function marcarTransformado(entradaId) {
+// v4.0 — candados: nunca transformar dos veces el mismo lote (ni por doble
+// toque, ni desde otra entrada que apunte al mismo lote, ni si otro
+// dispositivo ya lo transformó — se re-verifica en remoto antes de escribir).
+let transformarEnCurso = false;
+async function marcarTransformado(entradaId) {
+  if (transformarEnCurso) return;
   const c = DB.getCentro();
   const list = DB.getEntradas();
   const e = list.find(x => x.id === entradaId);
   if (!c || !e || !e.loteId || !e.origenCentroId) return;
+  if (e.transformado) { renderLotes(); return; }
+  if (list.some(x => x.id !== e.id && x.loteId === e.loteId && x.origenCentroId === e.origenCentroId && x.transformado)) {
+    showRecsToast('⚠️ Este lote ya fue transformado');
+    renderLotes();
+    return;
+  }
   if (!confirm(`¿Marcar el lote ${e.loteNumero || ''} como transformado?\n\nEsto cierra la cadena de custodia — el vendedor verá su lote como ♻️ transformado.`)) return;
+  transformarEnCurso = true;
+  try {
+  // Verificación remota (si hay red): el lote del vendedor no debe estar ya
+  // transformado por otro dispositivo/cuenta.
+  try {
+    const est = await fetchJson(`centros/${encodeURIComponent(e.origenCentroId)}/lotes/${e.loteId}/estado`);
+    if (est === 'transformado') {
+      e.transformado = true; e.transformadoAt = new Date().toISOString();
+      localStorage.setItem('acopi_entradas', JSON.stringify(list));
+      renderLotes();
+      showRecsToast('⚠️ Este lote ya estaba transformado');
+      return;
+    }
+  } catch { /* offline: se procede en local */ }
   const ahora = new Date().toISOString();
   e.transformado = true; e.transformadoAt = ahora;
   localStorage.setItem('acopi_entradas', JSON.stringify(list));
@@ -3289,6 +3599,7 @@ function marcarTransformado(entradaId) {
   queueSync(`centros/${e.origenCentroId}/lotes/${e.loteId}/transformadoPor`, c.name);
   renderLotes();
   showRecsToast('♻️ Lote marcado como transformado — cadena cerrada');
+  } finally { transformarEnCurso = false; }
 }
 
 // ── Crear lote (drawer) ──
@@ -3422,7 +3733,7 @@ function updateCrearLoteUI() {
     (cant > 0 ? ` — ${cant} ${u} sueltos (FIFO)` : '') +
     (nSel ? `${cant > 0 ? ' +' : ' —'} fusión de ${info.fusionDe.map(escHtml).join(' + ')}` : '') + ':<br>' +
     (r.red ? `🤝 Compra en red: ${r.red} ${u}<br>` : '') +
-    (r.desconocido ? `👤 Recolector desconocido: ${r.desconocido} ${u}<br>` : '') +
+    (r.desconocido ? `👤 Recolector externo: ${r.desconocido} ${u}<br>` : '') +
     (r.interna ? `🏠 Recolección interna: ${r.interna} ${u}<br>` : '') +
     (r.nodoc ? `❓ No documentado: ${r.nodoc} ${u}<br>` : '') +
     (info.lotesOrigen.length ? `⛓ Incluye material de ${info.lotesOrigen.length} lote${info.lotesOrigen.length > 1 ? 's' : ''} anterior${info.lotesOrigen.length > 1 ? 'es' : ''}<br>` : '') +
@@ -3433,13 +3744,25 @@ function updateCrearLoteUI() {
     : `✅ Crear lote — ${info.kgTotal} ${u} de ${mat.name}`;
 }
 
+// v4.0 — candados: un doble toque no puede crear dos lotes, y los lotes
+// marcados como ingredientes se re-verifican al confirmar (si uno ya fue
+// fusionado/vendido entretanto, se bloquea — nada de fusionar dos veces).
+let lastCrearLoteAt = 0;
 function confirmCrearLote() {
+  if (Date.now() - lastCrearLoteAt < 1500) return;
   const mat = crearLoteState.material;
   const cant = parseFloat(crearLoteState.cantidadStr) || 0;
   const nSel = crearLoteState.lotesSel.length;
   if (!mat || (cant <= 0 && nSel === 0) || (cant <= 0 && nSel === 1)) return;
   const info = componerLoteCombinado(mat.id, cant, crearLoteState.lotesSel);
   if (!info.completo) { showRecsToast('⚠️ No hay suficiente material suelto'); return; }
+  if (info.fuentes.length !== nSel) {
+    showRecsToast('⚠️ Un lote seleccionado ya no está disponible — revisa la lista');
+    closeCrearLote(); renderLotes();
+    return;
+  }
+  if (info.kgTotal <= 0) return;
+  lastCrearLoteAt = Date.now();
   const numero = nuevoNumeroLote();
   const c = DB.getCentro();
   DB.addLote({
@@ -3485,17 +3808,29 @@ function initPrecios() {
 }
 
 function renderPreciosList() {
-  document.getElementById('priceListPrecios').innerHTML = MATERIALES.map(m => `
-    <div class="price-card" id="pcard-${m.id}" onclick="openSheet('${m.id}')">
+  // v4.0 — cada línea muestra también el STOCK de la materia (suelto + lotes).
+  const sueltosMap = kgSueltosPorMat();
+  const lotesAll = DB.getLotes();
+  document.getElementById('priceListPrecios').innerHTML = MATERIALES.map(m => {
+    const u = matUnidad(m);
+    const suelto = Math.round((sueltosMap[m.id] || 0) * 100) / 100;
+    const lotesDisp = lotesAll.filter(l => l.matId === m.id && l.estado === 'disponible');
+    const enLotes = Math.round(lotesDisp.reduce((s, l) => s + (l.kg || 0), 0) * 100) / 100;
+    const tot = Math.round((suelto + enLotes) * 100) / 100;
+    const stockLine = tot > 0
+      ? `<div class="mat-stock-line">📦 ${tot} ${u} en stock — ${suelto} ${u} sueltos${lotesDisp.length ? ' · ' + enLotes + ' ' + u + ' en ' + lotesDisp.length + ' lote' + (lotesDisp.length > 1 ? 's' : '') : ''}</div>`
+      : `<div class="mat-stock-line cero">Sin stock</div>`;
+    return `<div class="price-card" id="pcard-${m.id}" onclick="openSheet('${m.id}')">
       <div class="mat-icon">${m.emoji}</div>
-      <div class="mat-info"><div class="mat-name-p">${m.name}</div><div class="mat-hint">${m.hint}</div></div>
+      <div class="mat-info"><div class="mat-name-p">${m.name}</div>${stockLine}</div>
       <div class="mat-price-badge">
         <span class="mat-price-sol">S/</span>
         <span class="mat-price-val" id="pval-${m.id}">${m.precio.toFixed(2)}</span>
-        <span class="mat-price-kg">/${matUnidad(m)}</span>
+        <span class="mat-price-kg">/${u}</span>
       </div>
       <span class="mat-edit-icon">✏️</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function openSheet(id) {
@@ -3638,7 +3973,7 @@ function closeHistorial() {
 function renderHistorial() {
   const matName = id => MATERIALES.find(m=>m.id===id)?.name || '';
   const items = [
-    ...DB.getEntradas().map(e=>({ tipo:'entrada', fecha:e.fecha, title:e.recName||'Desconocido', sub:`${e.matName||matName(e.matId)} · ${e.kg} kg`, total:e.total })),
+    ...DB.getEntradas().map(e=>({ tipo:'entrada', fecha:e.fecha, title:e.recName||'Recolector externo', sub:`${e.matName||matName(e.matId)} · ${e.kg} kg`, total:e.total })),
     ...DB.getVentas().map(v=>({ tipo:'venta',   fecha:v.fecha, title:v.comprador||'Venta',       sub:`${v.matName||matName(v.matId)} · ${v.kg} kg`, total:v.total })),
   ].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const list = document.getElementById('historialList');
@@ -3799,6 +4134,8 @@ function showRecsToast(msg) {
 // BOOT
 // ════════════════════════════════════════════════════════════
 updateCentroDisplay();
+notifsDesde();        // v4.0 — fija la fecha de instalación de la campana
+renderNotifBadge();   // v4.0 — pinta el contador de no leídas al arrancar
 goTo('resumen');
 // La cuenta (login/registro) se maneja en auth.onAuthStateChanged, más arriba.
 
