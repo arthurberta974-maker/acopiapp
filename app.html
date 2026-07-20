@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 4.0                                                 -->
+  <!-- Version : 5.2                                                 -->
   <!-- Date    : 20/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -30,7 +30,13 @@
       --red: #DC2626; --red-light: #FEE2E2;
       --radius: 12px; --radius-sm: 8px;
       --nav-h: 60px;
+      --topbar: #0F172A;
     }
+    /* ── v5.2 : thème par TYPE DE COMPTE (topbar + fond) ──
+       centro = bleu · sinba = morado (charte Sinba) · reciclador = vert */
+    body.acct-centro     { --topbar: #1E3A8A; --bg: #EFF4FB; }
+    body.acct-sinba      { --topbar: #5B21B6; --bg: #F5F1FB; }
+    body.acct-reciclador { --topbar: #166534; --bg: #EFFAF3; }
     html, body {
       height: 100%; background: var(--bg);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -39,7 +45,7 @@
     body { display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; min-height: 100dvh; }
 
     /* ── TOPBAR ── */
-    .topbar { background: var(--accent); color: white; padding: env(safe-area-inset-top, 0) 16px 0; flex-shrink: 0; }
+    .topbar { background: var(--topbar); color: white; padding: env(safe-area-inset-top, 0) 16px 0; flex-shrink: 0; transition: background 0.3s; }
     .topbar-inner { display: flex; align-items: center; padding: 14px 0; gap: 12px; }
     #tb-brand { display: flex; flex-direction: column; flex: 1; }
     .topbar-title { font-size: 17px; font-weight: 700; }
@@ -47,8 +53,6 @@
     .topbar-badge { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9); }
     .back-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     #tb-info { flex: 1; }
-    .topbar-add-btn { background: rgba(255,255,255,0.15); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 300; line-height: 1; }
-    .topbar-add-btn:active { background: rgba(255,255,255,0.25); }
 
     /* ── SCREENS ── */
     .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; }
@@ -62,7 +66,6 @@
     #screen-precios   .scroll-area { padding-bottom: 170px; }
     #screen-whatsapp  .scroll-area { padding-bottom: 180px; }
     #screen-finanzas  .scroll-area { padding-bottom: 80px; }
-    #screen-recs      .scroll-area { padding-bottom: 80px; }
 
     .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 8px; }
 
@@ -423,57 +426,8 @@
     .copy-btn { background: transparent; color: var(--text-secondary); border: none; padding: 4px; font-size: 13px; font-weight: 500; cursor: pointer; text-align: center; width: 100%; }
     .copy-btn:active { color: var(--accent); }
 
-    /* ── RECICLADORES ── */
-    .search-wrap { position: relative; }
-    .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
-    .search-input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 12px 12px 38px; font-size: 15px; color: var(--text-primary); outline: none; transition: border-color 0.15s; }
-    .search-input:focus { border-color: var(--accent); }
-    .search-input::placeholder { color: var(--text-muted); }
-    .stats-bar { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; display: flex; }
-    .stat-item { flex: 1; text-align: center; }
-    .stat-item + .stat-item { border-left: 1px solid var(--border); }
-    .stat-value { font-size: 20px; font-weight: 900; }
-    .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
-    .rec-list { display: flex; flex-direction: column; gap: 8px; }
-    .rec-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; transition: border-color 0.15s; }
-    .rec-card:active { border-color: var(--accent); }
-    .rec-avatar-big { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: white; flex-shrink: 0; }
-    .rec-body { flex: 1; min-width: 0; }
-    .rec-name-card { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .rec-phone-card { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .rec-right-card { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-    .rec-kg { font-size: 15px; font-weight: 800; color: var(--green); }
-    .rec-kg-label { font-size: 10px; color: var(--text-muted); font-weight: 500; }
-    .rec-medal { font-size: 16px; }
-    .empty-state-recs { display: none; flex-direction: column; align-items: center; text-align: center; padding: 48px 24px; gap: 12px; }
-    .empty-state-recs.show { display: flex; }
-    .empty-icon-recs { font-size: 52px; }
-    .empty-title-recs { font-size: 17px; font-weight: 700; }
-    .empty-sub-recs { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
-    .empty-btn-recs { margin-top: 8px; background: var(--accent); color: white; border: none; border-radius: var(--radius); padding: 14px 28px; font-size: 15px; font-weight: 700; cursor: pointer; }
-    .empty-btn-recs:active { opacity: 0.85; }
-    .no-results { display: none; text-align: center; padding: 32px 0; color: var(--text-muted); font-size: 14px; }
-    .no-results.show { display: block; }
-    /* Recs drawer */
-    .recs-drawer-body { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
-    .recs-drawer-sub { padding: 0 16px 12px; font-size: 13px; color: var(--text-muted); }
-    .field-label-r { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px; }
-    .field-input-r { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 13px 14px; font-size: 15px; color: var(--text-primary); outline: none; transition: border-color 0.15s; font-family: inherit; }
-    .field-input-r:focus { border-color: var(--accent); }
-    .field-input-r::placeholder { color: var(--text-muted); }
-    .color-row { display: flex; gap: 10px; flex-wrap: wrap; }
-    .color-dot { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.15s, border-color 0.15s; }
-    .color-dot.selected { border-color: var(--accent); transform: scale(1.15); }
-    .color-dot:active { transform: scale(0.95); }
-    .preview-row-r { display: flex; align-items: center; gap: 12px; background: var(--bg); border-radius: var(--radius-sm); padding: 12px; }
-    .preview-avatar-r { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: white; flex-shrink: 0; }
-    .preview-name-r { font-size: 15px; font-weight: 700; }
-    .preview-hint-r { font-size: 12px; color: var(--text-muted); }
-    .drawer-footer-r { padding: 16px 16px 4px; display: flex; gap: 10px; }
-    .btn-cancel-r { flex: 1; background: var(--bg); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 15px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
-    .btn-save-r { flex: 2; background: var(--accent); border: none; border-radius: var(--radius); padding: 14px; font-size: 15px; font-weight: 700; color: white; cursor: pointer; transition: opacity 0.15s; }
-    .btn-save-r:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
-    .btn-save-r:not(:disabled):active { opacity: 0.85; }
+    /* ── TOAST GLOBAL (v5.1 : le CSS de l'écran Recicladores a été supprimé
+          avec l'écran ; seul le toast — utilisé par toute l'app — reste) ── */
     .toast-recs { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--accent); color: white; padding: 13px 20px; border-radius: 50px; font-size: 14px; font-weight: 600; white-space: nowrap; z-index: 200; transition: transform 0.3s cubic-bezier(0.32,0.72,0,1), opacity 0.3s; opacity: 0; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
     .toast-recs.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
@@ -544,7 +498,8 @@
     /* ── v4.0 : LOTES — padres resaltados + botón trazabilidad ── */
     .lote-padres { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; align-items: center; }
     .lote-padres-lbl { font-size: 10px; font-weight: 700; color: var(--text-secondary); }
-    .padre-chip { background: #EDE9FE; color: #6D28D9; border: 1.5px solid #C4B5FD; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 12px; }
+    .padre-chip { background: #EDE9FE; color: #6D28D9; border: 1.5px solid #C4B5FD; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .padre-chip:active { background: #C4B5FD; }
     .traza-btn { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); padding: 13px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; text-align: left; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--text-primary); -webkit-tap-highlight-color: transparent; }
     .traza-btn:active { border-color: var(--accent); }
 
@@ -556,7 +511,7 @@
     /* ── v4.0 : NOTIFICACIONES (campana topbar + drawer) ── */
     .notif-bell { position: relative; background: rgba(255,255,255,0.15); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
     .notif-bell:active { background: rgba(255,255,255,0.28); }
-    .notif-badge { position: absolute; top: -3px; right: -3px; background: var(--red); color: white; font-size: 10px; font-weight: 800; min-width: 17px; height: 17px; border-radius: 9px; display: none; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--accent); line-height: 1; }
+    .notif-badge { position: absolute; top: -3px; right: -3px; background: var(--red); color: white; font-size: 10px; font-weight: 800; min-width: 17px; height: 17px; border-radius: 9px; display: none; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid var(--topbar); line-height: 1; }
     .notif-badge.show { display: flex; }
     .notif-item { display: flex; gap: 10px; padding: 12px 6px; border-bottom: 1px solid var(--border); align-items: flex-start; }
     .notif-item.nueva { background: var(--blue-light); border-radius: 10px; border-bottom-color: transparent; padding: 12px 10px; }
@@ -576,6 +531,29 @@
     .stock-row-mini .srm-name { font-size: 13px; font-weight: 700; flex: 1; min-width: 0; }
     .stock-row-mini .srm-kg { font-size: 16px; font-weight: 900; }
     .stock-row-mini .srm-unit { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+    /* ── v5.0 : TRANSFORMADOS (sección gris plegada en Lotes) ── */
+    .transf-toggle { background: #F1F5F9; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 16px; width: 100%; text-align: left; font-family: inherit; font-size: 13px; font-weight: 700; color: #64748B; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .transf-toggle:active { background: #E2E8F0; }
+    #transformadosList { margin-top: 8px; }
+    #transformadosList .lote-card { opacity: 0.62; border-color: #E2E8F0; background: #F8FAFC; }
+    /* v5.0 : surbrillance temporaire du lot ciblé dans Trazabilidad */
+    .lote-flash { animation: loteFlash 2s ease-out; }
+    @keyframes loteFlash { 0%, 40% { box-shadow: 0 0 0 3px #7C3AED; } 100% { box-shadow: none; } }
+
+    /* ── v5.0 : QR (modal vendedor + escáner comprador) ── */
+    .qr-mini-btn { background: var(--surface); color: var(--text-secondary); border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 10px; margin-right: 6px; }
+    .qr-mini-btn:active { border-color: var(--accent); color: var(--accent); }
+    .qr-modal-body { padding: 8px 16px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+    .qr-canvas-wrap { background: white; padding: 14px; border-radius: 12px; border: 1.5px solid var(--border); }
+    .qr-lote-num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
+    .scan-overlay { position: fixed; inset: 0; background: #000; z-index: 400; display: none; flex-direction: column; }
+    .scan-overlay.show { display: flex; }
+    .scan-video { flex: 1; object-fit: cover; width: 100%; }
+    .scan-topbar { position: absolute; top: 0; left: 0; right: 0; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 14px; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(rgba(0,0,0,0.6), transparent); color: white; font-size: 15px; font-weight: 700; }
+    .scan-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; font-size: 17px; cursor: pointer; }
+    .scan-frame { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 230px; height: 230px; border: 3px solid rgba(255,255,255,0.85); border-radius: 18px; pointer-events: none; }
+    .scan-hint { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); left: 0; right: 0; text-align: center; color: white; font-size: 13px; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.7); padding: 0 24px; line-height: 1.5; }
 
     /* ── v4.0 : STOCK (pantalla Precios → Stock y precios) ── */
     .mat-stock-line { font-size: 11px; font-weight: 700; color: var(--green); margin-top: 3px; }
@@ -627,7 +605,6 @@
       <div class="topbar-title" id="tb-title">—</div>
       <div class="topbar-sub" id="tb-sub">—</div>
     </div>
-    <button id="tb-add" class="topbar-add-btn" style="display:none" onclick="openRecsDrawer()">+</button>
     <!-- v4.0 : campana de notificaciones — visible en todas las pantallas -->
     <button id="tb-notif" class="notif-bell" onclick="openNotifs()">🔔<span class="notif-badge" id="notifBadge">0</span></button>
   </div>
@@ -750,6 +727,11 @@
             </div>
             <span class="chevron">›</span>
           </button>
+          <!-- v5.0 : scan du QR du vendeur, ou saisie du numéro sans caméra -->
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="qr-mini-btn" style="flex:1;margin:0;text-align:center;padding:10px" onclick="abrirScanQR()">📷 Escanear QR</button>
+            <button class="qr-mini-btn" style="flex:1;margin:0;text-align:center;padding:10px" onclick="ingresarNumeroLote()">⌨️ Ingresar número</button>
+          </div>
         </div>
         <div>
           <div class="section-label" id="entradaPrecioLabel">Precio acordado (S/ por kg)</div>
@@ -843,7 +825,12 @@
       <div class="section-label">📦 Mis lotes</div>
       <div id="lotesList"></div>
     </div>
-    <div class="nota"><strong>💡 ¿Qué es un lote?</strong><br>Agrupas tu material suelto en lotes numerados. Cuando alguien te compra un lote, la transacción llega sola a tus registros — y la trazabilidad (de dónde vino cada kilo) viaja con el número de lote.</div>
+    <!-- v5.0 : accordéon gris des lots transformés (lots propres + reçus) -->
+    <div id="transformadosWrap" style="display:none">
+      <button class="transf-toggle" id="transfToggle" onclick="toggleTransformados()">♻️ Transformados (<span id="transfCount">0</span>) <span id="transfChevron">▾</span></button>
+      <div id="transformadosList" style="display:none"></div>
+    </div>
+    <div class="nota" id="lotesNota"><strong>💡 ¿Qué es un lote?</strong><br>Agrupas tu material suelto en lotes numerados. Cuando alguien te compra un lote, la transacción llega sola a tus registros — y la trazabilidad (de dónde vino cada kilo) viaja con el número de lote.</div>
   </div>
   <div class="bottom-cta">
     <button class="confirm-btn" id="crearLoteBtn" onclick="openCrearLote()">➕ Crear lote</button>
@@ -957,31 +944,10 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: RECICLADORES ══════════════════════════════════ -->
-<div id="screen-recs" class="screen">
-  <div class="scroll-area">
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input class="search-input" id="recsSearchInput" type="text" placeholder="Buscar por nombre..." oninput="onRecsSearch(this.value)" autocomplete="off" autocorrect="off">
-    </div>
-    <div class="stats-bar" id="recsStatsBar" style="display:none">
-      <div class="stat-item"><div class="stat-value" id="statTotal">—</div><div class="stat-label">Recicladores</div></div>
-      <div class="stat-item"><div class="stat-value" id="statKg">—</div><div class="stat-label">kg este mes</div></div>
-      <div class="stat-item"><div class="stat-value" id="statActivos">—</div><div class="stat-label">activos este mes</div></div>
-    </div>
-    <div class="section-label" id="recsListLabel" style="display:none">Este mes</div>
-    <div class="rec-list" id="recList"></div>
-    <div class="no-results" id="noResults">Ningún reciclador coincide con "<span id="noResultsQuery"></span>"</div>
-    <div class="empty-state-recs" id="recsEmptyState">
-      <div class="empty-icon-recs">👷</div>
-      <div class="empty-title-recs">Sin recicladores aún</div>
-      <div class="empty-sub-recs">Agrega los recicladores que trabajan con tu centro para llevar un seguimiento.</div>
-      <button class="empty-btn-recs" onclick="openRecsDrawer()">+ Agregar primer reciclador</button>
-    </div>
-  </div>
-</div>
+<!-- (v5.1 : l'écran RECICLADORES — annuaire — a été supprimé. Il était hors
+     nav depuis le 02/07/2026. La couche DB recicladores est conservée pour la
+     compatibilité des données ; un annuaire pourra renaître en V2.) -->
 
-<!-- ── BOTTOM NAV ── -->
 <!-- ══════════════════════════════════ SCREEN: PAGOS ══════════════════════════════════ -->
 <div id="screen-pagos" class="screen">
   <div class="scroll-area" style="padding-bottom:80px">
@@ -1059,39 +1025,6 @@
 
 <!-- (v2.0 : le drawer "reciclador" de l'écran Entrada a été retiré — les
      origines sont désormais desconocido / interna / compra en red.) -->
-
-<!-- ── RECICLADORES: ADD DRAWER ── -->
-<div class="drawer-overlay" id="recsDrawerOverlay" onclick="closeRecsDrawer()"></div>
-<div class="drawer" id="recsDrawer">
-  <div class="drawer-handle"></div>
-  <div class="drawer-header">Nuevo Reciclador</div>
-  <div class="recs-drawer-sub">El reciclador no necesita la app — solo tú gestionas este directorio.</div>
-  <div class="recs-drawer-body">
-    <div class="preview-row-r" id="recsPreviewRow">
-      <div class="preview-avatar-r" id="recsPreviewAvatar" style="background:#94A3B8">??</div>
-      <div>
-        <div class="preview-name-r" id="recsPreviewName" style="color:var(--text-muted)">Nombre completo</div>
-        <div class="preview-hint-r">Vista previa del avatar</div>
-      </div>
-    </div>
-    <div>
-      <div class="field-label-r">Nombre *</div>
-      <input class="field-input-r" id="recsInputNombre" type="text" placeholder="Ej: Juan Mamani" autocomplete="off" autocorrect="off" oninput="onRecsNombreInput(this.value)">
-    </div>
-    <div>
-      <div class="field-label-r">Teléfono <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></div>
-      <input class="field-input-r" id="recsInputTelefono" type="tel" placeholder="Ej: 984 321 001" autocomplete="off">
-    </div>
-    <div>
-      <div class="field-label-r">Color del avatar</div>
-      <div class="color-row" id="recsColorRow"></div>
-    </div>
-  </div>
-  <div class="drawer-footer-r">
-    <button class="btn-cancel-r" onclick="closeRecsDrawer()">Cancelar</button>
-    <button class="btn-save-r" id="recsBtnSave" disabled onclick="saveRecsRec()">Guardar</button>
-  </div>
-</div>
 
 <!-- TOASTS -->
 <div class="toast-recs" id="toastRecs">✅ Reciclador agregado</div>
@@ -1185,6 +1118,33 @@
   </div>
 </div>
 
+<!-- ── QR DEL LOTE (v5.0, lado vendedor) ── -->
+<div class="drawer-overlay" id="qrOverlay" onclick="closeQrLote()"></div>
+<div class="drawer" id="qrDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">🔳 Código QR del lote</div>
+  <div class="qr-modal-body">
+    <div class="qr-lote-num" id="qrLoteNum">—</div>
+    <div id="qrLoteSub" style="font-size:12px;color:var(--text-muted)">—</div>
+    <div class="qr-canvas-wrap" id="qrCanvasWrap"></div>
+    <!-- v5.1 : compartir (imagen PNG por WhatsApp etc.) o imprimir (papel
+         pegado en el fardo) -->
+    <div style="display:flex;gap:8px;width:100%">
+      <button class="qr-mini-btn" style="flex:1;margin:0;padding:11px" onclick="compartirQR()">📤 Compartir</button>
+      <button class="qr-mini-btn" style="flex:1;margin:0;padding:11px" onclick="imprimirQR()">🖨️ Imprimir</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-secondary);line-height:1.5">El comprador lo escanea desde <b>Nueva Entrada → 🤝 Compra en red → 📷 Escanear QR</b>.<br>¿Sin cámara? Puede ingresar el número del lote a mano.</div>
+  </div>
+</div>
+
+<!-- ── ESCÁNER QR (v5.0, lado comprador) ── -->
+<div class="scan-overlay" id="scanOverlay">
+  <video class="scan-video" id="scanVideo" playsinline muted></video>
+  <div class="scan-frame"></div>
+  <div class="scan-topbar"><span>📷 Escanear código QR</span><button class="scan-close" onclick="cerrarScanQR()">✕</button></div>
+  <div class="scan-hint" id="scanHint">Apunta al código QR del lote (en la pantalla o el papel del vendedor)</div>
+</div>
+
 <!-- ── NOTIFICACIONES DRAWER (v4.0) ── -->
 <div class="drawer-overlay" id="notifsOverlay" onclick="closeNotifs()"></div>
 <div class="drawer historial-drawer" id="notifsDrawer">
@@ -1206,6 +1166,13 @@
   </div>
   <div class="historial-body" id="historialList"></div>
 </div>
+
+<script>
+// ── qrcode-generator v1.4.4 (c) Kazuhiko Arase — licence MIT ──
+// https://github.com/kazuhikoarase/qrcode-generator — embarqué inline
+// (minifié) pour rester sans dépendance réseau. Expose window.qrcode.
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(n*r,o*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+</script>
 
 <script>
 // ════════════════════════════════════════════════════════════
@@ -2120,9 +2087,25 @@ async function resetMisDatos() {
   if (currentScreen === 'pagos') renderPagos();
   showRecsToast('🗑️ Transacciones borradas (local y red)');
 }
+// v5.2 — thème visuel par type de compte : topbar + fond + barre système.
+const ACCT_THEME = {
+  centro:     { clase: 'acct-centro',     color: '#1E3A8A', tag: '📦 Centro de acopio' },
+  sinba:      { clase: 'acct-sinba',      color: '#5B21B6', tag: '🏭 Planta SinBa' },
+  reciclador: { clase: 'acct-reciclador', color: '#166534', tag: '♻️ Reciclador final' },
+};
+function aplicarTemaCuenta() {
+  const c = DB.getCentro();
+  const t = ACCT_THEME[(c && c.tipo) || 'centro'] || ACCT_THEME.centro;
+  document.body.classList.remove('acct-centro', 'acct-sinba', 'acct-reciclador');
+  document.body.classList.add(t.clase);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t.color);
+  return t;
+}
 function updateCentroDisplay() {
   const centro = DB.getCentro();
-  document.getElementById('tb-brand-sub').textContent = centro ? centro.name : 'Centro de acopio';
+  const t = aplicarTemaCuenta();
+  document.getElementById('tb-brand-sub').textContent = centro ? `${centro.name} · ${t.tag}` : 'Centro de acopio';
 }
 auth.onAuthStateChanged(user => {
   if (!user) { openCentroSetup(false); return; }
@@ -2179,15 +2162,16 @@ function renderOrigenDrawerList(q) {
     list.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px">Aún no hay otras cuentas registradas en la red.</div>';
     return;
   }
-  const filtered = origenDirectorio.filter(c => c.name.toLowerCase().includes(q.trim().toLowerCase()));
+  // v5.1 — los recicladores finales NO venden (fin de cadena): no aparecen
+  // como contraparte de una compra.
+  const filtered = origenDirectorio.filter(c => c.tipo !== 'reciclador' && c.name.toLowerCase().includes(q.trim().toLowerCase()));
   const tipoTag = t => t === 'sinba' ? ' <span style="font-size:11px;color:var(--text-muted)">🏭 SinBa</span>' : t === 'reciclador' ? ' <span style="font-size:11px;color:#7C3AED">♻️ Reciclador</span>' : '';
   list.innerHTML = filtered.length ? filtered.map(c => `
     <div onclick="selectOrigenCentro('${c.id}')" style="padding:12px 4px;border-bottom:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600">${escHtml(c.name)}${tipoTag(c.tipo)}</div>
   `).join('') : '<div style="padding:16px;color:var(--text-muted);font-size:13px">Sin resultados.</div>';
 }
-function selectOrigenCentro(id) {
-  const c = origenDirectorio.find(x => x.id === id);
-  if (!c) return;
+// v5.0 — factorisé : réutilisé par le drawer ET par le scan QR.
+function aplicarContraparte(c) {
   entradaState.contraparte = c;
   // Cambiar de vendedor invalida el lote elegido antes.
   entradaState.lote = null;
@@ -2202,6 +2186,11 @@ function selectOrigenCentro(id) {
   document.getElementById('recNameEl').textContent  = c.name;
   document.getElementById('recPhoneEl').textContent = c.tipo === 'sinba' ? '🏭 Planta SinBa' : c.tipo === 'reciclador' ? '♻️ Reciclador final' : '🤝 Acopiador de la red';
   document.getElementById('recBtn').classList.add('selected');
+}
+function selectOrigenCentro(id) {
+  const c = origenDirectorio.find(x => x.id === id);
+  if (!c) return;
+  aplicarContraparte(c);
   closeOrigenDrawer();
   updateEntradaUI();
 }
@@ -2292,7 +2281,7 @@ const SCREEN_CFG = {
   whatsapp: { title: '📲 Enviar Precios',    sub: 'Difunde tus precios por WhatsApp', back: true, add: false },
   finanzas: { title: '📈 Finanzas',          sub: 'Gastos, ingresos y ganancia potencial', back: true, add: false },
   pagos:    { title: '💵 Pagos',             sub: 'Por pagar y por cobrar',      back: true,  add: false },
-  recs:     { title: '👷 Recicladores',      sub: '',                            back: true,  add: true  }, // pantalla retirada de la navegación (sin recicladores desde 2026-07-02)
+  // (v5.1 : la entrada "recs" fue eliminada junto con la pantalla Recicladores.)
 };
 
 let currentScreen = 'resumen';
@@ -2318,7 +2307,6 @@ function goTo(id) {
     document.getElementById('tb-badge').style.display = 'block';
     document.getElementById('tb-back').style.display  = 'none';
     document.getElementById('tb-info').style.display  = 'none';
-    document.getElementById('tb-add').style.display   = 'none';
   } else {
     document.getElementById('tb-brand').style.display = 'none';
     document.getElementById('tb-badge').style.display = 'none';
@@ -2326,7 +2314,6 @@ function goTo(id) {
     document.getElementById('tb-info').style.display  = 'block';
     document.getElementById('tb-title').textContent   = cfg.title;
     document.getElementById('tb-sub').textContent     = cfg.sub;
-    document.getElementById('tb-add').style.display   = cfg.add ? 'flex' : 'none';
   }
   currentScreen = id;
   // per-screen init
@@ -2338,7 +2325,6 @@ function goTo(id) {
   if (id === 'whatsapp') initWhatsapp();
   if (id === 'finanzas') initFinanzas();
   if (id === 'pagos')    initPagos();
-  if (id === 'recs')     renderRecs();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2440,12 +2426,20 @@ function renderResumenSintesis(stats) {
   const lotesCreados  = DB.getLotes().filter(l => !l.auto && l.creadoAt && isMesSel(l.creadoAt)).length;
   const lotesVendidos = DB.getLotes().filter(l => l.vendidoAt && isMesSel(l.vendidoAt)).length;
   const celda = (val, lbl) => `<div class="sintesis-cell"><div class="sintesis-val">${val}</div><div class="sintesis-lbl">${lbl}</div></div>`;
+  // v5.1 — el reciclador final no vende: su indicador clave son los kg
+  // TRANSFORMADOS del mes (lotes propios + lotes recibidos transformados).
+  let celdaVentaOTransf = celda(lotesVendidos, '📤 Lotes vendidos');
+  if (isReciclador()) {
+    const kgT = DB.getLotes().filter(l => l.estado === 'transformado' && l.transformadoAt && isMesSel(l.transformadoAt)).reduce((s, l) => s + (l.kg || 0), 0)
+      + DB.getEntradas().filter(e => e.transformado && e.transformadoAt && isMesSel(e.transformadoAt)).reduce((s, e) => s + (e.kg || 0), 0);
+    celdaVentaOTransf = celda(r1(kgT) + ' kg', '♻️ Transformados');
+  }
   el.innerHTML =
     celda(r1(stats.kgComp) + ' kg', '⬇ Comprados') +
     celda(r1(stats.kgVend) + ' kg', '⬆ Vendidos') +
     celda(stats.entradas.length + stats.ventas.length, '🧾 Transacciones') +
     celda(lotesCreados, '📦 Lotes creados') +
-    celda(lotesVendidos, '📤 Lotes vendidos') +
+    celdaVentaOTransf +
     celda(DB.getLotes().filter(l => l.estado === 'disponible').length, '✔ Lotes en stock');
 }
 
@@ -3063,9 +3057,8 @@ function closeLotePicker() {
 }
 function cantidadLote(l) { return `${l.kg || 0} ${l.unidad === 'und' ? 'und' : 'kg'}`; }
 
-function selectLote(id) {
-  const l = lotesVendedor.find(x => x.id === id);
-  if (!l) return;
+// v5.0 — factorisé : réutilisé par le picker ET par le scan QR / saisie numéro.
+function aplicarLoteSeleccion(l) {
   entradaState.lote = l;
   document.getElementById('lotePlaceholder').style.display = 'none';
   document.getElementById('loteInfoEl').style.display = 'block';
@@ -3075,6 +3068,11 @@ function selectLote(id) {
   const esUnd = l.unidad === 'und';
   document.getElementById('entradaPrecioLabel').textContent = esUnd ? 'Precio acordado (S/ por unidad)' : 'Precio acordado (S/ por kg)';
   document.getElementById('precioRedUnit').textContent = esUnd ? '/und' : '/kg';
+}
+function selectLote(id) {
+  const l = lotesVendedor.find(x => x.id === id);
+  if (!l) return;
+  aplicarLoteSeleccion(l);
   closeLotePicker();
   updateEntradaUI();
 }
@@ -3369,10 +3367,16 @@ let crearLoteState = { material: null, cantidadStr: '0', lotesSel: [] };
 
 function initLotes() {
   loadMatPrices();
+  // v5.1 — el reciclador final no vende: su nota explica el rol de cierre.
+  const nota = document.getElementById('lotesNota');
+  if (nota && isReciclador()) nota.innerHTML = '<strong>💡 ¿Qué es un lote?</strong><br>Agrupas tus lotes recibidos y tu material en un lote propio para <b>transformarlo</b> con trazabilidad. Como reciclador final, tus lotes no se venden — tú cierras la cadena.';
   renderLotes();
 }
 
 // kg de cada entrada aún NO comprometidos en un lote (por materia).
+// v5.0 — las entradas TRANSFORMADAS ya no existen como stock: su material
+// salió de la cadena (regla de Arthur: o se agrupa Y LUEGO se transforma el
+// lote, o se transforma suelta y ya no se puede agrupar — nunca las dos).
 function kgSueltosPorMat() {
   // Los lotes FUSIONADOS no cuentan: su composición vive ahora en el lote
   // que los absorbió (contarlos dos veces inflaría los kilos usados).
@@ -3380,6 +3384,7 @@ function kgSueltosPorMat() {
   DB.getLotes().forEach(l => { if (l.estado === 'fusionado') return; (l.composicion || []).forEach(cp => { usados[cp.entradaId] = (usados[cp.entradaId] || 0) + (cp.kg || 0); }); });
   const sueltos = {};
   DB.getEntradas().forEach(e => {
+    if (e.transformado) return; // v5.0 — material transformado = fuera del stock
     const resto = Math.max(0, (e.kg || 0) - (usados[e.id] || 0));
     sueltos[e.matId] = (sueltos[e.matId] || 0) + resto;
   });
@@ -3391,9 +3396,20 @@ function kgSueltosPorMat() {
 function entradasDisponibles(matId) {
   const usados = {};
   DB.getLotes().forEach(l => { if (l.estado === 'fusionado') return; (l.composicion || []).forEach(cp => { usados[cp.entradaId] = (usados[cp.entradaId] || 0) + (cp.kg || 0); }); });
-  return DB.getEntradas().filter(e => e.matId === matId).sort((a, b) => a.id - b.id)
+  return DB.getEntradas().filter(e => e.matId === matId && !e.transformado).sort((a, b) => a.id - b.id)
     .map(e => ({ e, resto: Math.max(0, (e.kg || 0) - (usados[e.id] || 0)) }))
     .filter(x => x.resto > 0);
+}
+
+// v5.0 — kilos de una entrada ya comprometidos en MIS lotes (no fusionados).
+// Sirve para bloquear la transformación de un material ya agrupado.
+function kgComprometidos(entradaId) {
+  let usados = 0;
+  DB.getLotes().forEach(l => { if (l.estado === 'fusionado') return; (l.composicion || []).forEach(cp => { if (cp.entradaId === entradaId) usados += cp.kg || 0; }); });
+  return Math.round(usados * 100) / 100;
+}
+function loteQueContiene(entradaId) {
+  return DB.getLotes().find(l => l.estado !== 'fusionado' && (l.composicion || []).some(cp => cp.entradaId === entradaId)) || null;
 }
 
 // Composición FIFO de un lote de "cantidad" kg: qué entradas lo forman, con
@@ -3436,13 +3452,32 @@ function renderLotes() {
   list.innerHTML = lotes.length ? lotes.map(renderLoteCard).join('')
     : `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin lotes activos</div><div class="empty-sub">Agrupa tu material suelto en un lote para poder venderlo con trazabilidad. Los lotes cerrados están en ⛓ Trazabilidad.</div></div>`;
   // Lotes recibidos (mis compras en red) — con cierre de cadena para
-  // recicladores. Los ya transformados se consultan en Trazabilidad.
+  // recicladores. Los ya transformados bajan a la sección gris.
   const recibidos = DB.getEntradas().filter(e => e.loteId && e.origenCentroId && !e.transformado).sort((a, b) => b.id - a.id);
   const wrap = document.getElementById('lotesRecibidosWrap');
   if (recibidos.length) {
     wrap.style.display = 'block';
     document.getElementById('lotesRecibidosList').innerHTML = recibidos.map(renderLoteRecibido).join('');
   } else wrap.style.display = 'none';
+  // v5.0 — sección gris plegada: lotes propios transformados + recibidos
+  // transformados (el détail completo sigue en ⛓ Trazabilidad).
+  const transfPropios = DB.getLotes().filter(l => l.estado === 'transformado').sort((a, b) => b.id - a.id);
+  const transfRecibidos = DB.getEntradas().filter(e => e.loteId && e.origenCentroId && e.transformado).sort((a, b) => b.id - a.id);
+  const tWrap = document.getElementById('transformadosWrap');
+  const n = transfPropios.length + transfRecibidos.length;
+  if (n > 0) {
+    tWrap.style.display = 'block';
+    document.getElementById('transfCount').textContent = n;
+    document.getElementById('transformadosList').innerHTML =
+      transfPropios.map(l => renderLoteCard(l)).join('') + transfRecibidos.map(renderLoteRecibido).join('');
+  } else tWrap.style.display = 'none';
+}
+
+function toggleTransformados() {
+  const list = document.getElementById('transformadosList');
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  document.getElementById('transfChevron').textContent = open ? '▾' : '▴';
 }
 
 function renderLoteCard(l, extraHtml) {
@@ -3466,8 +3501,16 @@ function renderLoteCard(l, extraHtml) {
   const cadena = (Array.isArray(l.lotesOrigen) && l.lotesOrigen.length)
     ? `<div class="lote-cadena">⛓ Contiene material de ${l.lotesOrigen.length} lote${l.lotesOrigen.length > 1 ? 's' : ''} anterior${l.lotesOrigen.length > 1 ? 'es' : ''}</div>` : '';
   // v4.0 — los lotes PADRES (fusionados en este lote) se muestran resaltados.
+  // v5.0 — chips cliquables: tap → détail du parent dans Trazabilidad.
   const padres = (Array.isArray(l.fusionDe) && l.fusionDe.length)
-    ? `<div class="lote-padres"><span class="lote-padres-lbl">🔗 Fusión de</span>${l.fusionDe.map(p => `<span class="padre-chip">${escHtml(p)}</span>`).join('')}</div>` : '';
+    ? `<div class="lote-padres"><span class="lote-padres-lbl">🔗 Fusión de</span>${l.fusionDe.map(p => `<span class="padre-chip" onclick="verLoteEnTraza('${escHtml(p)}')">${escHtml(p)}</span>`).join('')}</div>` : '';
+  // v5.0 — caso a): el reciclador transforma su lote PROPIO (disponible).
+  const accionTransf = (isReciclador() && l.estado === 'disponible')
+    ? `<button class="transformar-btn" onclick="marcarLoteTransformado(${l.id})">♻️ Marcar como transformado</button>` : '';
+  // v5.0 — QR del lote (solo disponibles: es la llave de venta).
+  // v5.1 — el reciclador final no vende → sin QR de venta en sus lotes.
+  const qrBtn = (l.estado === 'disponible' && !isReciclador())
+    ? `<button class="qr-mini-btn" onclick="openQrLote(${l.id})">🔳 Código QR</button>` : '';
   return `<div class="lote-card">
     <div class="lote-top">
       <div style="flex:1;min-width:0">
@@ -3480,6 +3523,7 @@ function renderLoteCard(l, extraHtml) {
     <div class="lote-origen-leyenda">${ley.join('')}</div>
     ${padres}
     ${cadena}
+    ${qrBtn}${accionTransf}
     ${extraHtml || ''}
   </div>`;
 }
@@ -3528,8 +3572,23 @@ function renderTraza() {
     document.getElementById('trazaRecibList').innerHTML = recibTransf.map(renderLoteRecibido).join('');
   } else rw.style.display = 'none';
   document.getElementById('trazaList').innerHTML = cerrados.length
-    ? cerrados.map(l => renderLoteCard(l, trazaTimeline(l))).join('')
+    ? cerrados.map(l => `<div id="traza-lote-${l.id}">${renderLoteCard(l, trazaTimeline(l))}</div>`).join('')
     : `<div class="empty-state"><div class="empty-icon">⛓</div><div class="empty-title">Sin lotes cerrados aún</div><div class="empty-sub">Cuando un lote se venda, se fusione o se transforme, su parcours completo aparecerá aquí.</div></div>`;
+}
+
+// v5.0 — tap sur un chip parent (🔗 Fusión de …) → Trazabilidad, scroll et
+// surbrillance sur le lot parent.
+function verLoteEnTraza(numero) {
+  const l = DB.getLotes().find(x => (x.numero || '#' + x.id) === numero);
+  if (!l) { showRecsToast('⚠️ Lote ' + numero + ' no encontrado'); return; }
+  goTo('traza');
+  setTimeout(() => {
+    const el = document.getElementById('traza-lote-' + l.id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const card = el.querySelector('.lote-card');
+    if (card) { card.classList.remove('lote-flash'); void card.offsetWidth; card.classList.add('lote-flash'); }
+  }, 120);
 }
 
 // Lote que ME vendieron (compra en red). El reciclador final puede marcarlo
@@ -3572,6 +3631,13 @@ async function marcarTransformado(entradaId) {
     renderLotes();
     return;
   }
+  // v5.0 — regla a)/b): si los kilos de esta entrada ya están agrupados en un
+  // lote mío, se transforma ESE lote (no la entrada suelta) — nunca dos veces.
+  if (kgComprometidos(e.id) > 0.001) {
+    const lQ = loteQueContiene(e.id);
+    showRecsToast(`⚠️ Este material ya está agrupado en el lote ${lQ ? (lQ.numero || '#' + lQ.id) : ''} — transforma ese lote`);
+    return;
+  }
   if (!confirm(`¿Marcar el lote ${e.loteNumero || ''} como transformado?\n\nEsto cierra la cadena de custodia — el vendedor verá su lote como ♻️ transformado.`)) return;
   transformarEnCurso = true;
   try {
@@ -3600,6 +3666,206 @@ async function marcarTransformado(entradaId) {
   renderLotes();
   showRecsToast('♻️ Lote marcado como transformado — cadena cerrada');
   } finally { transformarEnCurso = false; }
+}
+
+// v5.0 — caso a): el reciclador agrupa sus lotes recibidos/kilos en un lote
+// PROPIO y transforma ESE lote. La transformación es LOCAL (decisión de
+// Arthur, 20/07): el lote propio pasa a transformado en MI cuenta; los lotes
+// de origen de los vendedores se quedan en "vendido" (no se propaga).
+let transformarLoteEnCurso = false;
+function marcarLoteTransformado(loteId) {
+  if (transformarLoteEnCurso) return;
+  const c = DB.getCentro();
+  const ll = DB.getLotes();
+  const l = ll.find(x => x.id === loteId);
+  if (!c || !l) return;
+  if (l.estado !== 'disponible') { showRecsToast('⚠️ Este lote ya no está disponible'); renderLotes(); return; }
+  if (!confirm(`¿Marcar el lote ${l.numero || '#' + l.id} como transformado?\n\n${l.kg || 0} ${l.unidad === 'und' ? 'und' : 'kg'} de ${l.matName || ''} salen de tu stock — esto no se puede deshacer.`)) return;
+  transformarLoteEnCurso = true;
+  try {
+    const ahora = new Date().toISOString();
+    l.estado = 'transformado';
+    l.transformadoAt = ahora;
+    l.transformadoPor = c.name;
+    DB.saveLotes(ll);
+    queueSync(`centros/${c.id}/lotes/${l.id}/estado`, 'transformado');
+    queueSync(`centros/${c.id}/lotes/${l.id}/transformadoAt`, ahora);
+    queueSync(`centros/${c.id}/lotes/${l.id}/transformadoPor`, c.name);
+    renderLotes();
+    if (currentScreen === 'resumen') initResumen();
+    showRecsToast(`♻️ Lote ${l.numero || ''} transformado — salió del stock`);
+  } finally { transformarLoteEnCurso = false; }
+}
+
+// ════════════════════════════════════════════════════════════
+// QR DEL LOTE (v5.0)
+//   · Vendedor: cada lote disponible tiene su código QR (payload
+//     "ACOPI|uid|loteId|numero") — se muestra en pantalla o se imprime.
+//   · Comprador: 📷 escanea con la cámara (BarcodeDetector — Android OK) y
+//     el vendedor + el lote se seleccionan solos en Nueva Entrada.
+//   · Sin cámara / iPhone: ⌨️ ingresa el número del lote a mano.
+// ════════════════════════════════════════════════════════════
+function openQrLote(loteId) {
+  const c = DB.getCentro();
+  const l = DB.getLotes().find(x => x.id === loteId);
+  if (!c || !l) return;
+  const payload = `ACOPI|${c.id}|${l.id}|${l.numero || ''}`;
+  let svg = '';
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(payload, 'Byte');
+    qr.make();
+    svg = qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+  } catch (e) { showRecsToast('⚠️ No se pudo generar el QR'); return; }
+  document.getElementById('qrLoteNum').textContent = l.numero || '#' + l.id;
+  document.getElementById('qrLoteSub').textContent = `${l.matName || ''} · ${cantidadLote(l)} · ${c.name}`;
+  const wrap = document.getElementById('qrCanvasWrap');
+  wrap.innerHTML = svg;
+  const svgEl = wrap.querySelector('svg');
+  if (svgEl) { svgEl.style.width = '210px'; svgEl.style.height = '210px'; svgEl.style.display = 'block'; }
+  document.getElementById('qrOverlay').classList.add('open');
+  document.getElementById('qrDrawer').classList.add('open');
+}
+function closeQrLote() {
+  document.getElementById('qrOverlay').classList.remove('open');
+  document.getElementById('qrDrawer').classList.remove('open');
+}
+
+// v5.1 — compartir el QR como imagen PNG (Web Share si el teléfono lo
+// permite; si no, se descarga el archivo) e imprimirlo (papel en el fardo).
+function qrToPng(cb) {
+  const svgEl = document.querySelector('#qrCanvasWrap svg');
+  if (!svgEl) return;
+  const xml = new XMLSerializer().serializeToString(svgEl);
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 640;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 640, 640);
+    ctx.drawImage(img, 40, 20, 520, 520);
+    ctx.fillStyle = '#0F172A'; ctx.font = '900 44px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center';
+    ctx.fillText(document.getElementById('qrLoteNum').textContent || '', 320, 600);
+    cv.toBlob(cb, 'image/png');
+  };
+  img.onerror = () => showRecsToast('⚠️ No se pudo generar la imagen');
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(xml)));
+}
+function compartirQR() {
+  qrToPng(async blob => {
+    if (!blob) return;
+    const num = document.getElementById('qrLoteNum').textContent || 'lote';
+    const file = new File([blob], `lote-${num}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: `Lote ${num}`, text: `Código QR del lote ${num} — AcopiApp` }); return; } catch { /* cancelado → descarga */ }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `lote-${num}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    showRecsToast('💾 Imagen del QR descargada');
+  });
+}
+function imprimirQR() {
+  const svgEl = document.querySelector('#qrCanvasWrap svg');
+  if (!svgEl) return;
+  const num = document.getElementById('qrLoteNum').textContent || '';
+  const sub = document.getElementById('qrLoteSub').textContent || '';
+  const win = window.open('', '_blank');
+  if (!win) { showRecsToast('⚠️ Permite las ventanas emergentes para imprimir'); return; }
+  win.document.write(`<!DOCTYPE html><html><head><title>Lote ${num}</title><style>
+    body { font-family: -apple-system, sans-serif; text-align: center; padding: 40px 20px; }
+    svg { width: 320px; height: 320px; }
+    .num { font-family: ui-monospace, Menlo, monospace; font-size: 42px; font-weight: 900; letter-spacing: 2px; margin: 16px 0 4px; }
+    .sub { font-size: 15px; color: #475569; }
+  </style></head><body>${svgEl.outerHTML}<div class="num">${num}</div><div class="sub">${sub}</div></body></html>`);
+  win.document.close();
+  setTimeout(() => { try { win.print(); } catch {} }, 300);
+}
+
+// ── Escáner (lado comprador) ──
+let scanStream = null, scanRAF = null, scanDetector = null, scanActivo = false, scanProcesando = false;
+async function abrirScanQR() {
+  if (!entradaState.contraparte) {
+    // El QR trae al vendedor: no hace falta elegirlo antes — solo avisamos.
+  }
+  if (!('BarcodeDetector' in window)) { ingresarNumeroLote('Tu navegador no tiene escáner — ingresa el número del lote:'); return; }
+  try { scanDetector = new BarcodeDetector({ formats: ['qr_code'] }); }
+  catch { ingresarNumeroLote('Tu navegador no tiene escáner — ingresa el número del lote:'); return; }
+  try { scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); }
+  catch { ingresarNumeroLote('No se pudo abrir la cámara — ingresa el número del lote:'); return; }
+  const video = document.getElementById('scanVideo');
+  video.srcObject = scanStream;
+  try { await video.play(); } catch {}
+  document.getElementById('scanHint').textContent = 'Apunta al código QR del lote (en la pantalla o el papel del vendedor)';
+  document.getElementById('scanOverlay').classList.add('show');
+  scanActivo = true; scanProcesando = false;
+  scanLoop();
+}
+async function scanLoop() {
+  if (!scanActivo) return;
+  const video = document.getElementById('scanVideo');
+  if (video.readyState >= 2 && !scanProcesando) {
+    try {
+      const codes = await scanDetector.detect(video);
+      if (codes && codes.length) { await procesarQR(codes[0].rawValue); if (!scanActivo) return; }
+    } catch { /* frame siguiente */ }
+  }
+  scanRAF = requestAnimationFrame(scanLoop);
+}
+function cerrarScanQR() {
+  scanActivo = false;
+  cancelAnimationFrame(scanRAF);
+  if (scanStream) { try { scanStream.getTracks().forEach(t => t.stop()); } catch {} scanStream = null; }
+  const video = document.getElementById('scanVideo');
+  if (video) video.srcObject = null;
+  document.getElementById('scanOverlay').classList.remove('show');
+}
+async function procesarQR(raw) {
+  if (scanProcesando) return;
+  scanProcesando = true;
+  const hint = document.getElementById('scanHint');
+  try {
+    const parts = String(raw || '').split('|');
+    if (parts.length < 3 || parts[0] !== 'ACOPI') { hint.textContent = '⚠️ Ese QR no es de AcopiApp — sigue apuntando al código del lote'; return; }
+    const uid = parts[1], loteId = parseInt(parts[2], 10);
+    const me = DB.getCentro();
+    if (me && uid === me.id) { hint.textContent = '⚠️ Ese lote es tuyo — escanea el QR de OTRO acopiador'; return; }
+    hint.textContent = '⏳ Verificando el lote…';
+    let lote = null, meta = null;
+    try {
+      lote = await fetchJson(`centros/${encodeURIComponent(uid)}/lotes/${loteId}`);
+      meta = await fetchJson(`centros/${encodeURIComponent(uid)}/meta`);
+    } catch { hint.textContent = '⚠️ Sin conexión — no se pudo verificar el lote'; return; }
+    if (!lote) { hint.textContent = '⚠️ Lote no encontrado en la red'; return; }
+    if (meta && meta.tipo === 'reciclador') { hint.textContent = '⚠️ Ese lote es de un reciclador final — los recicladores no venden lotes'; return; }
+    if (lote.estado !== 'disponible') { hint.textContent = `⚠️ El lote ${lote.numero || ''} ya no está disponible (${lote.estado})`; return; }
+    aplicarContraparte({ id: uid, name: (meta && meta.name) || 'Acopiador', telefono: (meta && meta.telefono) || null, tipo: (meta && meta.tipo) || 'centro' });
+    aplicarLoteSeleccion(lote);
+    updateEntradaUI();
+    cerrarScanQR();
+    playAvisoSound();
+    showRecsToast(`✅ Lote ${lote.numero || ''} de ${(meta && meta.name) || 'la red'} seleccionado — ingresa el precio`);
+  } finally { scanProcesando = false; }
+}
+
+// ── Repli sans caméra: saisie du numéro de lote ──
+async function ingresarNumeroLote(motivo) {
+  const ct = entradaState.contraparte;
+  if (!ct) { showRecsToast('👆 Primero elige a quién le compras (el número de lote se busca en SU lista)'); return; }
+  const num = prompt((motivo || 'Ingresa el número del lote (está en la pantalla 📦 Lotes del vendedor):') + `\n\nVendedor: ${ct.name}\nEjemplo: EA-003`);
+  if (!num) return;
+  const buscado = num.trim().toUpperCase();
+  let data = null;
+  try { data = await fetchJson(`centros/${encodeURIComponent(ct.id)}/lotes`); }
+  catch { showRecsToast('⚠️ Sin conexión — inténtalo de nuevo'); return; }
+  const lotes = Object.values(data || {});
+  const l = lotes.find(x => x && (x.numero || '').toUpperCase() === buscado);
+  if (!l) { showRecsToast(`⚠️ ${ct.name} no tiene un lote "${buscado}"`); return; }
+  if (l.estado !== 'disponible') { showRecsToast(`⚠️ El lote ${buscado} ya no está disponible (${l.estado})`); return; }
+  aplicarLoteSeleccion(l);
+  updateEntradaUI();
+  showRecsToast(`✅ Lote ${buscado} seleccionado — ingresa el precio`);
 }
 
 // ── Crear lote (drawer) ──
@@ -4024,105 +4290,12 @@ function renderHistorial() {
 }
 
 // ════════════════════════════════════════════════════════════
-// SCREEN: RECICLADORES
+// TOAST GLOBAL
+// (v5.1 : la pantalla Recicladores — directorio — fue eliminada; solo queda
+//  el toast, que usa toda la app. La capa DB recicladores se conserva por
+//  compatibilidad de datos.)
 // ════════════════════════════════════════════════════════════
-let recsAll=[], recsKgMap={}, recsSelectedColor=PALETTE[0];
 let recsToastTimer;
-
-function renderRecs(filter='') {
-  // seed from entradas if empty
-  let recs = DB.getRecs();
-  if (!recs.length) {
-    const seen=new Map();
-    DB.getEntradas().forEach(e => {
-      if (e.recId&&!seen.has(e.recId))
-        seen.set(e.recId,{id:e.recId,name:e.recName||'Sin nombre',phone:null,color:e.recColor||PALETTE[seen.size%PALETTE.length]});
-    });
-    if (seen.size) { recs=[...seen.values()]; DB.saveRecs(recs); }
-  }
-  const now=new Date(); recsKgMap={};
-  DB.getEntradas().forEach(e => {
-    const d=new Date(e.fecha);
-    if (d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()&&e.recId!=null)
-      recsKgMap[e.recId]=(recsKgMap[e.recId]||0)+(e.kg||0);
-  });
-  recsAll = recs.sort((a,b)=>(recsKgMap[b.id]||0)-(recsKgMap[a.id]||0));
-  const q=filter.toLowerCase().trim();
-  const filtered = q ? recsAll.filter(r=>r.name.toLowerCase().includes(q)) : recsAll;
-  const listEl=document.getElementById('recList'), emptyEl=document.getElementById('recsEmptyState');
-  const noRes=document.getElementById('noResults'), statsBar=document.getElementById('recsStatsBar');
-  const listLabel=document.getElementById('recsListLabel');
-  if (!recsAll.length) {
-    emptyEl.classList.add('show'); noRes.classList.remove('show'); listEl.innerHTML='';
-    statsBar.style.display='none'; listLabel.style.display='none';
-    document.getElementById('tb-sub').textContent='Sin recicladores';
-    return;
-  }
-  emptyEl.classList.remove('show'); statsBar.style.display='flex'; listLabel.style.display='block';
-  const totalKgMes=Object.values(recsKgMap).reduce((s,v)=>s+v,0);
-  document.getElementById('statTotal').textContent   = recsAll.length;
-  document.getElementById('statKg').textContent      = fmtKg(totalKgMes);
-  document.getElementById('statActivos').textContent = Object.keys(recsKgMap).length;
-  document.getElementById('tb-sub').textContent = recsAll.length===1?'1 reciclador':`${recsAll.length} recicladores`;
-  if (!filtered.length) {
-    noRes.classList.add('show'); document.getElementById('noResultsQuery').textContent=filter; listEl.innerHTML=''; return;
-  }
-  noRes.classList.remove('show');
-  listEl.innerHTML = filtered.map((r,i) => {
-    const kg=recsKgMap[r.id]||0;
-    const medal=i===0&&kg>0?'🥇':(i===1&&kg>0?'🥈':(i===2&&kg>0?'🥉':''));
-    return `<div class="rec-card">
-      <div class="rec-avatar-big" style="background:${r.color}">${initials(r.name)}</div>
-      <div class="rec-body"><div class="rec-name-card">${escHtml(r.name)}</div><div class="rec-phone-card">${r.phone?'📱 '+r.phone:'Sin teléfono'}</div></div>
-      <div class="rec-right-card">${medal?`<div class="rec-medal">${medal}</div>`:''}<div class="rec-kg" style="${kg>0?'color:var(--green)':'color:var(--text-muted)'}">${kg>0?fmtKg(kg):'0 kg'}</div><div class="rec-kg-label">este mes</div></div>
-    </div>`;
-  }).join('');
-}
-
-function onRecsSearch(val) { renderRecs(val); }
-
-function openRecsDrawer() {
-  document.getElementById('recsInputNombre').value='';
-  document.getElementById('recsInputTelefono').value='';
-  document.getElementById('recsBtnSave').disabled=true;
-  document.getElementById('recsPreviewName').textContent='Nombre completo';
-  document.getElementById('recsPreviewName').style.color='var(--text-muted)';
-  document.getElementById('recsPreviewAvatar').textContent='??';
-  document.getElementById('recsPreviewAvatar').style.background='#94A3B8';
-  const used=DB.getRecs().map(r=>r.color);
-  recsSelectedColor=PALETTE.find(c=>!used.includes(c))||PALETTE[DB.getRecs().length%PALETTE.length];
-  renderRecsColorPicker();
-  document.getElementById('recsDrawerOverlay').classList.add('open');
-  document.getElementById('recsDrawer').classList.add('open');
-  setTimeout(()=>document.getElementById('recsInputNombre').focus(),350);
-}
-function closeRecsDrawer() {
-  document.getElementById('recsDrawerOverlay').classList.remove('open');
-  document.getElementById('recsDrawer').classList.remove('open');
-}
-function renderRecsColorPicker() {
-  document.getElementById('recsColorRow').innerHTML = PALETTE.map(c =>
-    `<div class="color-dot ${c===recsSelectedColor?'selected':''}" style="background:${c}" onclick="selectRecsColor('${c}')"></div>`
-  ).join('');
-}
-function selectRecsColor(c) { recsSelectedColor=c; renderRecsColorPicker(); updateRecsPreview(); }
-function onRecsNombreInput(val) { updateRecsPreview(); document.getElementById('recsBtnSave').disabled=!val.trim(); }
-function updateRecsPreview() {
-  const nombre=document.getElementById('recsInputNombre').value.trim();
-  const pn=document.getElementById('recsPreviewName'), pa=document.getElementById('recsPreviewAvatar');
-  if (nombre) { pn.textContent=nombre; pn.style.color='var(--text-primary)'; pa.textContent=initials(nombre); }
-  else { pn.textContent='Nombre completo'; pn.style.color='var(--text-muted)'; pa.textContent='??'; }
-  pa.style.background=recsSelectedColor;
-}
-function saveRecsRec() {
-  const nombre=document.getElementById('recsInputNombre').value.trim();
-  const telefono=document.getElementById('recsInputTelefono').value.trim()||null;
-  if (!nombre) return;
-  DB.addRec({ name:nombre, phone:telefono, color:recsSelectedColor });
-  closeRecsDrawer();
-  renderRecs(document.getElementById('recsSearchInput').value);
-  showRecsToast(`✅ ${nombre} agregado`);
-}
 function showRecsToast(msg) {
   const t=document.getElementById('toastRecs');
   t.textContent=msg; t.classList.add('show');
