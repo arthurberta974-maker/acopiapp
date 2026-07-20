@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 5.5                                                 -->
+  <!-- Version : 5.6                                                 -->
   <!-- Date    : 20/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -1145,7 +1145,7 @@
       </div>
     </div>
     <div class="weight-card" id="psPrecioCard">
-      <div class="field-label-v">Precio — solo esta transacción</div>
+      <div class="field-label-v" id="psPrecioLabel">Precio — solo esta transacción</div>
       <div class="weight-row">
         <span class="weight-unit" style="margin-right:8px">S/</span>
         <input class="weight-display" id="psPrecio" type="text" inputmode="decimal" placeholder="0" autocomplete="off" style="font-size:28px" oninput="onPsInput()">
@@ -1679,10 +1679,10 @@ async function syncOwnData() {
           if (prev.compradorId) { lt.compradorId = prev.compradorId; lt.compradorName = prev.compradorName; lt.vendidoAt = prev.vendidoAt || null; }
         }
         // v4.0 — notificaciones por transición de estado (idempotentes por id):
-        // el reciclador transformó mi lote / otro dispositivo registró la venta.
-        if (prev && prev.estado !== 'transformado' && lt.estado === 'transformado') {
-          if (addNotif({ id: 'nt_' + lt.id, tipo: 'transformado', icon: '♻️', titulo: `Tu lote ${escHtml(lt.numero || '#' + lt.id)} fue transformado`, sub: `${escHtml(lt.transformadoPor || 'Un reciclador')} cerró la cadena de custodia — ${lt.kg || 0} ${lt.unidad === 'und' ? 'und' : 'kg'} de ${escHtml(lt.matName || '')}` })) playAvisoSound();
-        }
+        // otro dispositivo registró la venta.
+        // v5.6 — decisión de Arthur: la transformación por el reciclador final
+        // YA NO notifica al vendedor (el estado avanza en silencio; el detalle
+        // sigue visible en ⛓ Trazabilidad).
         if (prev && prev.estado === 'disponible' && lt.estado === 'vendido') {
           addNotif({ id: 'nvl_' + lt.id, tipo: 'venta', icon: '💰', titulo: `${escHtml(lt.compradorName || 'Una cuenta')} te compró el lote ${escHtml(lt.numero || '#' + lt.id)}`, sub: `${escHtml(lt.matName || '')} · ${lt.kg || 0} ${lt.unidad === 'und' ? 'und' : 'kg'}${lt.precioTotal ? ' · ' + fmt(lt.precioTotal) : ''}` });
         }
@@ -3070,6 +3070,9 @@ function selectRedSueltoMat(id) {
   document.getElementById('rsUnitKg').textContent = esUnd ? 'und' : 'kg';
   document.getElementById('rsUnitPrecio').textContent = 'S/ por ' + (esUnd ? 'unidad' : 'kg');
   updateEntradaUI();
+  // v5.6 — même panneau express que externo/interna : poids + precio acordado.
+  if (!entradaState.contraparte) { showRecsToast('👆 Primero elige a quién le compras'); return; }
+  openPesoSheet();
 }
 // ── SAISIE NUMÉRIQUE NATIVE (v3.0) ─────────────────────────
 // Los pesos y precios se escriben con el teclado del teléfono/computadora
@@ -3160,21 +3163,31 @@ function selectEntradaMat(id) {
 // direct, bouton d'enregistrement direct. Case optionnelle pour mettre à
 // jour le catalogue. Le formulaire inline classique reste fonctionnel.
 let pesoSheetGuard = false;
+// v5.6 — le sheet sert aussi à la compra en red de kilos sueltos.
+function esRedSueltoSheet() { return entradaState.origen === 'red' && entradaState.redModo === 'suelto'; }
 function openPesoSheet() {
   const mat = entradaState.material, og = entradaState.origen;
-  if (!mat || (og !== 'desconocido' && og !== 'interna')) return;
+  const redSuelto = esRedSueltoSheet();
+  if (!mat || (og !== 'desconocido' && og !== 'interna' && !redSuelto)) return;
+  if (redSuelto && !entradaState.contraparte) return;
   const u = matUnidad(mat);
   const esInterna = og === 'interna';
   document.getElementById('psIcon').textContent = mat.emoji;
   document.getElementById('psName').textContent = mat.name;
-  document.getElementById('psHint').textContent = esInterna ? '🏠 Recolección interna — sin costo' : '👤 Recolector externo — pago en efectivo';
+  document.getElementById('psHint').textContent = redSuelto
+    ? `🤝 Compra en red — ${entradaState.contraparte.name}`
+    : esInterna ? '🏠 Recolección interna — sin costo' : '👤 Recolector externo — pago en efectivo';
   document.getElementById('psPesoLabel').textContent = u === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)';
   document.getElementById('psUnit').textContent = u;
   document.getElementById('psPrecioUnit').textContent = '/' + u;
+  document.getElementById('psPrecioLabel').textContent = redSuelto ? 'Precio acordado con el vendedor' : 'Precio — solo esta transacción';
   document.getElementById('psPeso').value = parseFloat(entradaState.weightStr) > 0 ? entradaState.weightStr : '';
-  document.getElementById('psPrecio').value = mat.precio > 0 ? String(mat.precio) : '';
+  // Red suelto : le prix est négocié avec le vendeur — pas de pré-remplissage catalogue.
+  document.getElementById('psPrecio').value = redSuelto
+    ? (parseFloat(entradaState.precioStr) > 0 ? entradaState.precioStr : '')
+    : (mat.precio > 0 ? String(mat.precio) : '');
   document.getElementById('psPrecioCard').style.display = esInterna ? 'none' : 'block';
-  document.getElementById('psGuardarWrap').style.display = esInterna ? 'none' : 'flex';
+  document.getElementById('psGuardarWrap').style.display = (esInterna || redSuelto) ? 'none' : 'flex';
   document.getElementById('psGuardarPrecio').checked = false;
   document.getElementById('psMatName2').textContent = mat.name;
   document.getElementById('pesoSheetOverlay').classList.add('open');
@@ -3192,23 +3205,47 @@ function onPsInput() {
   const pesoStr   = sanitizeDecimal(document.getElementById('psPeso'), 9999);
   const precioStr = sanitizeDecimal(document.getElementById('psPrecio'), 999);
   const esInterna = entradaState.origen === 'interna';
+  const redSuelto = esRedSueltoSheet();
   const u = matUnidad(mat);
   const peso = parseFloat(pesoStr) || 0, precio = parseFloat(precioStr) || 0;
   // Sync avec le formulaire inline — le flux classique reste cohérent.
   entradaState.weightStr = pesoStr;
-  const wi = document.getElementById('weightInput');
-  if (wi) wi.value = document.getElementById('psPeso').value;
+  if (redSuelto) {
+    entradaState.precioStr = precioStr;
+    const rk = document.getElementById('rsInpKg');
+    const rp = document.getElementById('rsInpPrecio');
+    if (rk) rk.value = document.getElementById('psPeso').value;
+    if (rp) rp.value = document.getElementById('psPrecio').value;
+  } else {
+    const wi = document.getElementById('weightInput');
+    if (wi) wi.value = document.getElementById('psPeso').value;
+  }
   updateEntradaUI();
   const btn = document.getElementById('psConfirmBtn');
   if (peso <= 0) { btn.disabled = true; btn.textContent = 'Ingresa el peso'; return; }
   if (esInterna) { btn.disabled = false; btn.innerHTML = `✅ Registrar — ${peso} ${u} (sin costo)`; return; }
-  if (precio <= 0) { btn.disabled = true; btn.textContent = 'Ingresa el precio'; return; }
+  if (precio <= 0) { btn.disabled = true; btn.textContent = redSuelto ? 'Ingresa el precio acordado' : 'Ingresa el precio'; return; }
   btn.disabled = false;
-  btn.innerHTML = `✅ Registrar — ${fmt(peso * precio)}`;
+  btn.innerHTML = redSuelto ? `✅ Confirmar compra — ${fmt(peso * precio)}` : `✅ Registrar — ${fmt(peso * precio)}`;
 }
 function confirmPesoSheet() {
   if (pesoSheetGuard) return;
   const mat = entradaState.material, og = entradaState.origen;
+  // v5.6 — red suelto : on réutilise le flux complet confirmEntrada()
+  // (dépôt de la venta entrante chez le vendeur, FIFO, sinbapuntos).
+  if (esRedSueltoSheet()) {
+    const pesoRs   = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 9999)) || 0;
+    const precioRs = parseFloat(sanitizeDecimal(document.getElementById('psPrecio'), 999)) || 0;
+    if (!mat || !entradaState.contraparte || pesoRs <= 0 || precioRs <= 0) return;
+    pesoSheetGuard = true;
+    try {
+      entradaState.weightStr = String(pesoRs);
+      entradaState.precioStr = String(precioRs);
+      closePesoSheet();
+      confirmEntrada();
+    } finally { setTimeout(() => { pesoSheetGuard = false; }, 800); }
+    return;
+  }
   if (!mat || (og !== 'desconocido' && og !== 'interna')) return;
   const esInterna = og === 'interna';
   const peso = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 9999)) || 0;
@@ -3638,11 +3675,13 @@ function renderLotes() {
   }
   // v5.0 — sección gris plegada: lotes propios transformados + recibidos
   // transformados (el détail completo sigue en ⛓ Trazabilidad).
+  // v5.6 — visible SOLO para el reciclador (centro/SinBa: la transformación
+  // aguas abajo no es su negocio — todo sigue en ⛓ Trazabilidad).
   const transfPropios = DB.getLotes().filter(l => l.estado === 'transformado').sort((a, b) => b.id - a.id);
   const transfRecibidos = DB.getEntradas().filter(e => e.loteId && e.origenCentroId && e.transformado).sort((a, b) => b.id - a.id);
   const tWrap = document.getElementById('transformadosWrap');
   const n = transfPropios.length + transfRecibidos.length;
-  if (n > 0) {
+  if (n > 0 && isReciclador()) {
     tWrap.style.display = 'block';
     document.getElementById('transfCount').textContent = n;
     document.getElementById('transformadosList').innerHTML =
@@ -3663,7 +3702,9 @@ function toggleMovimientos() {
 
 function renderMovimientosLotes() {
   const rows = [];
-  DB.getLotes().filter(l => l.estado === 'vendido').forEach(l => {
+  // v5.6 — un lote vendido que el reciclador transformó después sigue siendo
+  // una VENTA para mí (la sección Transformados ya no existe para centro/SinBa).
+  DB.getLotes().filter(l => l.estado === 'vendido' || (l.estado === 'transformado' && l.compradorId)).forEach(l => {
     rows.push({
       fecha: l.vendidoAt || l.creadoAt || '',
       html: `<div class="act-item" style="cursor:pointer;margin-bottom:6px;background:var(--green-light);border-color:#86EFAC" onclick="abrirDetalleLote(${l.id})">
