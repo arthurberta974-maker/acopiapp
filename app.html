@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 5.3                                                 -->
+  <!-- Version : 5.5                                                 -->
   <!-- Date    : 20/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -821,11 +821,15 @@
          initLotes) — acopiador/SinBa : Mis lotes en haut ; reciclador :
          Lotes recibidos en haut (son flux principal). -->
     <div id="misLotesWrap" style="order:1">
-      <div class="section-label">📦 Mis lotes</div>
+      <div class="section-label" id="misLotesLabel">📦 Mis lotes</div>
       <div id="lotesList"></div>
     </div>
+    <!-- v5.4 (centro/SinBa) : « Movimientos » — liste synthétique reçus/vendus
+         dédupliquée. Reciclador : reste « Lotes recibidos » en cartes. -->
     <div id="lotesRecibidosWrap" style="display:none;order:3">
-      <div class="section-label">📥 Lotes recibidos de la red</div>
+      <div class="section-label" id="lotesRecibidosLabel">📥 Lotes recibidos de la red</div>
+      <!-- v5.5 (centro/SinBa) : Movimientos repliés par défaut -->
+      <button class="transf-toggle" id="movsToggle" style="display:none" onclick="toggleMovimientos()">🔄 Movimientos — comprados y vendidos (<span id="movsCount">0</span>) <span id="movsChevron">▾</span></button>
       <div id="lotesRecibidosList"></div>
     </div>
     <!-- v5.0 : accordéon gris des lots transformés (lots propres + reçus) -->
@@ -1118,6 +1122,41 @@
       <div class="section-label">Movimientos</div>
       <div id="spMovsList"></div>
     </div>
+  </div>
+</div>
+
+<!-- ── PESO + PRECIO EXPRESS (v5.5, Nueva Entrada externo/interna) ── -->
+<div class="drawer-overlay" id="pesoSheetOverlay" onclick="closePesoSheet()"></div>
+<div class="drawer" id="pesoSheet">
+  <div class="drawer-handle"></div>
+  <div class="sheet-header" style="padding:14px 16px 4px">
+    <span class="sheet-mat-icon" id="psIcon">🧴</span>
+    <div>
+      <div class="sheet-mat-name" id="psName">—</div>
+      <div class="sheet-mat-hint" id="psHint">—</div>
+    </div>
+  </div>
+  <div style="padding:10px 16px calc(env(safe-area-inset-bottom, 0px) + 16px);display:flex;flex-direction:column;gap:10px">
+    <div class="weight-card">
+      <div class="field-label-v" id="psPesoLabel">Peso (kg)</div>
+      <div class="weight-row">
+        <input class="weight-display" id="psPeso" type="text" inputmode="decimal" placeholder="0" autocomplete="off" style="font-size:40px" oninput="onPsInput()">
+        <span class="weight-unit" id="psUnit">kg</span>
+      </div>
+    </div>
+    <div class="weight-card" id="psPrecioCard">
+      <div class="field-label-v">Precio — solo esta transacción</div>
+      <div class="weight-row">
+        <span class="weight-unit" style="margin-right:8px">S/</span>
+        <input class="weight-display" id="psPrecio" type="text" inputmode="decimal" placeholder="0" autocomplete="off" style="font-size:28px" oninput="onPsInput()">
+        <span class="weight-unit" id="psPrecioUnit">/kg</span>
+      </div>
+    </div>
+    <label id="psGuardarWrap" style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-secondary);font-weight:600;cursor:pointer">
+      <input type="checkbox" id="psGuardarPrecio" style="width:17px;height:17px;accent-color:#0F172A;flex-shrink:0">
+      <span>Guardar como nuevo precio de <span id="psMatName2">—</span></span>
+    </label>
+    <button class="confirm-btn" id="psConfirmBtn" disabled onclick="confirmPesoSheet()">Ingresa el peso</button>
   </div>
 </div>
 
@@ -3111,6 +3150,95 @@ function selectEntradaMat(id) {
   const lblEl = document.getElementById('entradaPesoLabel');
   if (lblEl) lblEl.textContent = und === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)';
   updateEntradaUI();
+  // v5.5 — panneau express : poids + prix modifiable + enregistrement direct.
+  openPesoSheet();
+}
+
+// ── PESO + PRECIO EXPRESS (v5.5) ─────────────────────────
+// Tap sur une matière (externo/interna) → sheet : poids (autofocus), prix
+// pré-rempli du catalogue mais modifiable POUR CETTE TRANSACTION, total en
+// direct, bouton d'enregistrement direct. Case optionnelle pour mettre à
+// jour le catalogue. Le formulaire inline classique reste fonctionnel.
+let pesoSheetGuard = false;
+function openPesoSheet() {
+  const mat = entradaState.material, og = entradaState.origen;
+  if (!mat || (og !== 'desconocido' && og !== 'interna')) return;
+  const u = matUnidad(mat);
+  const esInterna = og === 'interna';
+  document.getElementById('psIcon').textContent = mat.emoji;
+  document.getElementById('psName').textContent = mat.name;
+  document.getElementById('psHint').textContent = esInterna ? '🏠 Recolección interna — sin costo' : '👤 Recolector externo — pago en efectivo';
+  document.getElementById('psPesoLabel').textContent = u === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)';
+  document.getElementById('psUnit').textContent = u;
+  document.getElementById('psPrecioUnit').textContent = '/' + u;
+  document.getElementById('psPeso').value = parseFloat(entradaState.weightStr) > 0 ? entradaState.weightStr : '';
+  document.getElementById('psPrecio').value = mat.precio > 0 ? String(mat.precio) : '';
+  document.getElementById('psPrecioCard').style.display = esInterna ? 'none' : 'block';
+  document.getElementById('psGuardarWrap').style.display = esInterna ? 'none' : 'flex';
+  document.getElementById('psGuardarPrecio').checked = false;
+  document.getElementById('psMatName2').textContent = mat.name;
+  document.getElementById('pesoSheetOverlay').classList.add('open');
+  document.getElementById('pesoSheet').classList.add('open');
+  onPsInput();
+  setTimeout(() => document.getElementById('psPeso').focus(), 350);
+}
+function closePesoSheet() {
+  document.getElementById('pesoSheetOverlay').classList.remove('open');
+  document.getElementById('pesoSheet').classList.remove('open');
+}
+function onPsInput() {
+  const mat = entradaState.material;
+  if (!mat) return;
+  const pesoStr   = sanitizeDecimal(document.getElementById('psPeso'), 9999);
+  const precioStr = sanitizeDecimal(document.getElementById('psPrecio'), 999);
+  const esInterna = entradaState.origen === 'interna';
+  const u = matUnidad(mat);
+  const peso = parseFloat(pesoStr) || 0, precio = parseFloat(precioStr) || 0;
+  // Sync avec le formulaire inline — le flux classique reste cohérent.
+  entradaState.weightStr = pesoStr;
+  const wi = document.getElementById('weightInput');
+  if (wi) wi.value = document.getElementById('psPeso').value;
+  updateEntradaUI();
+  const btn = document.getElementById('psConfirmBtn');
+  if (peso <= 0) { btn.disabled = true; btn.textContent = 'Ingresa el peso'; return; }
+  if (esInterna) { btn.disabled = false; btn.innerHTML = `✅ Registrar — ${peso} ${u} (sin costo)`; return; }
+  if (precio <= 0) { btn.disabled = true; btn.textContent = 'Ingresa el precio'; return; }
+  btn.disabled = false;
+  btn.innerHTML = `✅ Registrar — ${fmt(peso * precio)}`;
+}
+function confirmPesoSheet() {
+  if (pesoSheetGuard) return;
+  const mat = entradaState.material, og = entradaState.origen;
+  if (!mat || (og !== 'desconocido' && og !== 'interna')) return;
+  const esInterna = og === 'interna';
+  const peso = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 9999)) || 0;
+  const precio = esInterna ? 0 : (parseFloat(sanitizeDecimal(document.getElementById('psPrecio'), 999)) || 0);
+  if (peso <= 0 || (!esInterna && precio <= 0)) return;
+  pesoSheetGuard = true;
+  try {
+    const esUnd = matUnidad(mat) === 'und';
+    const total = Math.round(peso * precio * 100) / 100;
+    const guardarPrecio = !esInterna && document.getElementById('psGuardarPrecio').checked && precio > 0;
+    DB.addEntrada({
+      fecha: new Date().toISOString(), origen: og,
+      recId: null,
+      recName: esInterna ? 'Recolección interna' : 'Recolector externo',
+      recColor: esInterna ? '#16A34A' : '#94A3B8',
+      matId: mat.id, matName: mat.name, kg: peso,
+      unidades: esUnd ? peso : null,
+      precioKg: precio, total,
+    });
+    // Case cochée → le prix devient le nouveau prix catalogue de la matière.
+    if (guardarPrecio) {
+      mat.precio = precio;
+      const saved = {}; MATERIALES.forEach(m => { saved[m.id] = m.precio; });
+      DB.savePrecios(saved);
+    }
+    closePesoSheet();
+    document.getElementById('successAmountEntrada').textContent = esInterna ? `${peso} ${matUnidad(mat)}` : fmt(total);
+    document.getElementById('successSubEntrada').textContent = `${esInterna ? '🏠 Recolección interna' : '👤 Recolector externo'} · ${peso} ${matUnidad(mat)} de ${mat.name}${guardarPrecio ? ' · precio guardado' : ''}`;
+    document.getElementById('successEntrada').classList.add('show');
+  } finally { setTimeout(() => { pesoSheetGuard = false; }, 800); }
 }
 
 // (v3.0 : numpadEntrada retiré — la saisie passe par les inputs natifs
@@ -3471,19 +3599,43 @@ function nuevoNumeroLote() {
 function renderLotes() {
   const list = document.getElementById('lotesList');
   if (!list) return;
-  // v4.0 — la lista principal solo muestra lotes ACTIVOS (disponible/vendido).
-  // Los fusionados y transformados viven en ⛓ Trazabilidad.
-  const lotes = DB.getLotes().filter(l => l.estado !== 'fusionado' && l.estado !== 'transformado');
-  list.innerHTML = lotes.length ? lotes.map(renderLoteCard).join('')
-    : `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin lotes activos</div><div class="empty-sub">Agrupa tu material suelto en un lote para poder venderlo con trazabilidad. Los lotes cerrados están en ⛓ Trazabilidad.</div></div>`;
-  // Lotes recibidos (mis compras en red) — con cierre de cadena para
-  // recicladores. Los ya transformados bajan a la sección gris.
-  const recibidos = DB.getEntradas().filter(e => e.loteId && e.origenCentroId && !e.transformado).sort((a, b) => b.id - a.id);
   const wrap = document.getElementById('lotesRecibidosWrap');
-  if (recibidos.length) {
-    wrap.style.display = 'block';
-    document.getElementById('lotesRecibidosList').innerHTML = recibidos.map(renderLoteRecibido).join('');
-  } else wrap.style.display = 'none';
+  if (isReciclador()) {
+    // ── RECICLADOR : layout historique — recibidos en cartes + mis lotes ──
+    document.getElementById('misLotesLabel').textContent = '📦 Mis lotes';
+    document.getElementById('lotesRecibidosLabel').style.display = 'block';
+    document.getElementById('lotesRecibidosLabel').textContent = '📥 Lotes recibidos de la red';
+    document.getElementById('movsToggle').style.display = 'none';
+    document.getElementById('lotesRecibidosList').style.display = 'block';
+    const lotes = DB.getLotes().filter(l => l.estado !== 'fusionado' && l.estado !== 'transformado');
+    list.innerHTML = lotes.length ? lotes.map(renderLoteCard).join('')
+      : `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin lotes activos</div><div class="empty-sub">Agrupa tu material suelto en un lote para poder venderlo con trazabilidad. Los lotes cerrados están en ⛓ Trazabilidad.</div></div>`;
+    const recibidos = DB.getEntradas().filter(e => e.loteId && e.origenCentroId && !e.transformado).sort((a, b) => b.id - a.id);
+    if (recibidos.length) {
+      wrap.style.display = 'block';
+      document.getElementById('lotesRecibidosList').innerHTML = recibidos.map(renderLoteRecibido).join('');
+    } else wrap.style.display = 'none';
+  } else {
+    // ── CENTRO / SINBA (v5.4) : arriba SOLO el stock; abajo « Movimientos »
+    //    sintético (recibidos + vendidos, una línea por evento, sin doble
+    //    conteo: un lote recibido cuyo material ya fue re-loteado desaparece
+    //    de los recibidos — su materia vive en mis lotes). ──
+    document.getElementById('misLotesLabel').textContent = '📦 En stock';
+    // v5.5 — Movimientos repliés par défaut (toggle), lignes teintées.
+    document.getElementById('lotesRecibidosLabel').style.display = 'none';
+    const disponibles = DB.getLotes().filter(l => l.estado === 'disponible');
+    list.innerHTML = disponibles.length ? disponibles.map(renderLoteCard).join('')
+      : `<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-title">Sin lotes en stock</div><div class="empty-sub">Agrupa tu material suelto en un lote para poder venderlo con trazabilidad.</div></div>`;
+    const movs = renderMovimientosLotes();
+    if (movs.html) {
+      wrap.style.display = 'block';
+      document.getElementById('movsToggle').style.display = 'block';
+      document.getElementById('movsCount').textContent = movs.n;
+      document.getElementById('lotesRecibidosList').innerHTML = movs.html;
+      document.getElementById('lotesRecibidosList').style.display = movsOpen ? 'block' : 'none';
+      document.getElementById('movsChevron').textContent = movsOpen ? '▴' : '▾';
+    } else wrap.style.display = 'none';
+  }
   // v5.0 — sección gris plegada: lotes propios transformados + recibidos
   // transformados (el détail completo sigue en ⛓ Trazabilidad).
   const transfPropios = DB.getLotes().filter(l => l.estado === 'transformado').sort((a, b) => b.id - a.id);
@@ -3496,6 +3648,47 @@ function renderLotes() {
     document.getElementById('transformadosList').innerHTML =
       transfPropios.map(l => renderLoteCard(l)).join('') + transfRecibidos.map(renderLoteRecibido).join('');
   } else tWrap.style.display = 'none';
+}
+
+// v5.4 — « Movimientos » : líneas compactas 📥 recibido / 📤 vendido,
+// ordenadas por fecha. Anti doble conteo: un lote recibido cuyos kilos ya
+// están TODOS comprometidos en mis lotes no aparece más como recibido; si
+// quedan kilos sueltos, la línea muestra el restante. Tap → panel detalle.
+let movsOpen = false; // v5.5 — replié par défaut
+function toggleMovimientos() {
+  movsOpen = !movsOpen;
+  document.getElementById('lotesRecibidosList').style.display = movsOpen ? 'block' : 'none';
+  document.getElementById('movsChevron').textContent = movsOpen ? '▴' : '▾';
+}
+
+function renderMovimientosLotes() {
+  const rows = [];
+  DB.getLotes().filter(l => l.estado === 'vendido').forEach(l => {
+    rows.push({
+      fecha: l.vendidoAt || l.creadoAt || '',
+      html: `<div class="act-item" style="cursor:pointer;margin-bottom:6px;background:var(--green-light);border-color:#86EFAC" onclick="abrirDetalleLote(${l.id})">
+        <div class="act-dot venta"></div>
+        <div class="act-info"><div class="act-title">📤 Vendido ${escHtml(l.numero || '#' + l.id)}${l.compradorName ? ' → ' + escHtml(l.compradorName) : ''}</div>
+        <div class="act-sub">${escHtml(l.matName || '')} · ${cantidadLote(l)}</div></div>
+        <div class="act-right">${l.precioTotal ? `<div class="act-total venta">+${fmt(l.precioTotal)}</div>` : ''}<div class="act-fecha">${fechaLabel(l.vendidoAt || l.creadoAt || new Date().toISOString())}</div></div>
+      </div>` });
+  });
+  DB.getEntradas().filter(e => e.loteId && e.origenCentroId && !e.transformado).forEach(e => {
+    const resto = Math.max(0, Math.round(((e.kg || 0) - kgComprometidos(e.id)) * 100) / 100);
+    if (resto <= 0.001) return; // material ya re-loteado → vive en mis lotes
+    const parcial = resto < (e.kg || 0) - 0.001;
+    const u = e.unidades != null ? 'und' : 'kg';
+    rows.push({
+      fecha: e.fecha || '',
+      html: `<div class="act-item" style="cursor:pointer;margin-bottom:6px;background:var(--blue-light);border-color:#BFDBFE" onclick="abrirDetalleRecibido(${e.id})">
+        <div class="act-dot entrada" style="background:var(--blue)"></div>
+        <div class="act-info"><div class="act-title">📥 Recibido ${escHtml(e.loteNumero || '#' + e.loteId)} · de ${escHtml(e.recName || 'la red')}</div>
+        <div class="act-sub">${escHtml(e.matName || '')} · ${cantidadLabel(e)}${parcial ? ` · quedan ${resto} ${u} sueltos` : ''}</div></div>
+        <div class="act-right"><div class="act-total entrada">−${fmt(e.total || 0)}</div><div class="act-fecha">${fechaLabel(e.fecha)}</div></div>
+      </div>` });
+  });
+  rows.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  return { n: rows.length, html: rows.map(r => r.html).join('') };
 }
 
 function toggleTransformados() {
@@ -3849,10 +4042,33 @@ function closeDetalleLote() {
 //     el vendedor + el lote se seleccionan solos en Nueva Entrada.
 //   · Sin cámara / iPhone: ⌨️ ingresa el número del lote a mano.
 // ════════════════════════════════════════════════════════════
+// v5.4 — métadonnées d'impression/partage : date + heure + point GPS.
+let qrGeo = null; // { lat, lng } — capturé à l'ouverture du drawer QR
+function qrFechaHoraStr() {
+  const d = new Date();
+  return d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    + ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function qrGeoStr() {
+  return qrGeo ? `GPS: ${qrGeo.lat.toFixed(5)}, ${qrGeo.lng.toFixed(5)}` : 'GPS no disponible';
+}
+function capturarGeoQR() {
+  qrGeo = null;
+  try {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      pos => { qrGeo = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+      () => { /* permiso denegado o sin señal → "GPS no disponible" */ },
+      { enableHighAccuracy: false, timeout: 6000, maximumAge: 120000 }
+    );
+  } catch { /* sin geolocalización */ }
+}
+
 function openQrLote(loteId) {
   const c = DB.getCentro();
   const l = DB.getLotes().find(x => x.id === loteId);
   if (!c || !l) return;
+  capturarGeoQR();
   const payload = `ACOPI|${c.id}|${l.id}|${l.numero || ''}`;
   let svg = '';
   try {
@@ -3883,13 +4099,20 @@ function qrToPng(cb) {
   const xml = new XMLSerializer().serializeToString(svgEl);
   const img = new Image();
   img.onload = () => {
+    // v5.4 — le PNG partagé porte aussi date/heure/GPS (mêmes infos que
+    // la feuille imprimée) : 640×760, QR en haut, méta en bas.
     const cv = document.createElement('canvas');
-    cv.width = cv.height = 640;
+    cv.width = 640; cv.height = 760;
     const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 640, 640);
-    ctx.drawImage(img, 40, 20, 520, 520);
-    ctx.fillStyle = '#0F172A'; ctx.font = '900 44px ui-monospace, Menlo, monospace'; ctx.textAlign = 'center';
-    ctx.fillText(document.getElementById('qrLoteNum').textContent || '', 320, 600);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 640, 760);
+    ctx.drawImage(img, 60, 20, 520, 520);
+    ctx.fillStyle = '#0F172A'; ctx.textAlign = 'center';
+    ctx.font = '900 44px ui-monospace, Menlo, monospace';
+    ctx.fillText(document.getElementById('qrLoteNum').textContent || '', 320, 592);
+    ctx.font = '600 22px -apple-system, sans-serif'; ctx.fillStyle = '#475569';
+    ctx.fillText(document.getElementById('qrLoteSub').textContent || '', 320, 636);
+    ctx.fillText('🗓 ' + qrFechaHoraStr(), 320, 678);
+    ctx.fillText('📍 ' + qrGeoStr(), 320, 714);
     cv.toBlob(cb, 'image/png');
   };
   img.onerror = () => showRecsToast('⚠️ No se pudo generar la imagen');
@@ -3917,12 +4140,16 @@ function imprimirQR() {
   const sub = document.getElementById('qrLoteSub').textContent || '';
   const win = window.open('', '_blank');
   if (!win) { showRecsToast('⚠️ Permite las ventanas emergentes para imprimir'); return; }
+  // v5.4 — la feuille imprimée porte date, heure et point GPS (preuve de
+  // création du rótulo — papier collé sur le fardo).
   win.document.write(`<!DOCTYPE html><html><head><title>Lote ${num}</title><style>
     body { font-family: -apple-system, sans-serif; text-align: center; padding: 40px 20px; }
     svg { width: 320px; height: 320px; }
     .num { font-family: ui-monospace, Menlo, monospace; font-size: 42px; font-weight: 900; letter-spacing: 2px; margin: 16px 0 4px; }
     .sub { font-size: 15px; color: #475569; }
-  </style></head><body>${svgEl.outerHTML}<div class="num">${num}</div><div class="sub">${sub}</div></body></html>`);
+    .meta { font-size: 13px; color: #64748B; margin-top: 14px; line-height: 1.7; border-top: 1px dashed #CBD5E1; padding-top: 10px; display: inline-block; }
+  </style></head><body>${svgEl.outerHTML}<div class="num">${num}</div><div class="sub">${sub}</div>
+  <div class="meta">🗓 Impreso: ${qrFechaHoraStr()}<br>📍 ${qrGeoStr()}<br>AcopiApp — trazabilidad de la cadena de reciclaje</div></body></html>`);
   win.document.close();
   setTimeout(() => { try { win.print(); } catch {} }, 300);
 }
