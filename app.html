@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 6.2                                                 -->
+  <!-- Version : 6.4                                                 -->
   <!-- Date    : 21/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -765,6 +765,13 @@
           </div>
         </div>
       </div>
+      <!-- v6.3 (punto 6): solo cuentas con cap. sinbapuntos (hoy SinBa).
+           Elegibilidad POR ACTOR (se recuerda para esa contraparte), pero
+           SinBa puede desmarcar aquí si no quiere otorgar puntos. -->
+      <label id="spGrantRow" style="display:none;align-items:center;gap:10px;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;cursor:pointer">
+        <input type="checkbox" id="spGrantChk" style="width:20px;height:20px;flex-shrink:0" onchange="onSpGrantToggle(this)">
+        <span style="flex:1;font-size:13px;line-height:1.4;color:var(--text-primary)">⭐ Otorgar <b>sinbapuntos</b> a <span id="spGrantName">esta cuenta</span><br><span style="font-size:11px;color:var(--text-muted)">Se recuerda para esta cuenta · desmárcalo para no darle puntos</span></span>
+      </label>
     </div>
     <!-- DESCONOCIDO / INTERNA: material + peso -->
     <div id="entradaLibreBlock" style="display:none;flex-direction:column;gap:20px">
@@ -1056,7 +1063,14 @@
     <button class="historial-close-btn" onclick="closeCrearLote()">✕</button>
   </div>
   <div class="historial-body" style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:16px">
-    <div>
+    <!-- v6.3 (punto 1) — SinBa: clasificar (surtri) o fusionar lotes por grado -->
+    <div id="clModoWrap" style="display:none">
+      <div class="origen-grid" style="grid-template-columns:1fr 1fr">
+        <button class="origen-btn" id="clModoSurtri" onclick="setCrearLoteModo('surtri')"><span class="og-emoji">♻️</span><span class="og-name">Clasificar (surtri)</span></button>
+        <button class="origen-btn" id="clModoFusion" onclick="setCrearLoteModo('fusion')"><span class="og-emoji">🔗</span><span class="og-name">Fusionar lotes</span></button>
+      </div>
+    </div>
+    <div id="clMatWrap">
       <div class="section-label">Material (solo con stock suelto)</div>
       <div class="material-grid" id="matGridLote"></div>
     </div>
@@ -1086,6 +1100,12 @@
         <span style="font-size:13px;color:#92400E" id="clMermaUnit">kg</span>
       </div>
       <div id="clSurtriTotal" style="margin-top:10px;font-size:13px;color:var(--text-secondary);line-height:1.6"></div>
+    </div>
+    <!-- v6.3 (punto 1) — fusionar todos los lotes disponibles de un mismo grado -->
+    <div id="clFusionWrap" style="display:none">
+      <div class="section-label">Elige un grado (2+ lotes) para unirlos en uno</div>
+      <div class="material-grid" id="clFusionList"></div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:6px">Se fusionan TODOS los lotes disponibles de ese grado. Su composición, coste y trazabilidad se conservan en el nuevo lote.</div>
     </div>
     <div id="clResumen" style="display:none">
       <div class="section-label">Composición del lote (trazabilidad)</div>
@@ -1502,11 +1522,27 @@ function resolverReclamo(id) {
 }
 
 // ── RECLAMAR (lado vendedor: no reconozco esta venta) ────
+// v6.3 (punto 5) — el vendedor solo puede reclamar una venta 24 h DESPUÉS de
+// haberla anotado en sus libros (anotadaAt; fallback a fecha para ventas
+// anteriores a esta versión). Evita reclamos en caliente por un simple retraso
+// de pago. Devuelve true si ya pasó el plazo.
+const RECLAMO_ESPERA_MS = 24 * 60 * 60 * 1000;
+function reclamoDesde(v) { return new Date(v.anotadaAt || v.fecha || 0).getTime(); }
+function puedeReclamar(v) { return Date.now() - reclamoDesde(v) >= RECLAMO_ESPERA_MS; }
+function esperaReclamoTexto(v) {
+  const restante = RECLAMO_ESPERA_MS - (Date.now() - reclamoDesde(v));
+  if (restante <= 0) return '';
+  const h = Math.floor(restante / 3600000);
+  const min = Math.ceil((restante % 3600000) / 60000);
+  return h >= 1 ? `${h} h` : `${min} min`;
+}
+
 function reclamarVenta(ventaId) {
   const c = DB.getCentro();
   const list = DB.getVentas();
   const v = list.find(x => x.id === ventaId);
   if (!c || !v || !v.compradorId) return;
+  if (!puedeReclamar(v)) { showRecsToast(`⏳ Podrás reclamar en ${esperaReclamoTexto(v)}`); return; }
   if (!confirm(`¿Reclamar esta transacción?\n\n${v.comprador || 'Comprador'} · ${v.matName || ''} · ${fmt(v.total || 0)}\n\nEl comprador verá el reclamo en su app. No borra nada — solo marca el desacuerdo para que lo aclaren.`)) return;
   v.reclamo = 'reclamado'; v.reclamadoAt = new Date().toISOString();
   localStorage.setItem('acopi_ventas', JSON.stringify(list));
@@ -1610,6 +1646,9 @@ async function procesarVentasEntrantes() {
     const total = p.total || 0;
     DB.addVenta({
       id: p.id, fecha: p.fecha || new Date().toISOString(),
+      // v6.3 — momento en que ESTA cuenta (el vendedor) anota la venta.
+      // Ancla del plazo de 24 h antes de poder reclamar (punto 5).
+      anotadaAt: new Date().toISOString(),
       matId: p.matId, matName: p.matName, kg: p.kg,
       unidades: p.unidades != null ? p.unidades : null,
       precioKg: p.precioKg, total,
@@ -2754,7 +2793,12 @@ function renderPagos() {
     const tel = telefonoDe(v.compradorId);
     const reclamoHtml = v.reclamo === 'reclamado' ? '<div class="reclamo-badge" style="margin-top:6px;display:inline-block">⚠️ Reclamado — esperando al comprador</div>'
       : v.reclamo === 'resuelto' ? '<div class="reclamo-badge" style="margin-top:6px;display:inline-block;background:var(--green-light);color:var(--green)">✔ Reclamo resuelto</div>'
-      : (v.estadoPago !== 'pagado' ? `<button class="reclamo-btn" onclick="reclamarVenta(${v.id})">⚠️ Reclamar</button>` : '');
+      // v6.3 (punto 5): el botón Reclamar solo aparece 24 h después de anotada.
+      : (v.estadoPago !== 'pagado'
+          ? (puedeReclamar(v)
+              ? `<button class="reclamo-btn" onclick="reclamarVenta(${v.id})">⚠️ Reclamar</button>`
+              : `<div class="reclamo-espera" style="margin-top:6px;font-size:11px;color:var(--text-muted)">⏳ Podrás reclamar en ${esperaReclamoTexto(v)}</div>`)
+          : '');
     return `<div class="pago-row" style="flex-wrap:wrap">
       <div class="pago-info">
         <div class="pago-name">${escHtml(v.comprador || 'Acopiador')}${v.loteNumero ? ' <span style="font-size:11px;color:var(--text-muted)">· ' + escHtml(v.loteNumero) + '</span>' : ''}</div>
@@ -3468,7 +3512,35 @@ function confirmPesoSheet() {
 // (v3.0 : numpadEntrada retiré — la saisie passe par les inputs natifs
 //  weightInput / precioRedInput / rsInpKg / rsInpPrecio, voir plus haut.)
 
+// ── v6.3 (punto 6) — elegibilidad de sinbapuntos POR ACTOR ──
+// Guardada localmente por SinBa en acopi_sp_elegibles = { [centroId]: false }.
+// Ausente = elegible (por defecto TODOS reciben): solo se persisten las
+// EXCLUSIONES, así una contraparte nueva recibe puntos sin configuración.
+function getSpElegibles() { try { return JSON.parse(localStorage.getItem('acopi_sp_elegibles') || '{}') || {}; } catch { return {}; } }
+function spEsElegible(centroId) { return getSpElegibles()[centroId] !== false; }
+function setSpElegible(centroId, elegible) {
+  const m = getSpElegibles();
+  if (elegible) delete m[centroId]; else m[centroId] = false;
+  localStorage.setItem('acopi_sp_elegibles', JSON.stringify(m));
+}
+function onSpGrantToggle(el) {
+  const ct = entradaState.contraparte;
+  if (ct) setSpElegible(ct.id, el.checked);
+}
+function updateSpGrantRow() {
+  const row = document.getElementById('spGrantRow');
+  if (!row) return;
+  const ct = entradaState.contraparte;
+  const mostrar = tieneCap('sinbapuntos') && entradaState.origen === 'red' && !!ct;
+  row.style.display = mostrar ? 'flex' : 'none';
+  if (mostrar) {
+    document.getElementById('spGrantName').textContent = ct.name || 'esta cuenta';
+    document.getElementById('spGrantChk').checked = spEsElegible(ct.id);
+  }
+}
+
 function updateEntradaUI() {
+  updateSpGrantRow();
   const card = document.getElementById('totalCardEntrada');
   const amt  = document.getElementById('totalAmountEntrada');
   const det  = document.getElementById('totalDetailEntrada');
@@ -3588,8 +3660,9 @@ async function confirmEntradaInner(og, c) {
       suelto: true, loteId: null, loteNumero: null,
       fecha: entrada.fecha, estado: 'pendiente',
     });
-    // Cuenta SinBa: sinbapuntos inmediatos al vendedor.
-    if (isSinba() && mat.puntos > 0) {
+    // Cuenta SinBa: sinbapuntos inmediatos al vendedor (v6.3: solo si esta
+    // contraparte es elegible — casilla del punto 6).
+    if (isSinba() && mat.puntos > 0 && spEsElegible(ct.id)) {
       const pts = Math.round(mat.puntos * peso * 100) / 100;
       queueSync(`sinbapuntos/${ct.id}/movs/cr_e${entrada.id}`, {
         id: 'cr_e' + entrada.id, tipo: 'credito', puntos: pts,
@@ -3665,8 +3738,9 @@ async function confirmEntradaInner(og, c) {
       loteId: l.id, loteNumero: l.numero || null,
       fecha: entrada.fecha, estado: 'pendiente',
     });
-    // 3) Cap. sinbapuntos (hoy = SinBa): puntos inmediatos al vendedor.
-    if (tieneCap('sinbapuntos')) {
+    // 3) Cap. sinbapuntos (hoy = SinBa): puntos inmediatos al vendedor
+    //    (v6.3: solo si esta contraparte es elegible — casilla del punto 6).
+    if (tieneCap('sinbapuntos') && spEsElegible(ct.id)) {
       const mat = MATERIALES.find(m => m.id === l.matId);
       const pts = mat && mat.puntos ? Math.round(mat.puntos * (l.kg || 0) * 100) / 100 : 0;
       if (pts > 0) {
@@ -4523,7 +4597,163 @@ async function ingresarNumeroLote(motivo) {
 // ── Crear lote (drawer) ──
 // v6.0 — el botón Confirmar del drawer despacha según el tipo de cuenta:
 // SinBa hace surtri (varios lotes de golpe), el resto crea/fusiona un lote.
-function onCrearLoteConfirm() { if (tieneCap('surtri')) confirmSurtri(); else confirmCrearLote(); }
+// v6.3 (punto 1) — SinBa tiene además un modo FUSIONAR (agrupar por grado).
+let crearLoteModo = 'surtri'; // solo aplica a cuentas con cap. surtri
+function onCrearLoteConfirm() {
+  if (tieneCap('surtri')) { if (crearLoteModo === 'fusion') confirmFusion(); else confirmSurtri(); }
+  else confirmCrearLote();
+}
+function setCrearLoteModo(m) { crearLoteModo = m; aplicarCrearLoteModo(); }
+
+// Aplica el modo elegido (surtri | fusion) para cuentas con cap. surtri.
+function aplicarCrearLoteModo() {
+  document.getElementById('clModoSurtri').classList.toggle('selected', crearLoteModo === 'surtri');
+  document.getElementById('clModoFusion').classList.toggle('selected', crearLoteModo === 'fusion');
+  document.getElementById('clResumen').style.display = 'none';
+  const btn = document.getElementById('clConfirmBtn');
+  btn.disabled = true;
+  ['clCantidadWrap', 'clLotesWrap', 'clSurtriWrap', 'clFusionWrap'].forEach(id => document.getElementById(id).style.display = 'none');
+  if (crearLoteModo === 'fusion') { document.getElementById('clMatWrap').style.display = 'none'; renderCrearLoteFusion(); }
+  else { document.getElementById('clMatWrap').style.display = ''; renderCrearLoteSurtri(); }
+}
+
+// Modo SURTRI (clasificar el stock suelto acumulado en grados).
+function renderCrearLoteSurtri() {
+  const titleEl = document.querySelector('#crearLoteDrawer .historial-drawer-title');
+  if (titleEl) titleEl.textContent = '♻️ Surtri — clasificar para vender';
+  document.getElementById('clMatWrap').querySelector('.section-label').textContent = 'Material acumulado (stock suelto)';
+  surtriState = { material: null, alloc: {}, mermaStr: '0' };
+  const btn = document.getElementById('clConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Elige el material';
+  const sueltos = kgSueltosPorMat();
+  const mats = MATERIALES.filter(m => (sueltos[m.id] || 0) > 0.0001);
+  const grid = document.getElementById('matGridLote');
+  if (!mats.length) { grid.innerHTML = '<div class="mini-empty" style="grid-column:1/-1;background:var(--surface);border:1.5px dashed var(--border);border-radius:12px;padding:16px;text-align:center;color:var(--text-muted);font-size:12px">No tienes material suelto acumulado. Usa « Fusionar lotes » o registra entradas primero.</div>'; return; }
+  grid.innerHTML = mats.map(m => {
+    const st = Math.round((sueltos[m.id] || 0) * 100) / 100;
+    const ng = (GRADOS_VENTA[m.id] || []).length;
+    return `<button class="mat-btn" id="lmat-${m.id}" onclick="selectSurtriMat('${m.id}')">
+      <span class="mat-emoji">${m.emoji}</span>
+      <span class="mat-name">${m.name}</span>
+      <span class="mat-price">${fmtKg(st)} ${matUnidad(m)}${ng ? ' · ' + ng + ' grados' : ''}</span>
+    </button>`;
+  }).join('');
+}
+
+// ── Modo FUSIONAR (v6.3, punto 1) ──
+// Agrupa los lotes DISPONIBLES por grado (matId + matVentaId) y fusiona de
+// golpe todos los del mismo grado en un solo lote. Sin kilos sueltos (decisión
+// de Arthur): los sueltos no tienen grado hasta pasar por el surtri.
+let fusionState = { key: null, grupo: null };
+function gruposFusionables() {
+  const groups = {};
+  DB.getLotes().forEach(l => {
+    if (l.estado !== 'disponible') return;
+    const key = l.matId + '|' + (l.matVentaId || '');
+    if (!groups[key]) {
+      const mat = MATERIALES.find(m => m.id === l.matId);
+      groups[key] = {
+        key, matId: l.matId, matVentaId: l.matVentaId || null,
+        matName: l.matName || (mat && mat.name) || l.matId,
+        matVentaName: l.matVentaName || null,
+        emoji: (mat && mat.emoji) || '📦',
+        unidad: l.unidad || 'kg', lotes: [],
+      };
+    }
+    groups[key].lotes.push(l);
+  });
+  // Solo grados con 2+ lotes: fusionar uno solo lo renumera sin motivo.
+  return Object.values(groups).filter(g => g.lotes.length >= 2);
+}
+function renderCrearLoteFusion() {
+  const titleEl = document.querySelector('#crearLoteDrawer .historial-drawer-title');
+  if (titleEl) titleEl.textContent = '🔗 Fusionar lotes por grado';
+  fusionState = { key: null, grupo: null };
+  const btn = document.getElementById('clConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Elige un grado para fusionar';
+  document.getElementById('clFusionWrap').style.display = 'block';
+  const grupos = gruposFusionables();
+  const list = document.getElementById('clFusionList');
+  if (!grupos.length) {
+    list.innerHTML = '<div class="mini-empty" style="grid-column:1/-1;background:var(--surface);border:1.5px dashed var(--border);border-radius:12px;padding:16px;text-align:center;color:var(--text-muted);font-size:12px">No hay ningún grado con 2 o más lotes disponibles para fusionar.</div>';
+    return;
+  }
+  list.innerHTML = grupos.map(g => {
+    const total = Math.round(g.lotes.reduce((s, l) => s + (l.kg || 0), 0) * 100) / 100;
+    const nom = g.matVentaName ? `${g.matName} · ${g.matVentaName}` : g.matName;
+    return `<button class="mat-btn" id="fg-${escHtml(g.key)}" onclick="selectFusionGrupo('${escHtml(g.key)}')">
+      <span class="mat-emoji">${g.emoji}</span>
+      <span class="mat-name">${escHtml(nom)}</span>
+      <span class="mat-price">${g.lotes.length} lotes · ${fmtKg(total)} ${g.unidad}</span>
+    </button>`;
+  }).join('');
+}
+function selectFusionGrupo(key) {
+  const g = gruposFusionables().find(x => x.key === key);
+  if (!g) { renderCrearLoteFusion(); return; }
+  fusionState = { key, grupo: g };
+  document.querySelectorAll('#clFusionList .mat-btn').forEach(b => b.classList.remove('selected'));
+  const el = document.getElementById('fg-' + key); if (el) el.classList.add('selected');
+  const info = componerLoteCombinado(g.matId, 0, g.lotes.map(l => l.id));
+  const r = info.origenResumen, u = g.unidad;
+  const nom = g.matVentaName ? `${g.matName} · ${g.matVentaName}` : g.matName;
+  const res = document.getElementById('clResumen'); res.style.display = 'block';
+  document.getElementById('clResumenBody').innerHTML =
+    `<b>${fmtKg(info.kgTotal)} ${u} de ${escHtml(nom)}</b> — fusión de ${info.fusionDe.map(escHtml).join(' + ')}:<br>` +
+    (r.red ? `🤝 Compra en red: ${r.red} ${u}<br>` : '') +
+    (r.desconocido ? `👤 Recolector externo: ${r.desconocido} ${u}<br>` : '') +
+    (r.interna ? `🏠 Recolección interna: ${r.interna} ${u}<br>` : '') +
+    (r.nodoc ? `❓ No documentado: ${r.nodoc} ${u}<br>` : '') +
+    (info.lotesOrigen.length ? `⛓ Incluye material de ${info.lotesOrigen.length} lote${info.lotesOrigen.length > 1 ? 's' : ''} anterior${info.lotesOrigen.length > 1 ? 'es' : ''}<br>` : '') +
+    `💰 Costo del material: ${fmt(info.costoTotal)}`;
+  const btn = document.getElementById('clConfirmBtn');
+  btn.disabled = false;
+  btn.textContent = `🔗 Fusionar ${g.lotes.length} lotes — ${fmtKg(info.kgTotal)} ${u}`;
+}
+let lastFusionAt = 0;
+function confirmFusion() {
+  if (Date.now() - lastFusionAt < 1500) return;
+  const sel = fusionState.grupo;
+  if (!sel) return;
+  // Re-verificación: el grado debe seguir teniendo 2+ lotes disponibles.
+  const g = gruposFusionables().find(x => x.key === sel.key);
+  if (!g || g.lotes.length < 2) {
+    showRecsToast('⚠️ Ya no hay 2 o más lotes disponibles de ese grado');
+    renderCrearLoteFusion(); return;
+  }
+  const info = componerLoteCombinado(g.matId, 0, g.lotes.map(l => l.id));
+  if (info.fuentes.length < 2) { showRecsToast('⚠️ Algún lote ya no está disponible — revisa la lista'); renderCrearLoteFusion(); return; }
+  lastFusionAt = Date.now();
+  const numero = nuevoNumeroLote();
+  const c = DB.getCentro();
+  DB.addLote({
+    numero, matId: g.matId, matName: g.matName,
+    matVentaId: g.matVentaId || null, matVentaName: g.matVentaName || null,
+    kg: info.kgTotal, unidad: g.unidad, estado: 'disponible',
+    creadoAt: new Date().toISOString(),
+    composicion: info.composicion,
+    origenResumen: info.origenResumen,
+    costoTotal: info.costoTotal,
+    lotesOrigen: info.lotesOrigen,
+    fusionDe: info.fusionDe.length ? info.fusionDe : null,
+  });
+  // Los lotes absorbidos pasan a FUSIONADO (mismo patrón que confirmCrearLote).
+  const ll = DB.getLotes();
+  const ahora = new Date().toISOString();
+  info.fuentes.forEach(f => {
+    const lote = ll.find(x => x.id === f.id);
+    if (!lote) return;
+    lote.estado = 'fusionado';
+    lote.fusionadoEn = numero;
+    lote.fusionadoAt = ahora;
+    if (c) queueSync(`centros/${c.id}/lotes/${lote.id}`, lote);
+  });
+  DB.saveLotes(ll);
+  closeCrearLote();
+  renderLotes();
+  if (currentScreen === 'resumen') initResumen();
+  showRecsToast(`🔗 Lote ${numero} creado — fusión de ${info.fusionDe.join(' + ')}`);
+}
 
 function openCrearLote() {
   const titleEl = document.querySelector('#crearLoteDrawer .historial-drawer-title');
@@ -4534,29 +4764,17 @@ function openCrearLote() {
   document.getElementById('crearLoteDrawer').classList.add('open');
 
   if (tieneCap('surtri')) {
-    // ── SURTRI (cap. surtri, hoy = SinBa) : material acumulado → grados ──
-    if (titleEl) titleEl.textContent = '♻️ Surtri — clasificar para vender';
-    document.querySelector('#matGridLote').previousElementSibling.textContent = 'Material acumulado (stock suelto)';
-    surtriState = { material: null, alloc: {}, mermaStr: '0' };
-    const sueltos = kgSueltosPorMat();
-    const mats = MATERIALES.filter(m => (sueltos[m.id] || 0) > 0.0001);
-    if (!mats.length) { closeCrearLote(); showRecsToast('No tienes material suelto acumulado — registra o recibe entradas primero'); return; }
-    document.getElementById('matGridLote').innerHTML = mats.map(m => {
-      const st = Math.round((sueltos[m.id] || 0) * 100) / 100;
-      const ng = (GRADOS_VENTA[m.id] || []).length;
-      return `<button class="mat-btn" id="lmat-${m.id}" onclick="selectSurtriMat('${m.id}')">
-        <span class="mat-emoji">${m.emoji}</span>
-        <span class="mat-name">${m.name}</span>
-        <span class="mat-price">${fmtKg(st)} ${matUnidad(m)}${ng ? ' · ' + ng + ' grados' : ''}</span>
-      </button>`;
-    }).join('');
-    document.getElementById('clCantidadWrap').style.display = 'none';
-    document.getElementById('clLotesWrap').style.display = 'none';
-    document.getElementById('clSurtriWrap').style.display = 'none';
+    // ── SinBa : dos modos (surtri / fusionar), toggle visible ──
+    document.getElementById('clModoWrap').style.display = '';
+    if (crearLoteModo !== 'fusion') crearLoteModo = 'surtri';
+    aplicarCrearLoteModo();
     return;
   }
 
   // ── CENTRO / RECICLADOR : flujo clásico (crear lote / fusionar) ──
+  document.getElementById('clModoWrap').style.display = 'none';
+  document.getElementById('clMatWrap').style.display = '';
+  document.getElementById('clFusionWrap').style.display = 'none';
   if (titleEl) titleEl.textContent = '➕ Crear lote';
   document.querySelector('#matGridLote').previousElementSibling.textContent = 'Material (solo con stock suelto)';
   document.getElementById('clSurtriWrap').style.display = 'none';
