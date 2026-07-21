@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 6.0                                                 -->
+  <!-- Version : 6.2                                                 -->
   <!-- Date    : 21/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -878,10 +878,13 @@
 <div id="screen-precios" class="screen">
   <div class="scroll-area">
     <div>
-      <div class="section-label">Stock y precio por materia</div>
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span>Stock y precio por materia</span>
+        <button onclick="abrirMisMateriales()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--text-secondary);cursor:pointer">⚙️ Mis materiales</button>
+      </div>
       <div class="price-list-precios" id="priceListPrecios"></div>
     </div>
-    <div class="nota"><strong>💡 Stock y precios</strong><br>Cada línea muestra tu stock (suelto + lotes disponibles) y tu precio de compra — toca para editarlo. Los precios se usan en <em>Nueva Entrada</em> y se difunden por WhatsApp.</div>
+    <div class="nota"><strong>💡 Stock y precios</strong><br>Cada línea muestra tu stock (suelto + lotes disponibles) y tu precio de compra — toca para editarlo. Los precios se usan en <em>Nueva Entrada</em> y se difunden por WhatsApp. Con <strong>⚙️ Mis materiales</strong> ocultas las que no trabajas.</div>
   </div>
   <div class="bottom-cta">
     <!-- v3.0 : ouvre l'écran WhatsApp (aperçu + édition du message) — il n'est
@@ -962,11 +965,11 @@
       <div class="section-label">⬇ Por pagar — tus compras a la red</div>
       <div id="pagosPorPagarList"></div>
     </div>
-    <div>
+    <div id="pagosPorCobrarSection">
       <div class="section-label">⬆ Por cobrar — tus ventas a la red</div>
       <div id="pagosPorCobrarList"></div>
     </div>
-    <div class="nota"><strong>💡 Cómo funciona</strong><br>El que COMPRA marca cada línea como pagada cuando entrega el dinero. El vendedor ve el cambio en su columna "por cobrar" automáticamente.</div>
+    <div class="nota" id="pagosNota"><strong>💡 Cómo funciona</strong><br>El que COMPRA marca cada línea como pagada cuando entrega el dinero. El vendedor ve el cambio en su columna "por cobrar" automáticamente.</div>
   </div>
 </div>
 
@@ -989,11 +992,11 @@
         <span class="hero-sol" id="finMargenSol">S/</span><span id="finMargenVal">0.00</span>
       </div>
       <div class="hero-row">
-        <div class="hero-mini">
+        <div class="hero-mini" id="finIngresosMini">
           <div class="hero-mini-lbl">⬆ Ingresos ventas</div>
           <div class="hero-mini-val" id="finIngresos">S/ 0.00</div>
         </div>
-        <div class="hero-divider"></div>
+        <div class="hero-divider" id="finHeroDivider"></div>
         <div class="hero-mini">
           <div class="hero-mini-lbl">⬇ Gastos compras</div>
           <div class="hero-mini-val" id="finGastos">S/ 0.00</div>
@@ -1001,9 +1004,9 @@
       </div>
       <div class="hero-stats">
         <div class="hero-stat"><div class="hero-stat-val" id="finKgComprados">0 kg</div><div class="hero-stat-lbl">Comprados</div></div>
-        <div class="hero-stat"><div class="hero-stat-val" id="finKgVendidos">0 kg</div><div class="hero-stat-lbl">Vendidos</div></div>
+        <div class="hero-stat" id="finStatVendidos"><div class="hero-stat-val" id="finKgVendidos">0 kg</div><div class="hero-stat-lbl" id="finKgVendidosLbl">Vendidos</div></div>
         <div class="hero-stat"><div class="hero-stat-val" id="finEntradas">0</div><div class="hero-stat-lbl">Entradas</div></div>
-        <div class="hero-stat"><div class="hero-stat-val" id="finVentas">0</div><div class="hero-stat-lbl">Ventas</div></div>
+        <div class="hero-stat" id="finStatVentas"><div class="hero-stat-val" id="finVentas">0</div><div class="hero-stat-lbl" id="finVentasLbl">Ventas</div></div>
       </div>
     </div>
     <div class="valor-potencial-card" id="finPotencialCard" style="display:none">
@@ -1230,6 +1233,22 @@
     <button class="historial-close-btn" onclick="closeHistorial()">✕</button>
   </div>
   <div class="historial-body" id="historialList"></div>
+</div>
+
+<!-- v6.2 : MIS MATERIALES — cada cuenta oculta las materias que no trabaja. -->
+<div class="drawer-overlay" id="misMatOverlay" onclick="cerrarMisMateriales()"></div>
+<div class="drawer historial-drawer" id="misMatDrawer">
+  <div class="drawer-handle"></div>
+  <div class="historial-drawer-header">
+    <div class="historial-drawer-title">⚙️ Mis materiales</div>
+    <button class="historial-close-btn" onclick="cerrarMisMateriales()">✕</button>
+  </div>
+  <div style="padding:0 16px 6px;font-size:12px;color:var(--text-secondary)">Activa solo las materias que trabajas. Las que tienen stock no se pueden ocultar.</div>
+  <div class="historial-body" id="misMatList" style="padding:8px 12px 90px"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:8px">
+    <button onclick="misMatTodas()" style="flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:12px;font-size:13px;font-weight:700;color:var(--text-secondary);cursor:pointer">Activar todas</button>
+    <button onclick="guardarMisMateriales()" style="flex:2;background:var(--accent);border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;color:#fff;cursor:pointer">✓ Guardar</button>
+  </div>
 </div>
 
 <script>
@@ -2339,20 +2358,22 @@ const GRADOS_VENTA = {
     { id: 'sbv_papel_color',  emoji: '🟨', name: 'Papel color' },
   ],
 };
-// Grados "comodín" — sin materia de compra de origen (decisión de Arthur:
-// siempre elegibles como cajón de sastre en cualquier surtri).
+// Grados "comodín" — categorías de venta sin materia de compra de origen.
+// (v6.1 : ya NO se muestran en el surtri de una materia con grados propios —
+// la merma tiene su propia fila. Se conservan por si se les asigna un origen.)
 const GRADOS_ORFANOS = [
   { id: 'sbv_film_sucio', emoji: '🌫️', name: 'Film sucio' },
   { id: 'sbv_maiz',       emoji: '🌽', name: 'Grano de maíz' },
   { id: 'sbv_otros',      emoji: '📦', name: 'Otros' },
 ];
-// Grados elegibles para una materia de compra: sus grados finos (si tiene) +
-// "igual que compra" (sin sub-clasificar) + los comodines.
+// v6.1 — Grados elegibles al surtrir una materia: SOLO sus sub-clasificaciones
+// (ej. PET botellas → los 6 grados PET). La merma es una fila aparte en la UI.
+// Si la materia no tiene grados definidos, se vende tal cual (opción base).
 function gradosDe(matId) {
-  const m = MATERIALES.find(x => x.id === matId);
   const propios = GRADOS_VENTA[matId] || [];
-  const base = m ? [{ id: m.id, emoji: m.emoji, name: m.name + ' (sin sub-clasificar)', esBase: true }] : [];
-  return [...propios, ...base, ...GRADOS_ORFANOS];
+  if (propios.length) return propios.slice();
+  const m = MATERIALES.find(x => x.id === matId);
+  return m ? [{ id: m.id, emoji: m.emoji, name: m.name, esBase: true }] : [];
 }
 // Nombre legible de un grado de venta (o de la materia de compra si es base).
 function gradoName(id) {
@@ -2369,9 +2390,78 @@ const SINBA_A_CENTRO = {};
 
 function isSinba() { const c = DB.getCentro(); return !!(c && c.tipo === 'sinba'); }
 function isReciclador() { const c = DB.getCentro(); return !!(c && c.tipo === 'reciclador'); }
+
+// ── CAPACIDADES POR CUENTA (v6.1) ────────────────────────────
+// SinBa es un centro de acopio COMO LOS DEMÁS; sus especificidades son
+// "capacidades" activables, no un tipo aparte cableado en todo el código.
+// Así, mañana, para dar una especificidad a un centro clásico basta con
+// añadir la capacidad a su cuenta — sin tocar la lógica de cada pantalla.
+//   · Capacidades por defecto según el tipo (abajo).
+//   · Extensión ad-hoc por cuenta: meta.capacidades = ['surtri', …]
+//     (se fusiona con las del tipo — sirve para "pluggear" a un centro
+//     una capacidad puntual sin cambiar su tipo).
+// Las nuevas features deben preguntar tieneCap('x'), NO isSinba().
+const CAPS_POR_TIPO = {
+  centro:     [],
+  sinba:      ['surtri', 'sinbapuntos'],
+  reciclador: ['transformar'],
+};
+function cuentaCaps() {
+  const c = DB.getCentro();
+  const base = (c && CAPS_POR_TIPO[c.tipo]) ? CAPS_POR_TIPO[c.tipo].slice() : [];
+  if (c && Array.isArray(c.capacidades)) c.capacidades.forEach(x => { if (!base.includes(x)) base.push(x); });
+  return base;
+}
+function tieneCap(cap) { return cuentaCaps().includes(cap); }
 // Nomenclatura unificada: TODAS las cuentas comparten el catálogo de compra.
 const MATERIALES = SINBA_COMPRA;
 function matUnidad(m) { return (m && m.unidad) === 'und' ? 'und' : 'kg'; }
+
+// v6.2 — "Mis materiales": cada cuenta puede ocultar las materias que no
+// trabaja. Se guarda una LISTA BLANCA de ids activos en `acopi_mis_materiales`.
+// Regla de retrocompat: si la clave NO existe (o está vacía/corrupta) → todas
+// las materias están activas (ninguna cuenta existente se ve afectada).
+function getMisMateriales() {
+  try {
+    const raw = localStorage.getItem('acopi_mis_materiales');
+    if (!raw) return null; // null = todas activas
+    const arr = JSON.parse(raw);
+    return (Array.isArray(arr) && arr.length) ? arr : null;
+  } catch { return null; }
+}
+function setMisMateriales(ids) {
+  // Guardar null/[] = "todas activas" → se borra la clave (vuelve al default).
+  if (!ids || ids.length === MATERIALES.length) { localStorage.removeItem('acopi_mis_materiales'); }
+  else localStorage.setItem('acopi_mis_materiales', JSON.stringify(ids));
+  const c = DB.getCentro();
+  if (c) queueSync(`centros/${c.id}/meta/materiales`, ids && ids.length !== MATERIALES.length ? ids : null);
+}
+// Materias que TRABAJA la cuenta (lista blanca) — para pickers de captura y
+// difusión de precios (no compras ni anuncias lo que no trabajas).
+function materialesActivos() {
+  const wl = getMisMateriales();
+  if (!wl) return MATERIALES;
+  return MATERIALES.filter(m => wl.includes(m.id));
+}
+// Ids de materias que tienen stock ahora (suelto disponible o lotes disponibles)
+// — nunca deben ocultarse ni desaparecer de la pantalla Stock.
+function materialesConStock() {
+  const ids = new Set();
+  try {
+    const sueltos = kgSueltosPorMat();
+    Object.keys(sueltos).forEach(id => { if (sueltos[id] > 0.001) ids.add(id); });
+  } catch {}
+  DB.getLotes().forEach(l => { if (l.estado === 'disponible' && (l.kg || 0) > 0) ids.add(l.matId); });
+  return ids;
+}
+// Materias VISIBLES en Stock/Finanzas = activas ∪ las que tengan stock (aunque
+// estén ocultas, p.ej. un lote recibido de una materia que la cuenta no compra).
+function materialesVisibles() {
+  const wl = getMisMateriales();
+  if (!wl) return MATERIALES;
+  const conStock = materialesConStock();
+  return MATERIALES.filter(m => wl.includes(m.id) || conStock.has(m.id));
+}
 function fmtPts(n) { return (Math.round(n * 100) / 100).toLocaleString('es-PE'); }
 // v6.0 — kilos con separador de miles (para tonelajes SinBa). 12500 → "12,500".
 function fmtKg(n) { return (Math.round((n || 0) * 100) / 100).toLocaleString('es-PE'); }
@@ -2628,6 +2718,14 @@ function renderPagos() {
   const porPagarEl = document.getElementById('pagosPorPagarList');
   const porCobrarEl = document.getElementById('pagosPorCobrarList');
   if (!porPagarEl) return;
+
+  // v6.2 — el reciclador final no vende: se oculta "Por cobrar" (siempre vacío).
+  const cobrarSec = document.getElementById('pagosPorCobrarSection');
+  if (cobrarSec) cobrarSec.style.display = isReciclador() ? 'none' : '';
+  const nota = document.getElementById('pagosNota');
+  if (nota) nota.innerHTML = isReciclador()
+    ? '<strong>💡 Cómo funciona</strong><br>Marca cada compra como pagada cuando entregas el dinero al vendedor. Él verá el cambio automáticamente.'
+    : '<strong>💡 Cómo funciona</strong><br>El que COMPRA marca cada línea como pagada cuando entrega el dinero. El vendedor ve el cambio en su columna "por cobrar" automáticamente.';
 
   // POR PAGAR: toda entrada cuyo origen es una cuenta de la red.
   const compras = DB.getEntradas().filter(e => e.origenCentroId).sort((a, b) => b.id - a.id);
@@ -3001,17 +3099,40 @@ function renderFinanzas() {
   const allDates = [...DB.getEntradas().map(e => e.fecha), ...DB.getVentas().map(v => v.fecha)];
   document.getElementById('btnFinPrev').disabled = !allDates.length
     || ini <= new Date(Math.min(...allDates.map(d => new Date(d).getTime())));
+  const rk = n => Math.round(n * 10) / 10;
+  const esRec = isReciclador();
   const heroEl = document.getElementById('finMargen');
-  heroEl.className = 'hero-amount ' + (margen >= 0 ? 'positive' : 'negative');
-  document.getElementById('finMargenSol').textContent = (margen >= 0 ? '' : '−') + 'S/';
-  document.getElementById('finMargenVal').textContent = Math.abs(margen).toFixed(2);
+  const solEl = document.getElementById('finMargenSol');
+  // v6.2 — el reciclador final no vende: en vez de margen/ingresos mostramos
+  // sus GASTOS y sus kg TRANSFORMADOS (su verdadera producción).
+  document.getElementById('finIngresosMini').style.display = esRec ? 'none' : '';
+  document.getElementById('finHeroDivider').style.display  = esRec ? 'none' : '';
+  document.getElementById('finStatVendidos').style.display = esRec ? '' : '';
+  if (esRec) {
+    const lotesT = DB.getLotes().filter(l => l.estado === 'transformado' && l.transformadoAt && enRango({ fecha: l.transformadoAt }));
+    const entrsT = DB.getEntradas().filter(e => e.transformado && e.transformadoAt && enRango({ fecha: e.transformadoAt }));
+    const kgTransf = lotesT.reduce((s, l) => s + (l.kg || 0), 0) + entrsT.reduce((s, e) => s + (e.kg || 0), 0);
+    const nTransf = lotesT.length + entrsT.length;
+    heroEl.className = 'hero-amount negative';
+    solEl.textContent = 'S/';
+    document.getElementById('finMargenVal').textContent = gastos.toFixed(2);
+    document.getElementById('finKgVendidos').textContent = rk(kgTransf) + ' kg';
+    document.getElementById('finKgVendidosLbl').textContent = '♻️ Transformados';
+    document.getElementById('finVentas').textContent = nTransf;
+    document.getElementById('finVentasLbl').textContent = 'Transform.';
+  } else {
+    heroEl.className = 'hero-amount ' + (margen >= 0 ? 'positive' : 'negative');
+    solEl.textContent = (margen >= 0 ? '' : '−') + 'S/';
+    document.getElementById('finMargenVal').textContent = Math.abs(margen).toFixed(2);
+    document.getElementById('finKgVendidos').textContent = rk(ventas.reduce((s, v) => s + (v.kg || 0), 0)) + ' kg';
+    document.getElementById('finKgVendidosLbl').textContent = 'Vendidos';
+    document.getElementById('finVentas').textContent = ventas.length;
+    document.getElementById('finVentasLbl').textContent = 'Ventas';
+  }
   document.getElementById('finIngresos').textContent  = fmt(ingresos);
   document.getElementById('finGastos').textContent    = fmt(gastos);
-  const rk = n => Math.round(n * 10) / 10;
   document.getElementById('finKgComprados').textContent = rk(entradas.reduce((s, e) => s + (e.kg || 0), 0)) + ' kg';
-  document.getElementById('finKgVendidos').textContent  = rk(ventas.reduce((s, v) => s + (v.kg || 0), 0)) + ' kg';
   document.getElementById('finEntradas').textContent    = entradas.length;
-  document.getElementById('finVentas').textContent      = ventas.length;
   renderFinPotencial();
 }
 
@@ -3024,7 +3145,7 @@ function renderFinPotencial() {
   const sueltosMap = kgSueltosPorMat();
   let valorTotal = 0, costoTotal = 0, gananciaTotal = 0, hayStock = false, faltaHistorial = false;
   const rows = [];
-  MATERIALES.forEach(m => {
+  materialesVisibles().forEach(m => {
     const misLotes = lotesDisp.filter(l => l.matId === m.id);
     const kg = Math.round((((sueltosMap[m.id] || 0)) + misLotes.reduce((s, l) => s + (l.kg || 0), 0)) * 100) / 100;
     if (kg <= 0) return;
@@ -3087,7 +3208,7 @@ function initEntrada() {
 }
 
 function renderEntradaMats() {
-  document.getElementById('matGridEntrada').innerHTML = MATERIALES.map(m => `
+  document.getElementById('matGridEntrada').innerHTML = materialesActivos().map(m => `
     <button class="mat-btn" id="emat-${m.id}" onclick="selectEntradaMat('${m.id}')">
       <span class="mat-emoji">${m.emoji}</span>
       <span class="mat-name">${m.name}</span>
@@ -3117,7 +3238,7 @@ function setRedModo(m) {
   updateEntradaUI();
 }
 function renderRedSueltoMats() {
-  document.getElementById('matGridRedSuelto').innerHTML = MATERIALES.map(m => `
+  document.getElementById('matGridRedSuelto').innerHTML = materialesActivos().map(m => `
     <button class="mat-btn" id="rsmat-${m.id}" onclick="selectRedSueltoMat('${m.id}')">
       <span class="mat-emoji">${m.emoji}</span>
       <span class="mat-name">${m.name}</span>
@@ -3174,8 +3295,8 @@ async function openLotePicker() {
     return `<div class="drawer-item" onclick="selectLote(${l.id})">
       <div style="font-size:22px;flex-shrink:0">${mat ? mat.emoji : '📦'}</div>
       <div style="flex:1;min-width:0">
-        <div class="drawer-item-name"><span class="lote-num">${escHtml(l.numero || ('#' + l.id))}</span> · ${escHtml(l.matName || '')}</div>
-        <div class="drawer-item-phone">${cantidadLote(l)} · creado ${fechaLabel(l.creadoAt || new Date().toISOString())}</div>
+        <div class="drawer-item-name"><span class="lote-num">${escHtml(l.numero || ('#' + l.id))}</span> · ${escHtml(l.matVentaName || l.matName || '')}</div>
+        <div class="drawer-item-phone">${l.matVentaName && l.matVentaId ? 'de ' + escHtml(l.matName || '') + ' · ' : ''}${cantidadLote(l)} · creado ${fechaLabel(l.creadoAt || new Date().toISOString())}</div>
       </div>
       <span class="chevron">›</span>
     </div>`;
@@ -3192,7 +3313,7 @@ function aplicarLoteSeleccion(l) {
   entradaState.lote = l;
   document.getElementById('lotePlaceholder').style.display = 'none';
   document.getElementById('loteInfoEl').style.display = 'block';
-  document.getElementById('loteNumEl').textContent = `${l.numero || '#' + l.id} — ${l.matName || ''}`;
+  document.getElementById('loteNumEl').textContent = `${l.numero || '#' + l.id} — ${l.matVentaName || l.matName || ''}`;
   document.getElementById('loteDetEl').textContent = `${cantidadLote(l)} · trazabilidad incluida`;
   document.getElementById('loteBtn').classList.add('selected');
   const esUnd = l.unidad === 'und';
@@ -3516,6 +3637,9 @@ async function confirmEntradaInner(og, c) {
       fecha: new Date().toISOString(), origen: 'red',
       recId: null, recName: ct.name, recColor: '#0F172A',
       matId: l.matId, matName: l.matName, kg: l.kg,
+      // v6.1 — la sub-clasificación de venta (surtri) viaja con la compra:
+      // el reciclador final ve "PET mixto", no la genérica "PET botellas".
+      matVentaId: l.matVentaId || null, matVentaName: l.matVentaName || null,
       unidades: esUnd ? l.kg : null,
       precioKg: precio, total,
       origenCentroId: ct.id,
@@ -3536,12 +3660,13 @@ async function confirmEntradaInner(og, c) {
     queueSync(`centros/${ct.id}/ventas_pendientes/${entrada.id}`, {
       id: entrada.id, compradorId: c.id, compradorName: c.name,
       matId: l.matId, matName: l.matName, kg: l.kg,
+      matVentaId: l.matVentaId || null, matVentaName: l.matVentaName || null,
       unidades: esUnd ? l.kg : null, precioKg: precio, total,
       loteId: l.id, loteNumero: l.numero || null,
       fecha: entrada.fecha, estado: 'pendiente',
     });
-    // 3) Cuenta SinBa: sinbapuntos inmediatos al vendedor (barème × cantidad).
-    if (isSinba()) {
+    // 3) Cap. sinbapuntos (hoy = SinBa): puntos inmediatos al vendedor.
+    if (tieneCap('sinbapuntos')) {
       const mat = MATERIALES.find(m => m.id === l.matId);
       const pts = mat && mat.puntos ? Math.round(mat.puntos * (l.kg || 0) * 100) / 100 : 0;
       if (pts > 0) {
@@ -3979,8 +4104,8 @@ function renderLoteRecibido(e) {
   return `<div class="lote-card" style="cursor:pointer" onclick="abrirDetalleRecibido(${e.id})">
     <div class="lote-top">
       <div style="flex:1;min-width:0">
-        <div class="lote-num">${escHtml(e.loteNumero || '#' + e.loteId)}</div>
-        <div class="lote-sub">de ${escHtml(e.recName || 'la red')} · ${escHtml(e.matName || '')} · ${e.unidades != null ? e.unidades + ' und' : (e.kg || 0) + ' kg'} · ${fechaLabel(e.fecha)}</div>
+        <div class="lote-num">${escHtml(e.loteNumero || '#' + e.loteId)}${e.matVentaName ? ` <span style="display:inline-block;font-size:11px;font-weight:700;background:#EDE9FE;color:#5B21B6;padding:1px 7px;border-radius:8px;vertical-align:middle">🏷️ ${escHtml(e.matVentaName)}</span>` : ''}</div>
+        <div class="lote-sub">de ${escHtml(e.recName || 'la red')} · ${e.matVentaName && e.matVentaId ? escHtml(e.matVentaName) + ' <span style="opacity:.6">(de ' + escHtml(e.matName || '') + ')</span>' : escHtml(e.matName || '')} · ${e.unidades != null ? e.unidades + ' und' : (e.kg || 0) + ' kg'} · ${fechaLabel(e.fecha)}</div>
         ${origenTxt ? `<div class="lote-sub">Origen: ${origenTxt}</div>` : ''}
       </div>
       <span class="lote-chip ${e.transformado ? 'transformado' : 'vendido'}">${e.transformado ? '♻️ Transformado' : '📥 Recibido'}</span>
@@ -4012,33 +4137,20 @@ async function marcarTransformado(entradaId) {
     showRecsToast(`⚠️ Este material ya está agrupado en el lote ${lQ ? (lQ.numero || '#' + lQ.id) : ''} — transforma ese lote`);
     return;
   }
-  if (!confirm(`¿Marcar el lote ${e.loteNumero || ''} como transformado?\n\nEsto cierra la cadena de custodia — el vendedor verá su lote como ♻️ transformado.`)) return;
+  if (!confirm(`¿Marcar el lote ${e.loteNumero || ''} como transformado?\n\n${e.kg || 0} ${e.unidad === 'und' ? 'und' : 'kg'} salen de tu stock — esto no se puede deshacer.`)) return;
   transformarEnCurso = true;
   try {
-  // Verificación remota (si hay red): el lote del vendedor no debe estar ya
-  // transformado por otro dispositivo/cuenta.
-  try {
-    const est = await fetchJson(`centros/${encodeURIComponent(e.origenCentroId)}/lotes/${e.loteId}/estado`);
-    if (est === 'transformado') {
-      e.transformado = true; e.transformadoAt = new Date().toISOString();
-      localStorage.setItem('acopi_entradas', JSON.stringify(list));
-      renderLotes();
-      showRecsToast('⚠️ Este lote ya estaba transformado');
-      return;
-    }
-  } catch { /* offline: se procede en local */ }
+  // v6.2 — Transformación LOCAL (decisión de Arthur): NO se propaga al
+  // vendedor. Su lote se queda en "vendido"; solo marcamos MI entrada como
+  // transformada. Mismo comportamiento que marcarLoteTransformado (lote propio)
+  // → un único modelo, sin escrituras cruzadas ni verificación remota.
   const ahora = new Date().toISOString();
   e.transformado = true; e.transformadoAt = ahora;
   localStorage.setItem('acopi_entradas', JSON.stringify(list));
   queueSync(`centros/${c.id}/entradas/${e.id}/transformado`, true);
   queueSync(`centros/${c.id}/entradas/${e.id}/transformadoAt`, ahora);
-  // El avance de estado se escribe en el lote del VENDEDOR (como el
-  // "vendido" del comprador): disponible → vendido → transformado.
-  queueSync(`centros/${e.origenCentroId}/lotes/${e.loteId}/estado`, 'transformado');
-  queueSync(`centros/${e.origenCentroId}/lotes/${e.loteId}/transformadoAt`, ahora);
-  queueSync(`centros/${e.origenCentroId}/lotes/${e.loteId}/transformadoPor`, c.name);
   renderLotes();
-  showRecsToast('♻️ Lote marcado como transformado — cadena cerrada');
+  showRecsToast('♻️ Lote marcado como transformado');
   } finally { transformarEnCurso = false; }
 }
 
@@ -4411,7 +4523,7 @@ async function ingresarNumeroLote(motivo) {
 // ── Crear lote (drawer) ──
 // v6.0 — el botón Confirmar del drawer despacha según el tipo de cuenta:
 // SinBa hace surtri (varios lotes de golpe), el resto crea/fusiona un lote.
-function onCrearLoteConfirm() { if (isSinba()) confirmSurtri(); else confirmCrearLote(); }
+function onCrearLoteConfirm() { if (tieneCap('surtri')) confirmSurtri(); else confirmCrearLote(); }
 
 function openCrearLote() {
   const titleEl = document.querySelector('#crearLoteDrawer .historial-drawer-title');
@@ -4421,8 +4533,8 @@ function openCrearLote() {
   document.getElementById('crearLoteOverlay').classList.add('open');
   document.getElementById('crearLoteDrawer').classList.add('open');
 
-  if (isSinba()) {
-    // ── SURTRI SinBa : material acumulado (suelto) → reparto en grados ──
+  if (tieneCap('surtri')) {
+    // ── SURTRI (cap. surtri, hoy = SinBa) : material acumulado → grados ──
     if (titleEl) titleEl.textContent = '♻️ Surtri — clasificar para vender';
     document.querySelector('#matGridLote').previousElementSibling.textContent = 'Material acumulado (stock suelto)';
     surtriState = { material: null, alloc: {}, mermaStr: '0' };
@@ -4775,7 +4887,7 @@ function renderPreciosList() {
   // v4.0 — cada línea muestra también el STOCK de la materia (suelto + lotes).
   const sueltosMap = kgSueltosPorMat();
   const lotesAll = DB.getLotes();
-  document.getElementById('priceListPrecios').innerHTML = MATERIALES.map(m => {
+  document.getElementById('priceListPrecios').innerHTML = materialesVisibles().map(m => {
     const u = matUnidad(m);
     const suelto = Math.round((sueltosMap[m.id] || 0) * 100) / 100;
     const lotesDisp = lotesAll.filter(l => l.matId === m.id && l.estado === 'disponible');
@@ -4845,6 +4957,60 @@ function showPreciosToast(msg) {
 }
 
 // ════════════════════════════════════════════════════════════
+// MIS MATERIALES (v6.2) — lista blanca por cuenta. Selección en memoria
+// mientras el drawer está abierto; se confirma con "Guardar".
+// ════════════════════════════════════════════════════════════
+let misMatSel = null; // Set de ids activos
+function abrirMisMateriales() {
+  const wl = getMisMateriales();
+  misMatSel = new Set(wl || MATERIALES.map(m => m.id));
+  // Las materias con stock quedan siempre activas (no se pueden ocultar).
+  materialesConStock().forEach(id => misMatSel.add(id));
+  renderMisMaterialesList();
+  document.getElementById('misMatOverlay').classList.add('open');
+  document.getElementById('misMatDrawer').classList.add('open');
+}
+function cerrarMisMateriales() {
+  document.getElementById('misMatOverlay').classList.remove('open');
+  document.getElementById('misMatDrawer').classList.remove('open');
+  misMatSel = null;
+}
+function renderMisMaterialesList() {
+  const conStock = materialesConStock();
+  document.getElementById('misMatList').innerHTML = MATERIALES.map(m => {
+    const activo = misMatSel.has(m.id);
+    const bloqueado = conStock.has(m.id); // tiene stock → no se puede ocultar
+    return `<div onclick="${bloqueado ? '' : `toggleMisMat('${m.id}')`}" style="display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--border);cursor:${bloqueado ? 'default' : 'pointer'};opacity:${activo ? '1' : '0.5'}">
+      <span style="font-size:22px">${m.emoji}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:var(--text-primary)">${m.name}</div>
+        ${bloqueado ? '<div style="font-size:11px;color:var(--amber);font-weight:600">📦 en stock — no se puede ocultar</div>' : ''}
+      </div>
+      <span style="width:44px;height:26px;border-radius:999px;flex-shrink:0;position:relative;transition:background .15s;background:${activo ? 'var(--green)' : 'var(--border)'}">
+        <span style="position:absolute;top:3px;left:${activo ? '21px' : '3px'};width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></span>
+      </span>
+    </div>`;
+  }).join('');
+}
+function toggleMisMat(id) {
+  if (misMatSel.has(id)) misMatSel.delete(id); else misMatSel.add(id);
+  renderMisMaterialesList();
+}
+function misMatTodas() {
+  misMatSel = new Set(MATERIALES.map(m => m.id));
+  renderMisMaterialesList();
+}
+function guardarMisMateriales() {
+  if (!misMatSel || misMatSel.size === 0) { showPreciosToast('⚠️ Deja al menos una materia activa'); return; }
+  // Guardar en el ORDEN del catálogo para consistencia.
+  const ids = MATERIALES.filter(m => misMatSel.has(m.id)).map(m => m.id);
+  setMisMateriales(ids);
+  cerrarMisMateriales();
+  renderPreciosList();
+  showPreciosToast('✓ Mis materiales actualizados');
+}
+
+// ════════════════════════════════════════════════════════════
 // SCREEN: WHATSAPP
 // ════════════════════════════════════════════════════════════
 let waCurrentMessage  = '';
@@ -4869,7 +5035,7 @@ function buildWAMessage(savedPrecios) {
   const dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const fecha=`${dias[now.getDay()]} ${now.getDate()} ${meses[now.getMonth()]}`;
-  const lineas = MATERIALES.map(m => {
+  const lineas = materialesActivos().map(m => {
     const p = savedPrecios[m.id]!=null ? savedPrecios[m.id] : m.precio;
     return `${m.emoji} ${m.name}: S/${p.toFixed(2)}/${matUnidad(m)}`;
   });
@@ -4892,11 +5058,11 @@ function onWATextInput(el) {
 }
 
 function renderWAPriceList(savedPrecios) {
-  document.getElementById('priceListWA').innerHTML = MATERIALES.map(m => {
+  document.getElementById('priceListWA').innerHTML = materialesActivos().map(m => {
     const p = savedPrecios[m.id]!=null ? savedPrecios[m.id] : m.precio;
     return `<div class="price-row-wa">
       <div class="price-row-left-wa"><span class="price-emoji-wa">${m.emoji}</span><span class="price-name-wa">${m.name}</span></div>
-      <span class="price-val-wa">S/${p.toFixed(2)}/kg</span>
+      <span class="price-val-wa">S/${p.toFixed(2)}/${matUnidad(m)}</span>
     </div>`;
   }).join('');
 }
