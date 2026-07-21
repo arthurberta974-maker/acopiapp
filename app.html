@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 6.4                                                 -->
+  <!-- Version : 7.0                                                 -->
   <!-- Date    : 21/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -733,6 +733,18 @@
             <button class="qr-mini-btn" style="flex:1;margin:0;text-align:center;padding:10px" onclick="ingresarNumeroLote()">⌨️ Ingresar número</button>
           </div>
         </div>
+        <!-- v7.0 — SinBa: peso BRUTO en su propia balanza (pesada 1). No se fía
+             del peso anunciado en el lote del vendedor. -->
+        <div id="redBrutoWrap" style="display:none">
+          <div class="section-label">⚖️ Peso bruto en tu balanza (pesada 1)</div>
+          <div class="weight-card">
+            <div class="weight-row">
+              <input class="weight-display" id="brutoRedInput" type="text" inputmode="decimal" placeholder="0" autocomplete="off" oninput="onBrutoRedInput(this)">
+              <span class="weight-unit" id="brutoRedUnit">kg</span>
+            </div>
+            <div class="weight-hint" id="brutoRedHint">Pésalo tú mismo — el pago se define al clasificar (pesada 2).</div>
+          </div>
+        </div>
         <div>
           <div class="section-label" id="entradaPrecioLabel">Precio acordado (S/ por kg)</div>
           <div class="weight-card">
@@ -802,7 +814,7 @@
   <!-- SUCCESS ENTRADA -->
   <div class="success-overlay success-overlay-entrada" id="successEntrada">
     <div class="success-icon">✅</div>
-    <div class="success-title">¡Entrada registrada!</div>
+    <div class="success-title" id="successTitleEntrada">¡Entrada registrada!</div>
     <div class="success-amount-entrada" id="successAmountEntrada">S/ 0.00</div>
     <div class="success-sub" id="successSubEntrada">—</div>
     <div class="success-actions">
@@ -824,6 +836,15 @@
       <span style="flex:1">Trazabilidad — historial de lotes<span id="trazaBtnSub" style="display:block;font-size:11px;font-weight:500;color:var(--text-muted);margin-top:2px">Lotes vendidos, fusionados y transformados</span></span>
       <span class="chevron">›</span>
     </button>
+    <!-- v7.0 — SinBa: subpestañas Por clasificar / Mis lotes -->
+    <div id="lotesSubtabs" class="origen-grid" style="display:none;order:0;grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <button class="origen-btn" id="subtabRecep" onclick="setLotesVista('recepciones')"><span class="og-emoji">📥</span><span class="og-name">Por clasificar (<span id="subtabRecepN">0</span>)</span></button>
+      <button class="origen-btn" id="subtabLotes" onclick="setLotesVista('lotes')"><span class="og-emoji">📦</span><span class="og-name">Mis lotes</span></button>
+    </div>
+    <div id="recepcionesWrap" style="display:none;order:0">
+      <div class="section-label">📥 Recepciones por clasificar</div>
+      <div id="recepcionesList"></div>
+    </div>
     <!-- v5.3 : l'ordre des deux sections dépend du compte (flex order dans
          initLotes) — acopiador/SinBa : Mis lotes en haut ; reciclador :
          Lotes recibidos en haut (son flux principal). -->
@@ -870,6 +891,11 @@
     <div id="trazaRecibWrap" style="display:none">
       <div class="section-label">♻️ Lotes que transformaste</div>
       <div id="trazaRecibList"></div>
+    </div>
+    <!-- v7.0 — SinBa: rendimiento de cada clasificación (bruto → neto + merma) -->
+    <div id="trazaRendWrap" style="display:none">
+      <div class="section-label">♻️ Clasificaciones — rendimiento (bruto → neto + merma)</div>
+      <div id="trazaRendList"></div>
     </div>
     <div>
       <div class="section-label">🔒 Mis lotes cerrados</div>
@@ -1103,15 +1129,39 @@
     </div>
     <!-- v6.3 (punto 1) — fusionar todos los lotes disponibles de un mismo grado -->
     <div id="clFusionWrap" style="display:none">
-      <div class="section-label">Elige un grado (2+ lotes) para unirlos en uno</div>
+      <div class="section-label">Elige un grado</div>
       <div class="material-grid" id="clFusionList"></div>
-      <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:6px">Se fusionan TODOS los lotes disponibles de ese grado. Su composición, coste y trazabilidad se conservan en el nuevo lote.</div>
+      <div id="clFusionSelWrap" style="display:none;margin-top:14px">
+        <div class="section-label">¿Qué lotes fusionar? (marca 2 o más)</div>
+        <div id="clFusionSel"></div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:4px">Solo se fusionan los lotes marcados. Su composición, coste y trazabilidad se conservan en el nuevo lote.</div>
+      </div>
     </div>
     <div id="clResumen" style="display:none">
       <div class="section-label">Composición del lote (trazabilidad)</div>
       <div id="clResumenBody" style="background:var(--bg);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text-secondary);line-height:1.6"></div>
     </div>
     <button class="confirm-btn" id="clConfirmBtn" disabled onclick="onCrearLoteConfirm()">Elige el material</button>
+  </div>
+</div>
+
+<!-- ── CLASIFICAR RECEPCIÓN DRAWER (v7.0 — pesada 2: reparto en grados, merma auto) ── -->
+<div class="drawer-overlay" id="triOverlay" onclick="closeTri()"></div>
+<div class="drawer historial-drawer" id="triDrawer">
+  <div class="drawer-handle"></div>
+  <div class="historial-drawer-header">
+    <div class="historial-drawer-title">♻️ Clasificar recepción</div>
+    <button class="historial-close-btn" onclick="closeTri()">✕</button>
+  </div>
+  <div class="historial-body" style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:16px">
+    <div id="triCabecera" style="background:var(--bg);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text-secondary);line-height:1.6"></div>
+    <div>
+      <div class="section-label">Reparte el bruto en grados de venta (pesada 2)</div>
+      <div id="triRows" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:8px">La merma se calcula sola: <b>bruto − Σ grados</b>. El pago y los sinbapuntos van sobre el neto.</div>
+    </div>
+    <div id="triResumen" style="background:var(--bg);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text-secondary);line-height:1.7"></div>
+    <button class="confirm-btn" id="triConfirmBtn" disabled onclick="confirmTri()">Reparte los kilos</button>
   </div>
 </div>
 
@@ -1338,7 +1388,10 @@ const DB = {
   // en confirmEntrada — es el comprador (n+1) quien registra y notifica.
   addEntrada(e)  {
     const c = this.getCentro();
-    const rec = {...e, centroId: c ? c.id : null, centroName: c ? c.name : null, id: Date.now()};
+    // v7.0 — id explícito admitido (la entrada de una recepción SinBa usa el
+    // id de la recepción = id de la compra, para que sea idempotente y que la
+    // venta anotada del vendedor comparta el mismo id).
+    const rec = {...e, centroId: c ? c.id : null, centroName: c ? c.name : null, id: e.id || Date.now()};
     const l = this.getEntradas(); l.unshift(rec); localStorage.setItem('acopi_entradas', JSON.stringify(l));
     if (c) queueSync(`centros/${c.id}/entradas/${rec.id}`, rec);
     return rec;
@@ -1363,6 +1416,29 @@ const DB = {
     return rec;
   },
   addRec(r)      { const l = this.getRecs(); const rec = {...r, id: Date.now()}; l.push(rec); this.saveRecs(l); return rec; },
+  // ── RECEPCIONES (v7.0) — solo cuentas SinBa (compra en red con doble pesada) ──
+  // Una recepción es una entrega recibida que aún no se ha clasificado:
+  //   estado 'recibida' (bruto pesado por SinBa, en espera del triado) →
+  //   estado 'triada'  (neto finalizado: grados creados, pago y puntos al neto).
+  getRecepciones() { try { return JSON.parse(localStorage.getItem('acopi_recepciones')) || []; } catch { return []; } },
+  saveRecepciones(l) { localStorage.setItem('acopi_recepciones', JSON.stringify(l)); },
+  addRecepcion(r) {
+    const c = this.getCentro();
+    const rec = {...r, centroId: c ? c.id : null, id: r.id || Date.now()};
+    const l = this.getRecepciones(); l.unshift(rec); this.saveRecepciones(l);
+    if (c) queueSync(`centros/${c.id}/recepciones/${rec.id}`, rec);
+    return rec;
+  },
+  updateRecepcion(id, patch) {
+    const c = this.getCentro();
+    const l = this.getRecepciones();
+    const i = l.findIndex(r => r.id === id);
+    if (i === -1) return null;
+    l[i] = {...l[i], ...patch};
+    this.saveRecepciones(l);
+    if (c) queueSync(`centros/${c.id}/recepciones/${id}`, l[i]);
+    return l[i];
+  },
 };
 
 // ── SINCRONIZACIÓN REMOTA (Firebase Realtime Database) ───
@@ -1581,8 +1657,12 @@ async function fetchVentasEntrantes() {
     if (!res.ok) return [];
     const data = await res.json();
     const resueltos = new Set(getVpendResueltos());
+    // v7.0 — el canal es de DOS fases para la compra en red SinBa:
+    //   'recibida' (congelar, sin monto) → 'triada' (anotar la venta al neto).
+    //   'pendiente' = flujo instantáneo clásico (centros no-SinBa). El guard es
+    //   por (id + estado) para que cada fase se procese una sola vez.
     return Object.values(data || {})
-      .filter(p => p && p.estado === 'pendiente' && !resueltos.has(p.id))
+      .filter(p => p && ['pendiente', 'recibida', 'triada'].includes(p.estado) && !resueltos.has(p.id + ':' + p.estado))
       .sort((a, b) => a.id - b.id);
   } catch { return []; }
 }
@@ -1595,8 +1675,15 @@ async function procesarVentasEntrantes() {
   const entrantes = await fetchVentasEntrantes();
   if (!entrantes.length) return;
   for (const p of entrantes) {
-    if (getVpendResueltos().includes(p.id)) continue;
-    addVpendResuelto(p.id);
+    // v7.0 — canal de DOS fases. El guard es por (id + estado): cada fase se
+    // procesa una sola vez.
+    const fase = p.estado || 'pendiente';
+    const key = p.id + ':' + fase;
+    if (getVpendResueltos().includes(key)) continue;
+    addVpendResuelto(key);
+    // ── FASE 'recibida' (recepción SinBa): CONGELAR sin anotar la venta ──
+    if (fase === 'recibida') { procesarRecepcionEntrante(p); continue; }
+    // ── FASE 'pendiente' (instantáneo clásico) o 'triada' (finalizar al neto) ──
     // 1) Mi lote pasa a "vendido" en la copia local (el comprador ya lo
     //    marcó en el nodo remoto; syncOwnData lo confirmará después).
     let costo = 0;
@@ -1605,7 +1692,9 @@ async function procesarVentasEntrantes() {
       const lote = ll.find(x => x.id === p.loteId);
       if (lote) {
         costo = lote.costoTotal || 0;
-        if (lote.estado === 'disponible') {
+        // v7.0 — el lote puede venir de 'disponible' (clásico) o de 'recibido'
+        // (congelado en la fase de recepción SinBa).
+        if (lote.estado === 'disponible' || lote.estado === 'recibido') {
           lote.estado = 'vendido';
           lote.compradorId = p.compradorId || null;
           lote.compradorName = p.compradorName || null;
@@ -1615,34 +1704,50 @@ async function procesarVentasEntrantes() {
         }
       }
     } else if (p.suelto) {
-      // Venta SUELTA: para no perder la trazabilidad, mis kilos sueltos se
-      // consumen en FIFO y quedan registrados en un LOTE AUTOMÁTICO ya
-      // vendido (misma mecánica que crear un lote a mano). Si el comprador
-      // declaró más kilos de los que tengo sueltos, el excedente queda
-      // marcado como "origen no documentado" — visible en el lote.
-      const info = componerLote(p.matId, p.kg || 0);
-      const kgDoc = Math.round(info.composicion.reduce((sum, cp) => sum + (cp.kg || 0), 0) * 100) / 100;
-      const noDoc = Math.max(0, Math.round(((p.kg || 0) - kgDoc) * 100) / 100);
-      costo = info.costoTotal;
-      DB.addLote({
-        id: p.id, // = id de la compra del comprador → idempotente
-        numero: nuevoNumeroLote(), auto: true,
-        matId: p.matId, matName: p.matName, kg: p.kg,
-        unidad: p.unidades != null ? 'und' : 'kg',
-        estado: 'vendido',
-        creadoAt: p.fecha || new Date().toISOString(),
-        vendidoAt: p.fecha || new Date().toISOString(),
-        compradorId: p.compradorId || null, compradorName: p.compradorName || null,
-        precioTotal: p.total || null,
-        composicion: info.composicion,
-        origenResumen: { ...info.origenResumen, nodoc: noDoc },
-        costoTotal: info.costoTotal,
-        lotesOrigen: info.lotesOrigen,
-        kgNoDocumentado: noDoc,
-      });
+      // Venta SUELTA. v7.0 — si la recepción SinBa ya creó un auto-lote
+      // CONGELADO (fase 'recibida', id = p.id), solo lo avanzamos a 'vendido'.
+      // Si no existe (flujo instantáneo clásico), lo creamos consumiendo mis
+      // kilos sueltos en FIFO. El excedente queda como "no documentado".
+      const ll = DB.getLotes();
+      const existente = ll.find(x => x.id === p.id);
+      if (existente) {
+        costo = existente.costoTotal || 0;
+        if (existente.estado === 'disponible' || existente.estado === 'recibido') {
+          existente.estado = 'vendido';
+          existente.compradorId = p.compradorId || null;
+          existente.compradorName = p.compradorName || null;
+          existente.vendidoAt = p.fecha || new Date().toISOString();
+          existente.precioTotal = p.total || null;
+          DB.saveLotes(ll);
+        }
+      } else {
+        const brut = p.brutKg || p.kg || 0;
+        const info = componerLote(p.matId, brut);
+        const kgDoc = Math.round(info.composicion.reduce((sum, cp) => sum + (cp.kg || 0), 0) * 100) / 100;
+        const noDoc = Math.max(0, Math.round((brut - kgDoc) * 100) / 100);
+        costo = info.costoTotal;
+        DB.addLote({
+          id: p.id, // = id de la compra del comprador → idempotente
+          numero: nuevoNumeroLote(), auto: true,
+          matId: p.matId, matName: p.matName, kg: brut,
+          unidad: p.unidades != null ? 'und' : 'kg',
+          estado: 'vendido',
+          creadoAt: p.fecha || new Date().toISOString(),
+          vendidoAt: p.fecha || new Date().toISOString(),
+          compradorId: p.compradorId || null, compradorName: p.compradorName || null,
+          precioTotal: p.total || null,
+          composicion: info.composicion,
+          origenResumen: { ...info.origenResumen, nodoc: noDoc },
+          costoTotal: info.costoTotal,
+          lotesOrigen: info.lotesOrigen,
+          kgNoDocumentado: noDoc,
+        });
+      }
     }
     // 2) La venta se anota en mis libros con el MISMO id que la compra del
     //    otro lado (idempotente si dos de mis dispositivos procesan a la vez).
+    //    v7.0 — en fase 'triada' el kg/total ya vienen al NETO; brut/merma se
+    //    guardan para mostrar el rendimiento al vendedor.
     const total = p.total || 0;
     DB.addVenta({
       id: p.id, fecha: p.fecha || new Date().toISOString(),
@@ -1653,14 +1758,64 @@ async function procesarVentasEntrantes() {
       unidades: p.unidades != null ? p.unidades : null,
       precioKg: p.precioKg, total,
       margen: total - costo,
+      brutKg: p.brutKg != null ? p.brutKg : null,
+      mermaKg: p.mermaKg != null ? p.mermaKg : null,
+      rendimiento: p.rendimiento != null ? p.rendimiento : null,
       comprador: p.compradorName || 'Cuenta de la red', compradorId: p.compradorId || null,
       loteId: p.loteId || null, loteNumero: p.loteNumero || null,
       viaConfirmacion: true, compraId: p.id,
     });
-    queueSync(`centros/${c.id}/ventas_pendientes/${p.id}/estado`, 'confirmado');
+    queueSync(`centros/${c.id}/ventas_pendientes/${p.id}/estado`, fase === 'triada' ? 'cerrado' : 'confirmado');
     notifyVentaEntrante(p);
   }
   if (currentScreen === 'resumen') initResumen();
+  if (currentScreen === 'lotes') renderLotes();
+  if (currentScreen === 'pagos') renderPagos();
+}
+
+// v7.0 — FASE 'recibida': el vendedor CONGELA su material (sin anotar la venta;
+// el monto se define al triar) y recibe un aviso "en clasificación" sin importe.
+function procesarRecepcionEntrante(p) {
+  if (p.loteId) {
+    const ll = DB.getLotes();
+    const lote = ll.find(x => x.id === p.loteId);
+    if (lote && lote.estado === 'disponible') {
+      lote.estado = 'recibido';
+      lote.recepcionPor = p.compradorName || null;
+      lote.recibidoAt = p.fecha || new Date().toISOString();
+      DB.saveLotes(ll);
+    }
+  } else if (p.suelto) {
+    // Auto-lote CONGELADO (id = p.id): consume mis kilos sueltos FIFO sobre el
+    // bruto pesado por SinBa. Idempotente: si ya existe, no se recrea.
+    if (!DB.getLotes().some(l => l.id === p.id)) {
+      const brut = p.brutKg || p.kg || 0;
+      const info = componerLote(p.matId, brut);
+      const kgDoc = Math.round(info.composicion.reduce((s, cp) => s + (cp.kg || 0), 0) * 100) / 100;
+      const noDoc = Math.max(0, Math.round((brut - kgDoc) * 100) / 100);
+      DB.addLote({
+        id: p.id, numero: nuevoNumeroLote(), auto: true,
+        matId: p.matId, matName: p.matName, kg: brut,
+        unidad: p.unidades != null ? 'und' : 'kg',
+        estado: 'recibido',
+        recepcionPor: p.compradorName || null,
+        creadoAt: p.fecha || new Date().toISOString(),
+        recibidoAt: p.fecha || new Date().toISOString(),
+        composicion: info.composicion,
+        origenResumen: { ...info.origenResumen, nodoc: noDoc },
+        costoTotal: info.costoTotal,
+        lotesOrigen: info.lotesOrigen,
+        kgNoDocumentado: noDoc,
+      });
+    }
+  }
+  addNotif({
+    id: 'nrc_' + (p.loteId || 'c' + p.id), tipo: 'recepcion', icon: '📥',
+    titulo: `${escHtml(p.compradorName || 'Una cuenta')} recibió tu ${p.loteNumero ? 'lote ' + escHtml(p.loteNumero) : 'material'} — en clasificación`,
+    sub: `${escHtml(p.matName || '')} · ${p.brutKg || p.kg || 0} kg brutos · el pago se define al clasificar`,
+  });
+  playAvisoSound();
+  showRecsToast(`📥 ${p.compradorName || 'Una cuenta'} recibió tu material — en clasificación`);
   if (currentScreen === 'lotes') renderLotes();
   if (currentScreen === 'pagos') renderPagos();
 }
@@ -1740,7 +1895,9 @@ async function syncOwnData() {
       // El estado de un lote solo AVANZA (disponible → vendido → transformado).
       // El comprador/reciclador escribe el avance directamente en MI nodo
       // remoto; y un eco atrasado nunca debe retroceder un estado ya avanzado.
-      const ORD_LOTE = { disponible: 0, vendido: 1, fusionado: 1, transformado: 2, merma: 2 };
+      // v7.0 — 'recibido' (0.5) intercala entre disponible y vendido: el lote
+      // está congelado (recepción SinBa en espera de triado).
+      const ORD_LOTE = { disponible: 0, recibido: 0.5, vendido: 1, fusionado: 1, transformado: 2, merma: 2 };
       const localLotes = DB.getLotes();
       const mergedL = mergeById(localLotes, remote.lotes).map(lt => {
         const prev = localLotes.find(x => x.id === lt.id);
@@ -1756,9 +1913,25 @@ async function syncOwnData() {
         if (prev && prev.estado === 'disponible' && lt.estado === 'vendido') {
           addNotif({ id: 'nvl_' + lt.id, tipo: 'venta', icon: '💰', titulo: `${escHtml(lt.compradorName || 'Una cuenta')} te compró el lote ${escHtml(lt.numero || '#' + lt.id)}`, sub: `${escHtml(lt.matName || '')} · ${lt.kg || 0} ${lt.unidad === 'und' ? 'und' : 'kg'}${lt.precioTotal ? ' · ' + fmt(lt.precioTotal) : ''}` });
         }
+        // v7.0 — aviso "en clasificación" cuando el lote se congela (recepción).
+        if (prev && prev.estado === 'disponible' && lt.estado === 'recibido') {
+          addNotif({ id: 'nrc_' + lt.id, tipo: 'recepcion', icon: '📥', titulo: `${escHtml(lt.recepcionPor || 'Una cuenta')} recibió tu lote ${escHtml(lt.numero || '#' + lt.id)} — en clasificación`, sub: `${escHtml(lt.matName || '')} · ${lt.kg || 0} ${lt.unidad === 'und' ? 'und' : 'kg'} brutos · el pago se define al clasificar` });
+        }
         return lt;
       });
       DB.saveLotes(mergedL);
+    }
+    if (remote.recepciones) {
+      // Recepciones = nodo propio de SinBa. Su estado solo avanza recibida→triada;
+      // un eco atrasado nunca debe retroceder una recepción ya triada.
+      const ORD_REC = { recibida: 0, triada: 1 };
+      const localR = DB.getRecepciones();
+      const mergedR = mergeById(localR, remote.recepciones).map(rc => {
+        const prev = localR.find(x => x.id === rc.id);
+        if (prev && (ORD_REC[prev.estado] || 0) > (ORD_REC[rc.estado] || 0)) return prev;
+        return rc;
+      });
+      DB.saveRecepciones(mergedR);
     }
     if (remote.precios) localStorage.setItem('acopi_precios', JSON.stringify({ ...remote.precios, ...DB.getPrecios() }));
     if (remote.recicladores) localStorage.setItem('acopi_recicladores', JSON.stringify(mergeById(DB.getRecs(), remote.recicladores)));
@@ -2122,7 +2295,7 @@ function confirmEditPerfil() {
 }
 function logoutCentro() {
   auth.signOut();
-  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_lotes','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos','acopi_vpend_resueltos','acopi_canjes_estados','acopi_canjes_vistos','acopi_notifs','acopi_notifs_desde'].forEach(k => localStorage.removeItem(k));
+  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_lotes','acopi_recepciones','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos','acopi_vpend_resueltos','acopi_canjes_estados','acopi_canjes_vistos','acopi_notifs','acopi_notifs_desde'].forEach(k => localStorage.removeItem(k));
   location.reload();
 }
 
@@ -2160,12 +2333,19 @@ async function resetMisDatos() {
   misVentas.forEach(v => {
     if (v.compradorId && v.reclamo) rastrosCruzados.push(`centros/${v.compradorId}/reclamos/${v.compraId || v.id}`);
   });
+  // v7.0 — cada recepción mía dejó una venta_pendiente en el vendedor (y una
+  // recibida congeló su lote): hay que borrar el rastro también.
+  const misRecep = DB.getRecepciones();
+  misRecep.forEach(r => {
+    if (r.contraparteId) rastrosCruzados.push(`centros/${r.contraparteId}/ventas_pendientes/${r.id}`);
+  });
   try {
     // 1. Suspender lo que pueda estar escribiendo y limpiar lo local.
     localStorage.removeItem('acopi_sync_queue');
     localStorage.setItem('acopi_entradas', '[]');
     localStorage.setItem('acopi_ventas', '[]');
     localStorage.setItem('acopi_lotes', '[]');
+    localStorage.setItem('acopi_recepciones', '[]');
     localStorage.removeItem('acopi_pend_resueltos');
     localStorage.removeItem('acopi_vpend_resueltos');
     localStorage.removeItem('acopi_canjes_estados');
@@ -2182,6 +2362,7 @@ async function resetMisDatos() {
       `centros/${centro.id}/entradas`,
       `centros/${centro.id}/ventas`,
       `centros/${centro.id}/lotes`,
+      `centros/${centro.id}/recepciones`,
       `centros/${centro.id}/reclamos`,
       `centros/${centro.id}/entradas_pendientes`,
       `centros/${centro.id}/ventas_pendientes`,
@@ -2202,11 +2383,19 @@ async function resetMisDatos() {
       }
       if (!ok) { alert('No se pudo borrar todo en la red (¿sin internet?). Vuelve a intentarlo.'); break; }
     }
+    // v7.0 — descongelar los lotes de vendedores que quedaron en 'recibido'
+    // por una recepción mía aún no triada (rollback del congelado).
+    for (const r of misRecep) {
+      if (r.estado === 'recibida' && r.loteId && r.contraparteId) {
+        try { await fetch(`${FIREBASE_DB_URL}/centros/${r.contraparteId}/lotes/${r.loteId}/estado.json${qs}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: '"disponible"' }); } catch { /* best-effort */ }
+      }
+    }
     // 3. Por si algo se encoló durante el borrado, se limpia de nuevo.
     localStorage.removeItem('acopi_sync_queue');
     localStorage.setItem('acopi_entradas', '[]');
     localStorage.setItem('acopi_ventas', '[]');
     localStorage.setItem('acopi_lotes', '[]');
+    localStorage.setItem('acopi_recepciones', '[]');
   } finally {
     resetEnCurso = false;
     if (btn) { btn.disabled = false; btn.textContent = '🗑️ Borrar mis transacciones (solo pruebas)'; }
@@ -2237,6 +2426,14 @@ function updateCentroDisplay() {
   const centro = DB.getCentro();
   const t = aplicarTemaCuenta();
   document.getElementById('tb-brand-sub').textContent = centro ? `${centro.name} · ${t.tag}` : 'Centro de acopio';
+  // v7.0 — SinBa: la pestaña "Lotes" se vuelve "Recepciones" (clasificar + lotes).
+  const lotesNav = document.querySelector('.nav-btn[data-screen="lotes"]');
+  if (lotesNav) {
+    const ic = lotesNav.querySelector('.nav-icon'), lb = lotesNav.querySelector('.nav-label');
+    const esRecep = tieneCap('sinbapuntos');
+    if (ic) ic.textContent = esRecep ? '📥' : '📦';
+    if (lb) lb.textContent = esRecep ? 'Recep.' : 'Lotes';
+  }
 }
 auth.onAuthStateChanged(user => {
   if (!user) { openCentroSetup(false); return; }
@@ -2570,6 +2767,11 @@ function goTo(id) {
     document.getElementById('tb-info').style.display  = 'block';
     document.getElementById('tb-title').textContent   = cfg.title;
     document.getElementById('tb-sub').textContent     = cfg.sub;
+    // v7.0 — SinBa: título de la pestaña Lotes → Recepciones.
+    if (id === 'lotes' && tieneCap('sinbapuntos')) {
+      document.getElementById('tb-title').textContent = '📥 Recepciones';
+      document.getElementById('tb-sub').textContent   = 'Clasifica lo recibido y gestiona tus lotes';
+    }
   }
   currentScreen = id;
   // per-screen init
@@ -3242,8 +3444,11 @@ function renderFinPotencial() {
 //   · red         : compra de un LOTE a otra cuenta (material y peso vienen
 //                   del lote; el vendedor recibe el aviso automáticamente)
 // ════════════════════════════════════════════════════════════
-let entradaState = { origen: null, redModo: null, material: null, weightStr: '0', precioStr: '0', contraparte: null, lote: null };
+let entradaState = { origen: null, redModo: null, material: null, weightStr: '0', precioStr: '0', brutoStr: '0', contraparte: null, lote: null };
 let lotesVendedor = [];
+// v7.0 — la compra en red de una cuenta SinBa se vuelve una RECEPCIÓN con doble
+// pesada (bruto ahora, triado al neto después). Solo cuentas con cap. sinbapuntos.
+function esRecepcionSinba() { return entradaState.origen === 'red' && tieneCap('sinbapuntos'); }
 
 function initEntrada() {
   loadMatPrices();
@@ -3278,9 +3483,13 @@ function setRedModo(m) {
   ['lote', 'suelto'].forEach(x => document.getElementById('rm-' + x).classList.toggle('selected', x === m));
   document.getElementById('redLoteBlock').style.display = m === 'lote' ? 'flex' : 'none';
   document.getElementById('redSueltoBlock').style.display = m === 'suelto' ? 'flex' : 'none';
+  // v7.0 — SinBa: input de peso bruto (pesada 1) solo en modo lote.
+  const bw = document.getElementById('redBrutoWrap');
+  if (bw) bw.style.display = (m === 'lote' && esRecepcionSinba()) ? 'block' : 'none';
   if (m === 'suelto') renderRedSueltoMats();
   updateEntradaUI();
 }
+function onBrutoRedInput(el) { entradaState.brutoStr = sanitizeDecimal(el, 999999); updateEntradaUI(); }
 function renderRedSueltoMats() {
   document.getElementById('matGridRedSuelto').innerHTML = materialesActivos().map(m => `
     <button class="mat-btn" id="rsmat-${m.id}" onclick="selectRedSueltoMat('${m.id}')">
@@ -3363,6 +3572,7 @@ function aplicarLoteSeleccion(l) {
   const esUnd = l.unidad === 'und';
   document.getElementById('entradaPrecioLabel').textContent = esUnd ? 'Precio acordado (S/ por unidad)' : 'Precio acordado (S/ por kg)';
   document.getElementById('precioRedUnit').textContent = esUnd ? '/und' : '/kg';
+  const bru = document.getElementById('brutoRedUnit'); if (bru) bru.textContent = esUnd ? 'und' : 'kg';
 }
 function selectLote(id) {
   const l = lotesVendedor.find(x => x.id === id);
@@ -3406,9 +3616,9 @@ function openPesoSheet() {
   document.getElementById('psIcon').textContent = mat.emoji;
   document.getElementById('psName').textContent = mat.name;
   document.getElementById('psHint').textContent = redSuelto
-    ? `🤝 Compra en red — ${entradaState.contraparte.name}`
+    ? (esRecepcionSinba() ? `📥 Recepción — ${entradaState.contraparte.name} · pesa el bruto` : `🤝 Compra en red — ${entradaState.contraparte.name}`)
     : esInterna ? '🏠 Recolección interna — sin costo' : '👤 Recolector externo — pago en efectivo';
-  document.getElementById('psPesoLabel').textContent = u === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)';
+  document.getElementById('psPesoLabel').textContent = (redSuelto && esRecepcionSinba()) ? 'Peso bruto (pesada 1)' : (u === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)');
   document.getElementById('psUnit').textContent = u;
   document.getElementById('psPrecioUnit').textContent = '/' + u;
   document.getElementById('psPrecioLabel').textContent = redSuelto ? 'Precio acordado con el vendedor' : 'Precio — solo esta transacción';
@@ -3457,7 +3667,9 @@ function onPsInput() {
   if (esInterna) { btn.disabled = false; btn.innerHTML = `✅ Registrar — ${peso} ${u} (sin costo)`; return; }
   if (precio <= 0) { btn.disabled = true; btn.textContent = redSuelto ? 'Ingresa el precio acordado' : 'Ingresa el precio'; return; }
   btn.disabled = false;
-  btn.innerHTML = redSuelto ? `✅ Confirmar compra — ${fmt(peso * precio)}` : `✅ Registrar — ${fmt(peso * precio)}`;
+  // v7.0 — recepción SinBa: el peso es el BRUTO (pesada 1), el pago va al neto.
+  btn.innerHTML = (redSuelto && esRecepcionSinba()) ? '📥 Registrar recepción'
+    : redSuelto ? `✅ Confirmar compra — ${fmt(peso * precio)}` : `✅ Registrar — ${fmt(peso * precio)}`;
 }
 function confirmPesoSheet() {
   if (pesoSheetGuard) return;
@@ -3561,6 +3773,30 @@ function updateEntradaUI() {
       btn.textContent = !ct ? 'Elige a quién le compras' : 'Elige: ¿lote o kilos sueltos?';
       return;
     }
+    // v7.0 — RECEPCIÓN SinBa (doble pesada): se registra el BRUTO ahora; el
+    // pago y los puntos se calculan al NETO cuando se clasifique (pesada 2).
+    if (esRecepcionSinba()) {
+      const esLote = modo === 'lote';
+      const mat = esLote ? entradaState.lote : entradaState.material;
+      const u = esLote ? (entradaState.lote && entradaState.lote.unidad === 'und' ? 'und' : 'kg') : (mat ? matUnidad(mat) : 'kg');
+      const brut = esLote ? (parseFloat(entradaState.brutoStr) || 0) : (parseFloat(entradaState.weightStr) || 0);
+      const listo = !!mat && brut > 0 && precio > 0;
+      if (listo) {
+        const estimado = brut * precio;
+        card.classList.add('visible'); card.classList.remove('no-price');
+        lbl.textContent = '📥 Recepción — pesada 1 (bruto)';
+        amt.style.fontSize = '38px'; amt.textContent = `${brut} ${u}`;
+        det.textContent = `≈ ${fmt(estimado)} estimado · se paga al neto tras clasificar`;
+        btn.disabled = false; btn.innerHTML = '📥 Registrar recepción';
+      } else {
+        card.classList.remove('visible');
+        btn.disabled = true;
+        btn.textContent = !mat ? (esLote ? 'Elige el lote' : 'Elige el material')
+          : brut <= 0 ? (esLote ? 'Ingresa el peso bruto' : 'Ingresa el peso')
+          : 'Ingresa el precio acordado';
+      }
+      return;
+    }
     if (modo === 'lote') {
       const l = entradaState.lote;
       if (l && precio > 0) {
@@ -3633,6 +3869,10 @@ async function confirmEntrada() {
   } finally { entradaEnCurso = false; }
 }
 async function confirmEntradaInner(og, c) {
+  // v7.0 — la compra en red de una cuenta SinBa se registra como RECEPCIÓN
+  // (doble pesada): el pago, la venta del vendedor y los sinbapuntos se
+  // difieren al triado (pesada 2). Vale para lote y para kilos sueltos.
+  if (og === 'red' && tieneCap('sinbapuntos')) { return confirmRecepcionInner(c); }
   if (og === 'red' && entradaState.redModo === 'suelto') {
     // ── COMPRA EN RED de KILOS SUELTOS: yo (n+1) registro; el vendedor
     //    recibe el aviso y SU app consume sus kilos sueltos en FIFO ──
@@ -3780,8 +4020,97 @@ async function confirmEntradaInner(og, c) {
   document.getElementById('successEntrada').classList.add('show');
 }
 
+// v7.0 — RECEPCIÓN SinBa (pesada 1). Crea una recepción 'recibida', CONGELA el
+// material del vendedor (lote → 'recibido', o depósito fase 'recibida' para el
+// suelto → auto-lote congelado) y le avisa "en clasificación" SIN monto. No hay
+// entrada, ni venta, ni sinbapuntos todavía: todo eso ocurre al triar.
+async function confirmRecepcionInner(c) {
+  const ct = entradaState.contraparte;
+  if (!ct) return;
+  const modo = entradaState.redModo;
+  const precio = parseFloat(entradaState.precioStr) || 0;
+  const titleEl = document.getElementById('successTitleEntrada');
+  if (modo === 'lote') {
+    const l = entradaState.lote;
+    const brut = parseFloat(entradaState.brutoStr) || 0;
+    if (!l || precio <= 0 || brut <= 0) return;
+    // Re-verificación remota: si el lote ya no está disponible, se bloquea.
+    const btnE = document.getElementById('confirmBtnEntrada');
+    const btnTxt = btnE.innerHTML;
+    btnE.disabled = true; btnE.textContent = '⏳ Verificando el lote…';
+    let estadoRemoto = null;
+    try { estadoRemoto = await fetchJson(`centros/${encodeURIComponent(ct.id)}/lotes/${l.id}/estado`); } catch { /* offline */ }
+    if (estadoRemoto && estadoRemoto !== 'disponible') {
+      btnE.innerHTML = btnTxt; entradaState.lote = null;
+      document.getElementById('lotePlaceholder').style.display = 'block';
+      document.getElementById('loteInfoEl').style.display = 'none';
+      document.getElementById('loteBtn').classList.remove('selected');
+      updateEntradaUI();
+      showRecsToast(`⚠️ El lote ${l.numero || ''} ya no está disponible (${estadoRemoto})`);
+      return;
+    }
+    btnE.innerHTML = btnTxt; btnE.disabled = false;
+    const esUnd = l.unidad === 'und';
+    const rec = DB.addRecepcion({
+      fecha: new Date().toISOString(), estado: 'recibida',
+      contraparteId: ct.id, contraparteName: ct.name,
+      loteId: l.id, loteNumero: l.numero || null, suelto: false,
+      matId: l.matId, matName: l.matName,
+      matVentaOrigenId: l.matVentaId || null, matVentaOrigenName: l.matVentaName || null,
+      brutAnunciado: l.kg || 0, brutKg: brut, precioKg: precio,
+      unidad: esUnd ? 'und' : 'kg',
+      loteComposicion: l.composicion || null,
+      loteOrigenResumen: l.origenResumen || null,
+      lotesOrigen: Array.isArray(l.lotesOrigen) ? l.lotesOrigen : [],
+    });
+    const ahora = rec.fecha;
+    // Congelar el lote del vendedor (remoto).
+    queueSync(`centros/${ct.id}/lotes/${l.id}/estado`, 'recibido');
+    queueSync(`centros/${ct.id}/lotes/${l.id}/recepcionPor`, c.name);
+    queueSync(`centros/${ct.id}/lotes/${l.id}/recibidoAt`, ahora);
+    // Depósito fase 'recibida' — su app congela y avisa, sin anotar la venta.
+    queueSync(`centros/${ct.id}/ventas_pendientes/${rec.id}`, {
+      id: rec.id, estado: 'recibida', compradorId: c.id, compradorName: c.name,
+      matId: l.matId, matName: l.matName,
+      brutKg: brut, unidades: esUnd ? brut : null,
+      loteId: l.id, loteNumero: l.numero || null, suelto: false,
+      fecha: ahora,
+    });
+    document.getElementById('successAmountEntrada').textContent = `${brut} ${esUnd ? 'und' : 'kg'}`;
+    document.getElementById('successSubEntrada').textContent = `📥 Recepción de ${ct.name} · lote ${l.numero || ''} · en espera de clasificación`;
+  } else {
+    // suelto
+    const mat = entradaState.material;
+    const brut = parseFloat(entradaState.weightStr) || 0;
+    if (!mat || precio <= 0 || brut <= 0) return;
+    const esUnd = matUnidad(mat) === 'und';
+    const rec = DB.addRecepcion({
+      fecha: new Date().toISOString(), estado: 'recibida',
+      contraparteId: ct.id, contraparteName: ct.name,
+      loteId: null, loteNumero: null, suelto: true,
+      matId: mat.id, matName: mat.name,
+      matVentaOrigenId: null, matVentaOrigenName: null,
+      brutAnunciado: null, brutKg: brut, precioKg: precio,
+      unidad: esUnd ? 'und' : 'kg',
+      loteComposicion: null, loteOrigenResumen: null, lotesOrigen: [],
+    });
+    const ahora = rec.fecha;
+    queueSync(`centros/${ct.id}/ventas_pendientes/${rec.id}`, {
+      id: rec.id, estado: 'recibida', compradorId: c.id, compradorName: c.name,
+      matId: mat.id, matName: mat.name,
+      brutKg: brut, unidades: esUnd ? brut : null,
+      loteId: null, loteNumero: null, suelto: true,
+      fecha: ahora,
+    });
+    document.getElementById('successAmountEntrada').textContent = `${brut} ${esUnd ? 'und' : 'kg'}`;
+    document.getElementById('successSubEntrada').textContent = `📥 Recepción suelta de ${ct.name} · ${mat.name} · en espera de clasificación`;
+  }
+  if (titleEl) titleEl.textContent = '¡Recepción registrada!';
+  document.getElementById('successEntrada').classList.add('show');
+}
+
 function resetEntrada() {
-  entradaState = { origen: null, redModo: null, material: null, weightStr: '0', precioStr: '0', contraparte: null, lote: null };
+  entradaState = { origen: null, redModo: null, material: null, weightStr: '0', precioStr: '0', brutoStr: '0', contraparte: null, lote: null };
   ['desconocido', 'interna', 'red'].forEach(x => document.getElementById('og-' + x).classList.remove('selected'));
   ['lote', 'suelto'].forEach(x => document.getElementById('rm-' + x).classList.remove('selected'));
   document.getElementById('entradaRedBlock').style.display = 'none';
@@ -3801,6 +4130,9 @@ function resetEntrada() {
   document.querySelectorAll('#matGridEntrada .mat-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('weightInput').value = '';
   document.getElementById('precioRedInput').value = '';
+  const brutInp = document.getElementById('brutoRedInput'); if (brutInp) brutInp.value = '';
+  const brutWrap = document.getElementById('redBrutoWrap'); if (brutWrap) brutWrap.style.display = 'none';
+  const stEnt = document.getElementById('successTitleEntrada'); if (stEnt) stEnt.textContent = '¡Entrada registrada!';
   const eu = document.querySelector('#entradaLibreBlock .weight-unit'); if (eu) eu.textContent = 'kg';
   const el = document.getElementById('entradaPesoLabel'); if (el) el.textContent = 'Peso (kg)';
   document.getElementById('entradaNota').innerHTML = '<strong>💡 ¿Cómo funciona?</strong><br>Elige de dónde viene el material. Las compras en red se hacen por lote — el vendedor recibe el aviso automáticamente.';
@@ -3825,6 +4157,10 @@ function initLotes() {
   // v5.3 — ordre des sections selon le compte (flex order).
   document.getElementById('misLotesWrap').style.order = isReciclador() ? '3' : '1';
   document.getElementById('lotesRecibidosWrap').style.order = isReciclador() ? '1' : '3';
+  // v7.0 — SinBa: abre en "Por clasificar" si hay recepciones pendientes.
+  if (tieneCap('sinbapuntos')) {
+    lotesVista = DB.getRecepciones().some(r => r.estado === 'recibida') ? 'recepciones' : 'lotes';
+  }
   renderLotes();
 }
 
@@ -3935,10 +4271,56 @@ function nuevoNumeroLote() {
   return `${pref}-${String(seq).padStart(3, '0')}`;
 }
 
+let lotesVista = 'lotes'; // v7.0 — SinBa: 'recepciones' | 'lotes'
+function setLotesVista(v) { lotesVista = v; renderLotes(); }
+
+// v7.0 — tarjeta de una recepción en espera de clasificación.
+function renderRecepcionCard(rec) {
+  const mat = MATERIALES.find(m => m.id === rec.matId);
+  const u = rec.unidad === 'und' ? 'und' : 'kg';
+  return `<div class="lote-card">
+    <div class="lote-top">
+      <div style="flex:1;min-width:0">
+        <div class="lote-num">${mat ? mat.emoji + ' ' : '📥 '}${rec.suelto ? 'Suelto' : escHtml(rec.loteNumero || '#' + rec.id)}</div>
+        <div class="lote-sub">${escHtml(rec.matName || '')}${rec.matVentaOrigenName ? ' <span style="opacity:.6">(' + escHtml(rec.matVentaOrigenName) + ')</span>' : ''} · ${fmtKg(rec.brutKg)} ${u} brutos · de ${escHtml(rec.contraparteName || '')} · ${fechaLabel(rec.fecha)}</div>
+      </div>
+      <span class="lote-chip" style="background:#DBEAFE;color:#1E40AF">📥 En espera</span>
+    </div>
+    <button class="transformar-btn" style="background:#0F172A" onclick="openTri(${rec.id})">♻️ Clasificar (pesada 2)</button>
+  </div>`;
+}
+
 function renderLotes() {
   const list = document.getElementById('lotesList');
   if (!list) return;
   const wrap = document.getElementById('lotesRecibidosWrap');
+  // v7.0 — SinBa: subpestañas Por clasificar / Mis lotes.
+  const subtabs = document.getElementById('lotesSubtabs');
+  const recepWrap = document.getElementById('recepcionesWrap');
+  if (tieneCap('sinbapuntos')) {
+    const recibidas = DB.getRecepciones().filter(r => r.estado === 'recibida').sort((a, b) => b.id - a.id);
+    if (subtabs) subtabs.style.display = 'grid';
+    document.getElementById('subtabRecepN').textContent = recibidas.length;
+    document.getElementById('subtabRecep').classList.toggle('selected', lotesVista === 'recepciones');
+    document.getElementById('subtabLotes').classList.toggle('selected', lotesVista === 'lotes');
+    if (lotesVista === 'recepciones') {
+      recepWrap.style.display = 'block';
+      document.getElementById('recepcionesList').innerHTML = recibidas.length
+        ? recibidas.map(renderRecepcionCard).join('')
+        : `<div class="empty-state"><div class="empty-icon">📥</div><div class="empty-title">Nada por clasificar</div><div class="empty-sub">Las recepciones que registres en ➕ Entrada aparecen aquí hasta que las clasifiques (pesada 2).</div></div>`;
+      document.getElementById('misLotesWrap').style.display = 'none';
+      wrap.style.display = 'none';
+      document.getElementById('transformadosWrap').style.display = 'none';
+      document.getElementById('lotesNota').style.display = 'none';
+      return;
+    }
+    recepWrap.style.display = 'none';
+    document.getElementById('misLotesWrap').style.display = 'block';
+    document.getElementById('lotesNota').style.display = 'block';
+  } else {
+    if (subtabs) subtabs.style.display = 'none';
+    if (recepWrap) recepWrap.style.display = 'none';
+  }
   if (isReciclador()) {
     // ── RECICLADOR : layout historique — recibidos en cartes + mis lotes ──
     document.getElementById('misLotesLabel').textContent = '📦 Mis lotes';
@@ -4144,6 +4526,25 @@ function renderTraza() {
     rw.style.display = 'block';
     document.getElementById('trazaRecibList').innerHTML = recibTransf.map(renderLoteRecibido).join('');
   } else rw.style.display = 'none';
+  // v7.0 — rendimiento de las recepciones clasificadas (merma = atributo).
+  const rw2 = document.getElementById('trazaRendWrap');
+  if (rw2) {
+    const triadas = DB.getRecepciones().filter(r => r.estado === 'triada').sort((a, b) => b.id - a.id);
+    if (triadas.length) {
+      rw2.style.display = 'block';
+      document.getElementById('trazaRendList').innerHTML = triadas.map(rec => {
+        const u = rec.unidad === 'und' ? 'und' : 'kg';
+        const nL = (rec.lotesCreados || []).length;
+        return `<div class="lote-card">
+          <div class="lote-top"><div style="flex:1;min-width:0">
+            <div class="lote-num">♻️ ${rec.suelto ? 'Suelto' : escHtml(rec.loteNumero || '#' + rec.id)} — ${escHtml(rec.matName || '')}</div>
+            <div class="lote-sub">de ${escHtml(rec.contraparteName || '')} · ${fechaLabel(rec.triadaAt || rec.fecha)}</div>
+          </div><span class="lote-chip" style="background:#DCFCE7;color:#166534">${rec.rendimiento != null ? rec.rendimiento + '%' : ''}</span></div>
+          <div class="traza-paso">⚖️ Bruto <b>${fmtKg(rec.brutKg)} ${u}</b> → Neto <b>${fmtKg(rec.netKg)} ${u}</b> (${nL} lote${nL > 1 ? 's' : ''}) + Merma <b>${fmtKg(rec.mermaKg)} ${u}</b><br>💰 Pagado al neto: <b>${fmt(rec.totalNet || 0)}</b></div>
+        </div>`;
+      }).join('');
+    } else rw2.style.display = 'none';
+  }
   document.getElementById('trazaList').innerHTML = cerrados.length
     ? cerrados.map(l => `<div id="traza-lote-${l.id}">${renderLoteCard(l, trazaTimeline(l))}</div>`).join('')
     : `<div class="empty-state"><div class="empty-icon">⛓</div><div class="empty-title">Sin lotes cerrados aún</div><div class="empty-sub">Cuando un lote se venda, se fusione o se transforme, su parcours completo aparecerá aquí.</div></div>`;
@@ -4644,7 +5045,7 @@ function renderCrearLoteSurtri() {
 // Agrupa los lotes DISPONIBLES por grado (matId + matVentaId) y fusiona de
 // golpe todos los del mismo grado en un solo lote. Sin kilos sueltos (decisión
 // de Arthur): los sueltos no tienen grado hasta pasar por el surtri.
-let fusionState = { key: null, grupo: null };
+let fusionState = { key: null, grupo: null, sel: [] };
 function gruposFusionables() {
   const groups = {};
   DB.getLotes().forEach(l => {
@@ -4668,10 +5069,11 @@ function gruposFusionables() {
 function renderCrearLoteFusion() {
   const titleEl = document.querySelector('#crearLoteDrawer .historial-drawer-title');
   if (titleEl) titleEl.textContent = '🔗 Fusionar lotes por grado';
-  fusionState = { key: null, grupo: null };
+  fusionState = { key: null, grupo: null, sel: [] };
   const btn = document.getElementById('clConfirmBtn');
   btn.disabled = true; btn.textContent = 'Elige un grado para fusionar';
   document.getElementById('clFusionWrap').style.display = 'block';
+  document.getElementById('clFusionSelWrap').style.display = 'none';
   const grupos = gruposFusionables();
   const list = document.getElementById('clFusionList');
   if (!grupos.length) {
@@ -4688,16 +5090,41 @@ function renderCrearLoteFusion() {
     </button>`;
   }).join('');
 }
+// v6.5 (remarque Arthur) — al elegir un grado se muestran SUS lotes con
+// casillas; se fusionan solo los marcados (2+). Por defecto todos marcados.
 function selectFusionGrupo(key) {
   const g = gruposFusionables().find(x => x.key === key);
   if (!g) { renderCrearLoteFusion(); return; }
-  fusionState = { key, grupo: g };
+  fusionState = { key, grupo: g, sel: g.lotes.map(l => l.id) };
   document.querySelectorAll('#clFusionList .mat-btn').forEach(b => b.classList.remove('selected'));
   const el = document.getElementById('fg-' + key); if (el) el.classList.add('selected');
-  const info = componerLoteCombinado(g.matId, 0, g.lotes.map(l => l.id));
+  document.getElementById('clFusionSelWrap').style.display = 'block';
+  document.getElementById('clFusionSel').innerHTML = g.lotes.map(l => `
+    <label class="cl-lote-check checked" id="clfchk-${l.id}">
+      <input type="checkbox" checked onchange="toggleFusionLote(${l.id}, this.checked)">
+      <span style="flex:1"><b class="lote-num" style="font-size:13px">${escHtml(l.numero || '#' + l.id)}</b> · ${cantidadLote(l)} · ${fechaLabel(l.creadoAt || new Date().toISOString())}</span>
+    </label>`).join('');
+  updateFusionResumen();
+}
+function toggleFusionLote(id, checked) {
+  const sel = fusionState.sel || [];
+  if (checked && !sel.includes(id)) sel.push(id);
+  if (!checked) fusionState.sel = sel.filter(x => x !== id);
+  const row = document.getElementById('clfchk-' + id);
+  if (row) row.classList.toggle('checked', checked);
+  updateFusionResumen();
+}
+function updateFusionResumen() {
+  const g = fusionState.grupo;
+  const btn = document.getElementById('clConfirmBtn');
+  const res = document.getElementById('clResumen');
+  const ids = fusionState.sel || [];
+  if (!g) { btn.disabled = true; res.style.display = 'none'; return; }
+  if (ids.length < 2) { btn.disabled = true; btn.textContent = 'Marca 2 o más lotes'; res.style.display = 'none'; return; }
+  const info = componerLoteCombinado(g.matId, 0, ids);
   const r = info.origenResumen, u = g.unidad;
   const nom = g.matVentaName ? `${g.matName} · ${g.matVentaName}` : g.matName;
-  const res = document.getElementById('clResumen'); res.style.display = 'block';
+  res.style.display = 'block';
   document.getElementById('clResumenBody').innerHTML =
     `<b>${fmtKg(info.kgTotal)} ${u} de ${escHtml(nom)}</b> — fusión de ${info.fusionDe.map(escHtml).join(' + ')}:<br>` +
     (r.red ? `🤝 Compra en red: ${r.red} ${u}<br>` : '') +
@@ -4706,23 +5133,23 @@ function selectFusionGrupo(key) {
     (r.nodoc ? `❓ No documentado: ${r.nodoc} ${u}<br>` : '') +
     (info.lotesOrigen.length ? `⛓ Incluye material de ${info.lotesOrigen.length} lote${info.lotesOrigen.length > 1 ? 's' : ''} anterior${info.lotesOrigen.length > 1 ? 'es' : ''}<br>` : '') +
     `💰 Costo del material: ${fmt(info.costoTotal)}`;
-  const btn = document.getElementById('clConfirmBtn');
   btn.disabled = false;
-  btn.textContent = `🔗 Fusionar ${g.lotes.length} lotes — ${fmtKg(info.kgTotal)} ${u}`;
+  btn.textContent = `🔗 Fusionar ${ids.length} lotes — ${fmtKg(info.kgTotal)} ${u}`;
 }
 let lastFusionAt = 0;
 function confirmFusion() {
   if (Date.now() - lastFusionAt < 1500) return;
-  const sel = fusionState.grupo;
-  if (!sel) return;
-  // Re-verificación: el grado debe seguir teniendo 2+ lotes disponibles.
-  const g = gruposFusionables().find(x => x.key === sel.key);
-  if (!g || g.lotes.length < 2) {
-    showRecsToast('⚠️ Ya no hay 2 o más lotes disponibles de ese grado');
-    renderCrearLoteFusion(); return;
+  const g = fusionState.grupo;
+  if (!g) return;
+  const ids = (fusionState.sel || []).slice();
+  if (ids.length < 2) { showRecsToast('Marca 2 o más lotes'); return; }
+  const info = componerLoteCombinado(g.matId, 0, ids);
+  // Re-verificación: todos los marcados deben seguir disponibles.
+  if (info.fuentes.length < 2 || info.fuentes.length !== ids.length) {
+    showRecsToast('⚠️ Algún lote ya no está disponible — revisa la lista');
+    if (gruposFusionables().find(x => x.key === g.key)) selectFusionGrupo(g.key); else renderCrearLoteFusion();
+    return;
   }
-  const info = componerLoteCombinado(g.matId, 0, g.lotes.map(l => l.id));
-  if (info.fuentes.length < 2) { showRecsToast('⚠️ Algún lote ya no está disponible — revisa la lista'); renderCrearLoteFusion(); return; }
   lastFusionAt = Date.now();
   const numero = nuevoNumeroLote();
   const c = DB.getCentro();
@@ -5088,6 +5515,193 @@ function confirmSurtri() {
   renderLotes();
   if (currentScreen === 'resumen') initResumen();
   showRecsToast(`♻️ Surtri hecho — ${creados.length} lote${creados.length > 1 ? 's' : ''} creado${creados.length > 1 ? 's' : ''}${info.merma ? ' + merma ' + fmtKg(info.merma.kg) + ' ' + u : ''}`);
+}
+
+// ════════════════════════════════════════════════════════════
+// CLASIFICAR UNA RECEPCIÓN (v7.0 — pesada 2)
+//   El bruto de UNA recepción se reparte en grados; la merma = bruto − neto se
+//   calcula sola y queda como ATRIBUTO de la recepción (no un pseudo-lote). Al
+//   confirmar: se crean los lotes de grado (neto), se anota mi entrada al neto,
+//   se deposita la venta 'triada' al vendedor, se avanza su lote a 'vendido' y
+//   se acreditan los sinbapuntos sobre el neto.
+// ════════════════════════════════════════════════════════════
+let triState = { recepcion: null, alloc: {} };
+
+function openTri(recId) {
+  const rec = DB.getRecepciones().find(r => r.id === recId);
+  if (!rec || rec.estado !== 'recibida') return;
+  triState = { recepcion: rec, alloc: {} };
+  const u = rec.unidad === 'und' ? 'und' : 'kg';
+  document.getElementById('triCabecera').innerHTML =
+    `${rec.suelto ? '⚖️ Suelto' : '📦 Lote ' + escHtml(rec.loteNumero || '')} de <b>${escHtml(rec.contraparteName || '')}</b><br>` +
+    `Materia: <b>${escHtml(rec.matName || '')}</b>${rec.matVentaOrigenName ? ' (' + escHtml(rec.matVentaOrigenName) + ')' : ''}<br>` +
+    `Bruto (pesada 1): <b>${fmtKg(rec.brutKg)} ${u}</b>${rec.brutAnunciado ? ` · anunciado ${fmtKg(rec.brutAnunciado)} ${u}` : ''}<br>` +
+    `Precio acordado: <b>S/${(rec.precioKg || 0).toFixed(2)}/${u}</b> — el pago va sobre el NETO`;
+  const grados = gradosDe(rec.matId);
+  document.getElementById('triRows').innerHTML = grados.map(g => `
+    <div class="surtri-row" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:10px">
+      <span style="font-size:18px">${g.emoji}</span>
+      <span style="flex:1;font-size:13px;color:var(--text-primary)${g.esBase ? ';color:var(--text-secondary)' : ''}">${escHtml(g.name)}</span>
+      <input class="surtri-kg" id="tg-${g.id}" type="text" inputmode="decimal" placeholder="0" autocomplete="off" style="width:78px;text-align:right;font-size:16px;font-weight:700;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#fff" oninput="onTriAllocInput('${g.id}', this)">
+      <span style="font-size:13px;color:var(--text-muted)">${u}</span>
+    </div>`).join('');
+  document.getElementById('triOverlay').classList.add('open');
+  document.getElementById('triDrawer').classList.add('open');
+  updateTriUI();
+}
+function closeTri() {
+  document.getElementById('triOverlay').classList.remove('open');
+  document.getElementById('triDrawer').classList.remove('open');
+}
+function onTriAllocInput(gid, el) { triState.alloc[gid] = sanitizeDecimal(el, 999999); updateTriUI(); }
+
+function triTotals() {
+  const rec = triState.recepcion;
+  const u = rec ? (rec.unidad === 'und' ? 'und' : 'kg') : 'kg';
+  const brut = rec ? (rec.brutKg || 0) : 0;
+  const grados = rec ? gradosDe(rec.matId) : [];
+  let net = 0; const alloc = [];
+  grados.forEach(g => {
+    const kg = parseFloat(triState.alloc[g.id]) || 0;
+    if (kg > 0.0001) { net += kg; alloc.push({ gradeId: g.id, gradeName: g.name, esBase: !!g.esBase, kg }); }
+  });
+  net = Math.round(net * 100) / 100;
+  const merma = Math.round((brut - net) * 100) / 100;
+  const precio = rec ? (rec.precioKg || 0) : 0;
+  const pago = Math.round(net * precio * 100) / 100;
+  return { u, brut, net, merma, alloc, precio, pago, rendimiento: brut > 0 ? Math.round(net / brut * 100) : 0 };
+}
+
+function updateTriUI() {
+  const btn = document.getElementById('triConfirmBtn');
+  const box = document.getElementById('triResumen');
+  const rec = triState.recepcion;
+  if (!rec) { btn.disabled = true; btn.textContent = 'Reparte los kilos'; box.innerHTML = ''; return; }
+  const t = triTotals();
+  box.innerHTML =
+    `Neto (Σ grados): <b>${fmtKg(t.net)} ${t.u}</b> en ${t.alloc.length} lote${t.alloc.length !== 1 ? 's' : ''}<br>` +
+    (t.merma >= -0.001
+      ? `Merma (bruto − neto): <b>${fmtKg(Math.max(0, t.merma))} ${t.u}</b> · rendimiento <b>${t.rendimiento}%</b><br>`
+      : `<b style="color:var(--red)">Lo clasificado excede el bruto por ${fmtKg(-t.merma)} ${t.u}</b><br>`) +
+    `Pago al vendedor (neto): <b>${fmt(t.pago)}</b>`;
+  if (t.net <= 0.0001) { btn.disabled = true; btn.textContent = 'Reparte al menos un grado'; return; }
+  if (t.merma < -0.001) { btn.disabled = true; btn.textContent = 'Excede el bruto — corrige'; return; }
+  btn.disabled = false;
+  btn.textContent = `✅ Confirmar — ${t.alloc.length} lote${t.alloc.length > 1 ? 's' : ''} · paga ${fmt(t.pago)}`;
+}
+
+// Composición de cada grado desde la ÚNICA fuente (el lote/suelto recibido).
+function componerTriRecepcion(rec, alloc, net) {
+  const chain = rec.loteId
+    ? [`${rec.contraparteId}:${rec.loteId}`].concat(Array.isArray(rec.lotesOrigen) ? rec.lotesOrigen : [])
+    : [`${rec.contraparteId}:${rec.id}`];
+  const totalNet = Math.round(net * (rec.precioKg || 0) * 100) / 100;
+  const piezas = alloc.map(a => {
+    const frac = net > 0 ? a.kg / net : 0;
+    return {
+      gradeId: a.gradeId, gradeName: a.gradeName, esBase: !!a.esBase, kg: a.kg,
+      composicion: [{ entradaId: rec.id, kg: a.kg, origen: 'red', origenName: rec.contraparteName || null, loteOrigen: rec.loteNumero || null }],
+      origenResumen: { desconocido: 0, interna: 0, red: a.kg, nodoc: 0 },
+      costoTotal: Math.round(frac * totalNet * 100) / 100,
+      lotesOrigen: chain.slice(),
+    };
+  });
+  return { piezas, totalNet };
+}
+
+let lastTriAt = 0;
+async function confirmTri() {
+  if (Date.now() - lastTriAt < 1500) return;
+  const rec = triState.recepcion;
+  if (!rec || rec.estado !== 'recibida') return;
+  const t = triTotals();
+  if (t.net <= 0.0001 || t.merma < -0.001) return;
+  lastTriAt = Date.now();
+  const c = DB.getCentro();
+  if (!c) return;
+  const esUnd = rec.unidad === 'und';
+  const comp = componerTriRecepcion(rec, t.alloc, t.net);
+  const base = Date.now();
+  // 1) Crear los lotes de grado (NETO) — lotes propios de SinBa.
+  const lotesCreados = [];
+  comp.piezas.forEach((p, i) => {
+    if ((p.kg || 0) <= 0.0001) return;
+    const numero = nuevoNumeroLote();
+    const esBase = p.esBase || p.gradeId === rec.matId;
+    DB.addLote({
+      id: base + i + 1,
+      numero, matId: rec.matId, matName: rec.matName,
+      matVentaId: esBase ? null : p.gradeId,
+      matVentaName: esBase ? null : p.gradeName,
+      recepcionId: rec.id,
+      kg: p.kg, unidad: esUnd ? 'und' : 'kg', estado: 'disponible',
+      creadoAt: new Date().toISOString(),
+      composicion: p.composicion,
+      origenResumen: p.origenResumen,
+      costoTotal: p.costoTotal,
+      lotesOrigen: p.lotesOrigen,
+    });
+    lotesCreados.push(numero);
+  });
+  const ahora = new Date().toISOString();
+  // 2) Mi ENTRADA al NETO (lo que pago a la red). id = id de la recepción → la
+  //    venta anotada del vendedor comparte el mismo id (idempotente). El net
+  //    queda 100% comprometido en los lotes de grado (sin fuga de suelto).
+  DB.addEntrada({
+    id: rec.id, fecha: ahora, origen: 'red', suelto: !rec.loteId,
+    recId: null, recName: rec.contraparteName, recColor: '#0F172A',
+    matId: rec.matId, matName: rec.matName, kg: t.net,
+    matVentaId: null, matVentaName: null,
+    unidades: esUnd ? t.net : null,
+    precioKg: rec.precioKg, total: t.pago,
+    origenCentroId: rec.contraparteId,
+    loteId: rec.loteId || null, loteNumero: rec.loteNumero || null,
+    brutoKg: rec.brutKg, mermaKg: t.merma, recepcionId: rec.id,
+    lotesOrigen: rec.loteId ? [`${rec.contraparteId}:${rec.loteId}`].concat(Array.isArray(rec.lotesOrigen) ? rec.lotesOrigen : []) : null,
+  });
+  // 3) Depósito fase 'triada' al vendedor — anota la venta al NETO (con bruto y
+  //    merma para el rendimiento).
+  queueSync(`centros/${rec.contraparteId}/ventas_pendientes/${rec.id}`, {
+    id: rec.id, estado: 'triada', compradorId: c.id, compradorName: c.name,
+    matId: rec.matId, matName: rec.matName,
+    kg: t.net, unidades: esUnd ? t.net : null, precioKg: rec.precioKg, total: t.pago,
+    brutKg: rec.brutKg, mermaKg: t.merma, rendimiento: t.rendimiento,
+    suelto: !rec.loteId, loteId: rec.loteId || null, loteNumero: rec.loteNumero || null,
+    fecha: ahora,
+  });
+  // 4) Avanzar el lote del vendedor a 'vendido' (caso lote).
+  if (rec.loteId) {
+    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/estado`, 'vendido');
+    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/compradorId`, c.id);
+    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/compradorName`, c.name);
+    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/vendidoAt`, ahora);
+    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/precioTotal`, t.pago);
+  }
+  // 5) Sinbapuntos sobre el NETO (si la contraparte es elegible).
+  if (tieneCap('sinbapuntos') && spEsElegible(rec.contraparteId)) {
+    const mat = MATERIALES.find(m => m.id === rec.matId);
+    const pts = mat && mat.puntos ? Math.round(mat.puntos * t.net * 100) / 100 : 0;
+    if (pts > 0) {
+      queueSync(`sinbapuntos/${rec.contraparteId}/movs/cr_e${rec.id}`, {
+        id: 'cr_e' + rec.id, tipo: 'credito', puntos: pts, fecha: ahora,
+        centroId: rec.contraparteId, centroName: rec.contraparteName || null,
+        sinbaId: c.id, sinbaName: c.name,
+        matId: rec.matId, matName: rec.matName,
+        kg: esUnd ? null : t.net, unidades: esUnd ? t.net : null,
+        refId: rec.id,
+      });
+    }
+  }
+  // 6) Cerrar la recepción — la merma queda como ATRIBUTO (no pseudo-lote).
+  DB.updateRecepcion(rec.id, {
+    estado: 'triada', triadaAt: ahora,
+    grados: t.alloc, netKg: t.net, mermaKg: t.merma, rendimiento: t.rendimiento,
+    totalNet: t.pago, lotesCreados,
+  });
+  closeTri();
+  if (currentScreen === 'lotes') renderLotes();
+  if (currentScreen === 'resumen') initResumen();
+  showRecsToast(`♻️ Clasificado — ${lotesCreados.length} lote${lotesCreados.length > 1 ? 's' : ''} · neto ${fmtKg(t.net)} ${t.u} · merma ${fmtKg(Math.max(0, t.merma))} ${t.u}`);
 }
 
 // ════════════════════════════════════════════════════════════
