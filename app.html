@@ -3,8 +3,8 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 5.6                                                 -->
-  <!-- Date    : 20/07/2026                                          -->
+  <!-- Version : 6.0                                                 -->
+  <!-- Date    : 21/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
   <meta charset="UTF-8">
@@ -1072,11 +1072,23 @@
       <div id="clLotesList"></div>
       <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:4px">Los lotes incluidos se fusionan en el nuevo lote — su composición y trazabilidad se conservan.</div>
     </div>
+    <!-- v6.0 — SURTRI SinBa : reparto multi-grado del stock suelto -->
+    <div id="clSurtriWrap" style="display:none">
+      <div class="section-label">Clasificar para vender (reparte los kilos)</div>
+      <div id="clSurtriRows" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div class="surtri-merma-row" style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:#FEF3C7;border-radius:10px">
+        <span style="font-size:18px">🗑️</span>
+        <span style="flex:1;font-size:13px;color:#92400E">Merma / rechazo del triado</span>
+        <input class="surtri-kg" id="clMermaInput" type="text" inputmode="decimal" placeholder="0" autocomplete="off" style="width:78px;text-align:right;font-size:16px;font-weight:700;border:1px solid #FCD34D;border-radius:8px;padding:6px 8px;background:#fff" oninput="onSurtriMermaInput(this)">
+        <span style="font-size:13px;color:#92400E" id="clMermaUnit">kg</span>
+      </div>
+      <div id="clSurtriTotal" style="margin-top:10px;font-size:13px;color:var(--text-secondary);line-height:1.6"></div>
+    </div>
     <div id="clResumen" style="display:none">
       <div class="section-label">Composición del lote (trazabilidad)</div>
       <div id="clResumenBody" style="background:var(--bg);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text-secondary);line-height:1.6"></div>
     </div>
-    <button class="confirm-btn" id="clConfirmBtn" disabled onclick="confirmCrearLote()">Elige el material</button>
+    <button class="confirm-btn" id="clConfirmBtn" disabled onclick="onCrearLoteConfirm()">Elige el material</button>
   </div>
 </div>
 
@@ -1670,7 +1682,7 @@ async function syncOwnData() {
       // El estado de un lote solo AVANZA (disponible → vendido → transformado).
       // El comprador/reciclador escribe el avance directamente en MI nodo
       // remoto; y un eco atrasado nunca debe retroceder un estado ya avanzado.
-      const ORD_LOTE = { disponible: 0, vendido: 1, fusionado: 1, transformado: 2 };
+      const ORD_LOTE = { disponible: 0, vendido: 1, fusionado: 1, transformado: 2, merma: 2 };
       const localLotes = DB.getLotes();
       const mergedL = mergeById(localLotes, remote.lotes).map(lt => {
         const prev = localLotes.find(x => x.id === lt.id);
@@ -2292,10 +2304,62 @@ const SINBA_COMPRA = [
   { id: 'sbc_uco',            emoji: '🛢️', name: 'Aceite vegetal usado',      hint: 'UCO',                       precio: 0, puntos: 0,    unidad: 'kg'  },
 ];
 
-// v2.0 : el catálogo de VENTA (surtri SinBa, 26 categorías) se retiró — los
-// lotes se crean con la nomenclatura unificada de compra (SINBA_COMPRA) para
-// TODAS las cuentas. Si SinBa necesita re-clasificar (surtri) al crear lotes,
-// se reintroducirá un catálogo específico en una versión futura.
+// v6.0 (21/07/2026) : SURTRI SinBa reintroducido como ÁRBOL de grados.
+// SinBa compra 15 categorías (SINBA_COMPRA) y, tras acumular y triar, revende
+// en 26 sub-clasificaciones ("grados de venta"). En vez de dos catálogos +
+// una tabla de mapeo (frágil), el mapeo ES la estructura: cada materia de
+// compra lleva su lista de grados. Principio clave de robustez: el stock, el
+// FIFO, la composición y la trazabilidad SIEMPRE viven en la materia de
+// compra (matId); el grado es una etiqueta comercial (matVentaId) que NUNCA
+// toca el balance de masa. Solo las cuentas tipo=sinba ven el surtri.
+// Ids de grado reutilizados del antiguo SINBA_VENTA (v1.0).
+const GRADOS_VENTA = {
+  sbc_pet_botellas: [
+    { id: 'sbv_pet_transparente', emoji: '🧴', name: 'PET transparente' },
+    { id: 'sbv_pet_limpieza',     emoji: '🧼', name: 'PET limpieza' },
+    { id: 'sbv_pet_pvc',          emoji: '🏷️', name: 'PET con etiqueta PVC' },
+    { id: 'sbv_pet_mixto',        emoji: '🧩', name: 'PET mixto' },
+    { id: 'sbv_pet_aceite',       emoji: '🫗', name: 'PET aceite' },
+    { id: 'sbv_pet_color',        emoji: '🟣', name: 'PET color' },
+  ],
+  sbc_vidrio: [
+    { id: 'sbv_vidrio_transp',   emoji: '🍶', name: 'Vidrio transparente' },
+    { id: 'sbv_vidrio_color',    emoji: '🍾', name: 'Vidrio color' },
+    { id: 'sbv_vidrio_andea',    emoji: '💧', name: 'Vidrio Andea' },
+    { id: 'sbv_vidrio_pilsen',   emoji: '🍺', name: 'Vidrio Backus - Pilsen' },
+    { id: 'sbv_vidrio_cusquena', emoji: '🍺', name: 'Vidrio Backus - Cusqueña' },
+  ],
+  sbc_carton: [
+    { id: 'sbv_carton_suelto',     emoji: '📦', name: 'Cartón - suelto' },
+    { id: 'sbv_carton_compactado', emoji: '🧱', name: 'Cartón - compactado' },
+  ],
+  sbc_papel_mixto: [
+    { id: 'sbv_papel_blanco', emoji: '📄', name: 'Papel blanco' },
+    { id: 'sbv_papel_couche', emoji: '🗞️', name: 'Papel couché' },
+    { id: 'sbv_papel_color',  emoji: '🟨', name: 'Papel color' },
+  ],
+};
+// Grados "comodín" — sin materia de compra de origen (decisión de Arthur:
+// siempre elegibles como cajón de sastre en cualquier surtri).
+const GRADOS_ORFANOS = [
+  { id: 'sbv_film_sucio', emoji: '🌫️', name: 'Film sucio' },
+  { id: 'sbv_maiz',       emoji: '🌽', name: 'Grano de maíz' },
+  { id: 'sbv_otros',      emoji: '📦', name: 'Otros' },
+];
+// Grados elegibles para una materia de compra: sus grados finos (si tiene) +
+// "igual que compra" (sin sub-clasificar) + los comodines.
+function gradosDe(matId) {
+  const m = MATERIALES.find(x => x.id === matId);
+  const propios = GRADOS_VENTA[matId] || [];
+  const base = m ? [{ id: m.id, emoji: m.emoji, name: m.name + ' (sin sub-clasificar)', esBase: true }] : [];
+  return [...propios, ...base, ...GRADOS_ORFANOS];
+}
+// Nombre legible de un grado de venta (o de la materia de compra si es base).
+function gradoName(id) {
+  for (const arr of Object.values(GRADOS_VENTA)) { const g = arr.find(x => x.id === id); if (g) return g.name; }
+  const o = GRADOS_ORFANOS.find(x => x.id === id); if (o) return o.name;
+  const m = MATERIALES.find(x => x.id === id); return m ? m.name : id;
+}
 
 // Con la nomenclatura unificada ya NO hace falta traducir: todos usan los
 // mismos ids (sbc_…). Estos mapas quedan VACÍOS a propósito — el código que
@@ -2309,6 +2373,8 @@ function isReciclador() { const c = DB.getCentro(); return !!(c && c.tipo === 'r
 const MATERIALES = SINBA_COMPRA;
 function matUnidad(m) { return (m && m.unidad) === 'und' ? 'und' : 'kg'; }
 function fmtPts(n) { return (Math.round(n * 100) / 100).toLocaleString('es-PE'); }
+// v6.0 — kilos con separador de miles (para tonelajes SinBa). 12500 → "12,500".
+function fmtKg(n) { return (Math.round((n || 0) * 100) / 100).toLocaleString('es-PE'); }
 
 function loadMatPrices() {
   const saved = DB.getPrecios();
@@ -3086,9 +3152,9 @@ function sanitizeDecimal(el, maxVal) {
   if (el.value !== v) el.value = v;
   return (v === '' || v === '.') ? '0' : v;
 }
-function onWeightInput(el)    { entradaState.weightStr = sanitizeDecimal(el, 9999); updateEntradaUI(); }
+function onWeightInput(el)    { entradaState.weightStr = sanitizeDecimal(el, 999999); updateEntradaUI(); }
 function onPrecioRedInput(el) { entradaState.precioStr = sanitizeDecimal(el, 9999); updateEntradaUI(); }
-function onRsInput(el, target){ entradaState[target]   = sanitizeDecimal(el, 9999); updateEntradaUI(); }
+function onRsInput(el, target){ entradaState[target]   = sanitizeDecimal(el, 999999); updateEntradaUI(); }
 
 // ── Lote picker (compra en red) ──
 async function openLotePicker() {
@@ -3202,7 +3268,7 @@ function closePesoSheet() {
 function onPsInput() {
   const mat = entradaState.material;
   if (!mat) return;
-  const pesoStr   = sanitizeDecimal(document.getElementById('psPeso'), 9999);
+  const pesoStr   = sanitizeDecimal(document.getElementById('psPeso'), 999999);
   const precioStr = sanitizeDecimal(document.getElementById('psPrecio'), 999);
   const esInterna = entradaState.origen === 'interna';
   const redSuelto = esRedSueltoSheet();
@@ -3234,7 +3300,7 @@ function confirmPesoSheet() {
   // v5.6 — red suelto : on réutilise le flux complet confirmEntrada()
   // (dépôt de la venta entrante chez le vendeur, FIFO, sinbapuntos).
   if (esRedSueltoSheet()) {
-    const pesoRs   = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 9999)) || 0;
+    const pesoRs   = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 999999)) || 0;
     const precioRs = parseFloat(sanitizeDecimal(document.getElementById('psPrecio'), 999)) || 0;
     if (!mat || !entradaState.contraparte || pesoRs <= 0 || precioRs <= 0) return;
     pesoSheetGuard = true;
@@ -3248,7 +3314,7 @@ function confirmPesoSheet() {
   }
   if (!mat || (og !== 'desconocido' && og !== 'interna')) return;
   const esInterna = og === 'interna';
-  const peso = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 9999)) || 0;
+  const peso = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 999999)) || 0;
   const precio = esInterna ? 0 : (parseFloat(sanitizeDecimal(document.getElementById('psPrecio'), 999)) || 0);
   if (peso <= 0 || (!esInterna && precio <= 0)) return;
   pesoSheetGuard = true;
@@ -3622,6 +3688,43 @@ function componerLote(matId, cantidad) {
   return { composicion, origenResumen, costoTotal: Math.round(costo * 100) / 100, lotesOrigen, completo: falta <= 0.001 };
 }
 
+// v6.0 — SURTRI : reparte el stock SUELTO de una materia de compra en varios
+// lotes de venta (grados) + una merma, recorriendo las entradas UNA sola vez
+// en FIFO. Cada "pieza" hereda su composición / origen / costo / cadena de
+// forma determinista y sin doble conteo. El balance de masa es explícito:
+// Σ grados + merma = material consumido (≤ suelto disponible).
+//   allocations = [{ gradeId, gradeName, esBase?, kg }, ...]
+//   mermaKg     = pérdida/rechazo del triado
+function componerSurtri(matId, allocations, mermaKg) {
+  // Cursor FIFO compartido sobre las entradas disponibles de la materia.
+  const fuentes = entradasDisponibles(matId).map(x => ({ e: x.e, resto: x.resto }));
+  let ci = 0;
+  function tomar(cant) {
+    const composicion = [], lotesOrigen = [];
+    const origenResumen = { desconocido: 0, interna: 0, red: 0, nodoc: 0 };
+    let falta = cant, costo = 0;
+    while (falta > 0.0001 && ci < fuentes.length) {
+      const f = fuentes[ci];
+      if (f.resto <= 0.0001) { ci++; continue; }
+      const toma = Math.min(f.resto, falta);
+      const e = f.e;
+      const og = e.origen || (e.origenCentroId ? 'red' : 'desconocido');
+      composicion.push({ entradaId: e.id, kg: Math.round(toma * 100) / 100, origen: og, origenName: e.recName || null, loteOrigen: e.loteNumero || null });
+      origenResumen[og] = (origenResumen[og] || 0) + toma;
+      costo += toma * (e.precioKg || 0);
+      if (Array.isArray(e.lotesOrigen)) e.lotesOrigen.forEach(r => { if (!lotesOrigen.includes(r)) lotesOrigen.push(r); });
+      f.resto -= toma; falta -= toma;
+    }
+    Object.keys(origenResumen).forEach(k => { origenResumen[k] = Math.round(origenResumen[k] * 100) / 100; });
+    return { composicion, origenResumen, costoTotal: Math.round(costo * 100) / 100, lotesOrigen, kg: Math.round((cant - Math.max(0, falta)) * 100) / 100, completo: falta <= 0.001 };
+  }
+  const piezas = [];
+  for (const a of allocations) { if ((a.kg || 0) > 0.0001) piezas.push({ ...a, comp: tomar(a.kg) }); }
+  const merma = (mermaKg || 0) > 0.0001 ? tomar(mermaKg) : null;
+  const totalPedido = Math.round((allocations.reduce((s, a) => s + (a.kg || 0), 0) + (mermaKg || 0)) * 100) / 100;
+  return { piezas, merma, totalPedido, completo: piezas.every(p => p.comp.completo) && (!merma || merma.completo) };
+}
+
 // Número de lote: iniciales del centro + secuencia (ej: "EA-003"). El lote
 // siempre se elige desde la lista del vendedor, así que no hace falta que el
 // número sea único en toda la red — solo dentro de cada cuenta.
@@ -3747,6 +3850,8 @@ function chipLote(l) {
     ? '<span class="lote-chip transformado">♻️ Transformado</span>'
     : l.estado === 'fusionado'
     ? `<span class="lote-chip fusionado">🔗 Fusionado${l.fusionadoEn ? ' → ' + escHtml(l.fusionadoEn) : ''}</span>`
+    : l.estado === 'merma'
+    ? '<span class="lote-chip" style="background:#FEF3C7;color:#92400E">🗑️ Merma</span>'
     : '<span class="lote-chip disponible">✔ Disponible</span>';
 }
 function origenBarHtml(l) {
@@ -3783,8 +3888,8 @@ function renderLoteCard(l, extraHtml) {
   return `<div class="lote-card" style="cursor:pointer" onclick="abrirDetalleLote(${l.id})">
     <div class="lote-top">
       <div style="flex:1;min-width:0">
-        <div class="lote-num">${mat ? mat.emoji + ' ' : ''}${escHtml(l.numero || '#' + l.id)}</div>
-        <div class="lote-sub">${escHtml(l.matName || '')} · ${cantidadLote(l)} · ${fechaLabel(l.creadoAt || new Date().toISOString())}${l.auto ? ' · venta suelta (auto)' : ''}${l.precioTotal ? ' · vendido: ' + fmt(l.precioTotal) : ''}</div>
+        <div class="lote-num">${mat ? mat.emoji + ' ' : ''}${escHtml(l.numero || '#' + l.id)}${l.matVentaName ? ` <span style="display:inline-block;font-size:11px;font-weight:700;background:#EDE9FE;color:#5B21B6;padding:1px 7px;border-radius:8px;vertical-align:middle">🏷️ ${escHtml(l.matVentaName)}</span>` : ''}</div>
+        <div class="lote-sub">${l.matVentaName && l.matVentaId ? `${escHtml(l.matVentaName)} <span style="opacity:.6">(de ${escHtml(l.matName || '')})</span>` : escHtml(l.matName || '')} · ${cantidadLote(l)} · ${fechaLabel(l.creadoAt || new Date().toISOString())}${l.auto ? ' · venta suelta (auto)' : ''}${l.precioTotal ? ' · vendido: ' + fmt(l.precioTotal) : ''}</div>
       </div>
       ${chip}
     </div>
@@ -3805,6 +3910,7 @@ function trazaTimeline(l) {
   const f = iso => iso ? fechaLabel(iso) : '';
   pasos.push(`📦 <b>Creado</b> ${f(l.creadoAt)}${l.auto ? ' (venta suelta automática)' : ''}`);
   if (l.estado === 'fusionado') pasos.push(`🔗 <b>Fusionado en ${escHtml(l.fusionadoEn || 'otro lote')}</b> ${f(l.fusionadoAt)} — su trazabilidad sigue viva en ese lote`);
+  if (l.estado === 'merma') pasos.push(`🗑️ <b>Merma / rechazo del triado (surtri)</b> — material perdido en la clasificación, registrado para el balance de masa`);
   if (l.vendidoAt || l.compradorName) pasos.push(`📤 <b>Vendido a ${escHtml(l.compradorName || 'la red')}</b> ${f(l.vendidoAt)}${l.precioTotal ? ' · ' + fmt(l.precioTotal) : ''}`);
   if (l.estado === 'transformado') pasos.push(`♻️ <b>Transformado por ${escHtml(l.transformadoPor || 'un reciclador')}</b> ${f(l.transformadoAt)} — cadena cerrada`);
   return `<div class="traza-paso">${pasos.join('<br>')}</div>`;
@@ -3812,7 +3918,7 @@ function trazaTimeline(l) {
 
 function renderTraza() {
   const lotes = DB.getLotes();
-  const cerrados = lotes.filter(l => l.estado === 'vendido' || l.estado === 'fusionado' || l.estado === 'transformado')
+  const cerrados = lotes.filter(l => l.estado === 'vendido' || l.estado === 'fusionado' || l.estado === 'transformado' || l.estado === 'merma')
     .sort((a, b) => b.id - a.id);
   const transf = cerrados.filter(l => l.estado === 'transformado');
   const vend   = cerrados.filter(l => l.estado === 'vendido');
@@ -4303,7 +4409,45 @@ async function ingresarNumeroLote(motivo) {
 }
 
 // ── Crear lote (drawer) ──
+// v6.0 — el botón Confirmar del drawer despacha según el tipo de cuenta:
+// SinBa hace surtri (varios lotes de golpe), el resto crea/fusiona un lote.
+function onCrearLoteConfirm() { if (isSinba()) confirmSurtri(); else confirmCrearLote(); }
+
 function openCrearLote() {
+  const titleEl = document.querySelector('#crearLoteDrawer .historial-drawer-title');
+  document.getElementById('clResumen').style.display = 'none';
+  const btn = document.getElementById('clConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Elige el material';
+  document.getElementById('crearLoteOverlay').classList.add('open');
+  document.getElementById('crearLoteDrawer').classList.add('open');
+
+  if (isSinba()) {
+    // ── SURTRI SinBa : material acumulado (suelto) → reparto en grados ──
+    if (titleEl) titleEl.textContent = '♻️ Surtri — clasificar para vender';
+    document.querySelector('#matGridLote').previousElementSibling.textContent = 'Material acumulado (stock suelto)';
+    surtriState = { material: null, alloc: {}, mermaStr: '0' };
+    const sueltos = kgSueltosPorMat();
+    const mats = MATERIALES.filter(m => (sueltos[m.id] || 0) > 0.0001);
+    if (!mats.length) { closeCrearLote(); showRecsToast('No tienes material suelto acumulado — registra o recibe entradas primero'); return; }
+    document.getElementById('matGridLote').innerHTML = mats.map(m => {
+      const st = Math.round((sueltos[m.id] || 0) * 100) / 100;
+      const ng = (GRADOS_VENTA[m.id] || []).length;
+      return `<button class="mat-btn" id="lmat-${m.id}" onclick="selectSurtriMat('${m.id}')">
+        <span class="mat-emoji">${m.emoji}</span>
+        <span class="mat-name">${m.name}</span>
+        <span class="mat-price">${fmtKg(st)} ${matUnidad(m)}${ng ? ' · ' + ng + ' grados' : ''}</span>
+      </button>`;
+    }).join('');
+    document.getElementById('clCantidadWrap').style.display = 'none';
+    document.getElementById('clLotesWrap').style.display = 'none';
+    document.getElementById('clSurtriWrap').style.display = 'none';
+    return;
+  }
+
+  // ── CENTRO / RECICLADOR : flujo clásico (crear lote / fusionar) ──
+  if (titleEl) titleEl.textContent = '➕ Crear lote';
+  document.querySelector('#matGridLote').previousElementSibling.textContent = 'Material (solo con stock suelto)';
+  document.getElementById('clSurtriWrap').style.display = 'none';
   crearLoteState = { material: null, cantidadStr: '0', lotesSel: [] };
   const sueltos = kgSueltosPorMat();
   const lotesDispPorMat = {};
@@ -4322,11 +4466,6 @@ function openCrearLote() {
   }).join('');
   document.getElementById('clCantidadWrap').style.display = 'none';
   document.getElementById('clLotesWrap').style.display = 'none';
-  document.getElementById('clResumen').style.display = 'none';
-  const btn = document.getElementById('clConfirmBtn');
-  btn.disabled = true; btn.textContent = 'Elige el material';
-  document.getElementById('crearLoteOverlay').classList.add('open');
-  document.getElementById('crearLoteDrawer').classList.add('open');
 }
 function closeCrearLote() {
   document.getElementById('crearLoteOverlay').classList.remove('open');
@@ -4371,7 +4510,7 @@ function selectLoteMat(id) {
 }
 
 function onClCantidadInput(el) {
-  crearLoteState.cantidadStr = sanitizeDecimal(el, 99999);
+  crearLoteState.cantidadStr = sanitizeDecimal(el, 999999);
   updateCrearLoteUI();
 }
 
@@ -4494,6 +4633,131 @@ function confirmCrearLote() {
   renderLotes();
   if (currentScreen === 'resumen') initResumen();
   showRecsToast(info.fusionDe.length ? `🔗 Lote ${numero} creado (fusión de ${info.fusionDe.join(' + ')})` : `📦 Lote ${numero} creado — listo para vender`);
+}
+
+// ════════════════════════════════════════════════════════════
+// SURTRI SinBa (v6.0) — reparte el stock suelto acumulado de una materia
+// de compra en varios lotes de venta (grados) + merma, en un solo gesto.
+// El stock/FIFO/trazabilidad viven en la materia de compra; el grado es
+// una etiqueta (matVentaId). Balance de masa explícito y atómico.
+// ════════════════════════════════════════════════════════════
+let surtriState = { material: null, alloc: {}, mermaStr: '0' };
+
+function selectSurtriMat(id) {
+  surtriState = { material: MATERIALES.find(m => m.id === id), alloc: {}, mermaStr: '0' };
+  document.querySelectorAll('#matGridLote .mat-btn').forEach(b => b.classList.remove('selected'));
+  const sel = document.getElementById('lmat-' + id); if (sel) sel.classList.add('selected');
+  const u = matUnidad(surtriState.material);
+  document.getElementById('clMermaUnit').textContent = u;
+  document.getElementById('clMermaInput').value = '';
+  const grados = gradosDe(id);
+  document.getElementById('clSurtriRows').innerHTML = grados.map(g => `
+    <div class="surtri-row" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:10px">
+      <span style="font-size:18px">${g.emoji}</span>
+      <span style="flex:1;font-size:13px;color:var(--text-primary)${g.esBase ? ';color:var(--text-secondary)' : ''}">${escHtml(g.name)}</span>
+      <input class="surtri-kg" id="sg-${g.id}" type="text" inputmode="decimal" placeholder="0" autocomplete="off" style="width:78px;text-align:right;font-size:16px;font-weight:700;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#fff" oninput="onSurtriAllocInput('${g.id}', this)">
+      <span style="font-size:13px;color:var(--text-muted)">${u}</span>
+    </div>`).join('');
+  document.getElementById('clSurtriWrap').style.display = 'block';
+  updateSurtriUI();
+}
+
+function onSurtriAllocInput(gid, el) { surtriState.alloc[gid] = sanitizeDecimal(el, 999999); updateSurtriUI(); }
+function onSurtriMermaInput(el)      { surtriState.mermaStr = sanitizeDecimal(el, 999999); updateSurtriUI(); }
+
+function surtriTotals() {
+  const mat = surtriState.material;
+  const u = mat ? matUnidad(mat) : 'kg';
+  const disp = mat ? Math.round((kgSueltosPorMat()[mat.id] || 0) * 100) / 100 : 0;
+  const grados = mat ? gradosDe(mat.id) : [];
+  let sumaGrados = 0; const alloc = [];
+  grados.forEach(g => {
+    const kg = parseFloat(surtriState.alloc[g.id]) || 0;
+    if (kg > 0.0001) { sumaGrados += kg; alloc.push({ gradeId: g.id, gradeName: g.name, esBase: !!g.esBase, kg }); }
+  });
+  const merma = parseFloat(surtriState.mermaStr) || 0;
+  const total = Math.round((sumaGrados + merma) * 100) / 100;
+  return { u, disp, alloc, sumaGrados: Math.round(sumaGrados * 100) / 100, merma, total, restante: Math.round((disp - total) * 100) / 100 };
+}
+
+function updateSurtriUI() {
+  const btn = document.getElementById('clConfirmBtn');
+  const box = document.getElementById('clSurtriTotal');
+  const mat = surtriState.material;
+  if (!mat) { btn.disabled = true; btn.textContent = 'Elige el material'; box.innerHTML = ''; return; }
+  const t = surtriTotals();
+  const nLotes = t.alloc.length;
+  box.innerHTML =
+    `Disponible: <b>${fmtKg(t.disp)} ${t.u}</b><br>` +
+    `Clasificado en ${nLotes} lote${nLotes !== 1 ? 's' : ''}: <b>${fmtKg(t.sumaGrados)} ${t.u}</b>` +
+    (t.merma ? ` · merma <b>${fmtKg(t.merma)} ${t.u}</b>` : '') + '<br>' +
+    (t.restante >= -0.001
+      ? `Queda sin clasificar: <b>${fmtKg(Math.max(0, t.restante))} ${t.u}</b>`
+      : `<b style="color:var(--red)">Excede el stock por ${fmtKg(-t.restante)} ${t.u}</b>`);
+  if (t.total <= 0.0001) { btn.disabled = true; btn.textContent = 'Reparte los kilos por grado'; return; }
+  if (t.total > t.disp + 0.001) { btn.disabled = true; btn.textContent = `Solo tienes ${fmtKg(t.disp)} ${t.u}`; return; }
+  if (nLotes === 0) { btn.disabled = true; btn.textContent = 'Clasifica al menos un grado'; return; }
+  btn.disabled = false;
+  btn.textContent = `✅ Crear ${nLotes} lote${nLotes > 1 ? 's' : ''}${t.merma ? ' + merma' : ''}`;
+}
+
+let lastSurtriAt = 0;
+function confirmSurtri() {
+  if (Date.now() - lastSurtriAt < 1500) return;
+  const mat = surtriState.material;
+  if (!mat) return;
+  const t = surtriTotals();
+  if (t.alloc.length === 0 || t.total <= 0.0001) return;
+  if (t.total > t.disp + 0.001) { showRecsToast('⚠️ El reparto excede el stock suelto'); return; }
+  const info = componerSurtri(mat.id, t.alloc, t.merma);
+  if (!info.completo) { showRecsToast('⚠️ No hay suficiente material suelto — revisa las cantidades'); return; }
+  lastSurtriAt = Date.now();
+  const c = DB.getCentro();
+  const u = matUnidad(mat);
+  const base = Date.now();
+  const surtriId = 'sx' + base;
+  const creados = [];
+  info.piezas.forEach((p, i) => {
+    if ((p.comp.kg || 0) <= 0.0001) return;
+    const numero = nuevoNumeroLote();
+    const esBase = p.esBase || p.gradeId === mat.id;
+    DB.addLote({
+      id: base + i + 1,
+      numero, matId: mat.id, matName: mat.name,
+      matVentaId: esBase ? null : p.gradeId,
+      matVentaName: esBase ? null : p.gradeName,
+      surtriId,
+      kg: p.comp.kg, unidad: u, estado: 'disponible',
+      creadoAt: new Date().toISOString(),
+      composicion: p.comp.composicion,
+      origenResumen: p.comp.origenResumen,
+      costoTotal: p.comp.costoTotal,
+      lotesOrigen: p.comp.lotesOrigen,
+    });
+    creados.push(numero);
+  });
+  // Merma = pseudo-lote terminal: conserva su composición (trazabilidad de la
+  // pérdida, útil para auditoría REP/ESG) pero queda fuera de todo stock
+  // vendible / picker. Consume suelto (estado ≠ fusionado) → balance correcto.
+  if (info.merma && (info.merma.kg || 0) > 0.0001) {
+    DB.addLote({
+      id: base + 900,
+      numero: 'MRM-' + String(base).slice(-5),
+      matId: mat.id, matName: mat.name,
+      matVentaName: 'Merma / rechazo',
+      surtriId,
+      kg: info.merma.kg, unidad: u, estado: 'merma',
+      creadoAt: new Date().toISOString(),
+      composicion: info.merma.composicion,
+      origenResumen: info.merma.origenResumen,
+      costoTotal: info.merma.costoTotal,
+      lotesOrigen: info.merma.lotesOrigen,
+    });
+  }
+  closeCrearLote();
+  renderLotes();
+  if (currentScreen === 'resumen') initResumen();
+  showRecsToast(`♻️ Surtri hecho — ${creados.length} lote${creados.length > 1 ? 's' : ''} creado${creados.length > 1 ? 's' : ''}${info.merma ? ' + merma ' + fmtKg(info.merma.kg) + ' ' + u : ''}`);
 }
 
 // ════════════════════════════════════════════════════════════
