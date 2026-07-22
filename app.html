@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 8.2                                                 -->
+  <!-- Version : 9.0                                                 -->
   <!-- Date    : 22/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -255,6 +255,14 @@
     .canje-form-input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px; font-size: 14px; font-family: inherit; color: var(--text-primary); }
     .canje-send-btn { width: 100%; background: #D97706; color: white; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .canje-send-btn:disabled { opacity: 0.5; }
+    /* v9.0 — catálogo de canje: buscador + lista compacta + selector de cantidad */
+    .canje-cat-list { max-height: 40vh; overflow-y: auto; -webkit-overflow-scrolling: touch; border: 1.5px solid var(--border); border-radius: 12px; }
+    .canje-cat-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+    .canje-cat-row:last-child { border-bottom: none; }
+    .canje-cat-row.activa { background: var(--amber-light, #FFFBEB); }
+    .qty-btn { width: 30px; height: 30px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); font-size: 18px; font-weight: 800; color: var(--text-primary); cursor: pointer; font-family: inherit; line-height: 1; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .qty-btn.plus { border-color: #D97706; color: #D97706; }
+    .qty-cant { min-width: 20px; text-align: center; font-weight: 800; font-size: 14px; }
     .actividad-list { display: flex; flex-direction: column; gap: 6px; }
     .act-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 11px 14px; display: flex; align-items: center; gap: 12px; }
     .act-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -1226,12 +1234,13 @@
       <div class="sp-card-sub">Se acreditan al instante cuando SinBa te compra material</div>
     </div>
     <div>
-      <div class="section-label">🎁 Canjear por un equipo</div>
+      <div class="section-label">🎁 Canjear por beneficios</div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <input class="canje-form-input" id="canjeEquipo" type="text" placeholder="¿Qué equipo necesitas? (Ej: balanza, carrito)" autocomplete="off" oninput="updateCanjeBtn()">
-        <input class="canje-form-input" id="canjePuntos" type="number" inputmode="numeric" min="1" placeholder="Puntos a canjear" oninput="updateCanjeBtn()">
-        <button class="canje-send-btn" id="canjeSendBtn" disabled onclick="enviarCanje()">Enviar solicitud a SinBa</button>
-        <div style="font-size:11px;color:var(--text-muted);line-height:1.5">SinBa revisará tu solicitud. Los puntos se descuentan cuando SinBa la aprueba.</div>
+        <input class="canje-form-input" id="canjeBuscar" type="text" placeholder="🔍 Buscar beneficio…" autocomplete="off" oninput="renderCanjeCatalogo()">
+        <div class="canje-cat-list" id="canjeCatalogoList"></div>
+        <div id="canjeResumen"></div>
+        <button class="canje-send-btn" id="canjeSendBtn" disabled onclick="enviarCanje()">Elige uno o más beneficios</button>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5">Añade cantidades con − / +. SinBa revisará tu solicitud. Los puntos se descuentan cuando SinBa la aprueba.</div>
       </div>
     </div>
     <div>
@@ -3201,7 +3210,7 @@ function renderSpCentro() {
     <div class="canje-item">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:700">${escHtml(cj.equipo || 'Equipo')}</div>
+          <div style="font-size:13px;font-weight:700">${escHtml(canjeResumenTexto(cj))}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${fmtPts(cj.puntos)} puntos · ${fechaLabel(cj.fecha)}</div>
         </div>
         <span class="canje-estado ${cj.estado}">${cj.estado === 'aprobado' ? '✅ Aprobado' : cj.estado === 'rechazado' ? '❌ Rechazado' : '⏳ Pendiente'}</span>
@@ -3222,28 +3231,140 @@ function renderSpCentro() {
 function openSpDrawer() {
   document.getElementById('spDrawerOverlay').classList.add('open');
   document.getElementById('spDrawer').classList.add('open');
+  // v9.0 — arranca el catálogo de canje con el carrito vacío.
+  canjeCart = {};
+  const b = document.getElementById('canjeBuscar'); if (b) b.value = '';
+  renderCanjeCatalogo();
+  updateCanjeResumen();
   renderSpCentro();
 }
 function closeSpDrawer() {
   document.getElementById('spDrawerOverlay').classList.remove('open');
   document.getElementById('spDrawer').classList.remove('open');
 }
-function updateCanjeBtn() {
-  const eq = document.getElementById('canjeEquipo').value.trim();
-  const pts = parseFloat(document.getElementById('canjePuntos').value) || 0;
-  const btn = document.getElementById('canjeSendBtn');
-  const saldo = spBalance(spMovs);
-  btn.disabled = !(eq.length >= 2 && pts > 0 && pts <= saldo);
-  btn.textContent = pts > saldo ? `Saldo insuficiente (tienes ${fmtPts(saldo)} pts)` : 'Enviar solicitud a SinBa';
+// ════════════════════════════════════════════════════════════
+// CATÁLOGO DE CANJE (v9.0) — lista de beneficios (nombre + costo en puntos).
+//   Codificado en duro (como MATERIALES): fuente única, sin backend. Para
+//   actualizarlo se edita esta lista. No hay stock: la cantidad solo la limita
+//   el saldo de puntos del centro. Fuente: gestion/SINBA - beneficios sinbapuntos.
+// ════════════════════════════════════════════════════════════
+const CANJE_CATALOGO = [
+  { id: 'zapato_seg_premium', nombre: 'Zapato de seguridad premium', puntos: 1300 },
+  { id: 'polo_manga_larga',   nombre: 'Polo manga larga',            puntos: 400 },
+  { id: 'vale_super_100',     nombre: 'Vale para supermercado 100',  puntos: 1670 },
+  { id: 'vale_super_50',      nombre: 'Vale para supermercado 50',   puntos: 835 },
+  { id: 'saca_grande',        nombre: 'Saca grande',                 puntos: 500 },
+  { id: 'almuerzo_polleria',  nombre: 'Almuerzo en pollería (10 personas)', puntos: 3820 },
+  { id: 'guantes_multiflex',  nombre: 'Guantes multiflex',           puntos: 115 },
+  { id: 'guantes_5pro',       nombre: 'Guantes 5 Pro',               puntos: 120 },
+  { id: 'gorro_chavito',      nombre: 'Gorro chavito',               puntos: 280 },
+  { id: 'casco',              nombre: 'Casco',                       puntos: 250 },
+  { id: 'mochila',            nombre: 'Mochila',                     puntos: 1180 },
+  { id: 'bolsa_verdes_100',   nombre: 'Bolsa verdes (100 unds)',     puntos: 425 },
+  { id: 'memoria_sd',         nombre: 'Memoria SD',                  puntos: 1550 },
+  { id: 'chaleco_dril_azul',  nombre: 'Chaleco dril azul (1 und)',   puntos: 1140 },
+  { id: 'chalecos_perso_6',   nombre: 'Chalecos personalizados (6 unds)', puntos: 6850 },
+  { id: 'asesoria',           nombre: 'Asesoría',                    puntos: 1670 },
+  { id: 'consejeria_psico',   nombre: 'Consejería psicológica',      puntos: 920 },
+  { id: 'balanza_digital',    nombre: 'Balanza digital',             puntos: 5600 },
+  { id: 'set_herramientas',   nombre: 'Set herramientas',            puntos: 1840 },
+  { id: 'pantalon',           nombre: 'Pantalón',                    puntos: 740 },
+  { id: 'vale_cine',          nombre: 'Vale combo de cine',          puntos: 870 },
+  { id: 'guantes_cuero',      nombre: 'Guantes de cuero',            puntos: 160 },
+  { id: 'faja_lumbar',        nombre: 'Faja lumbar',                 puntos: 1180 },
+  { id: 'botiquin',           nombre: 'Botiquín',                    puntos: 282 },
+  { id: 'bloqueador_solar',   nombre: 'Bloqueador solar',            puntos: 1000 },
+  { id: 'lentes_seguridad',   nombre: 'Lentes de seguridad',         puntos: 500 },
+];
+
+// Carrito de la solicitud en curso: { [itemId]: cantidad }.
+let canjeCart = {};
+
+// Resumen legible de una solicitud (nuevo modelo items[] o antiguo equipo).
+function canjeResumenTexto(cj) {
+  if (cj && Array.isArray(cj.items) && cj.items.length)
+    return cj.items.map(it => `${it.cantidad}× ${it.nombre}`).join(', ');
+  return (cj && cj.equipo) || 'Canje';
 }
+// Los ítems del carrito con sus datos de catálogo.
+function canjeCartItems() {
+  return Object.keys(canjeCart).map(id => {
+    const it = CANJE_CATALOGO.find(x => x.id === id);
+    return it && canjeCart[id] > 0 ? { id, nombre: it.nombre, puntos: it.puntos, cantidad: canjeCart[id] } : null;
+  }).filter(Boolean);
+}
+function canjeCartTotal() {
+  return Math.round(canjeCartItems().reduce((s, it) => s + it.puntos * it.cantidad, 0) * 100) / 100;
+}
+
+// Lista compacta filtrada por el buscador; cada línea con selector − / +.
+function renderCanjeCatalogo() {
+  const cont = document.getElementById('canjeCatalogoList');
+  if (!cont) return;
+  const q = (document.getElementById('canjeBuscar').value || '').trim().toLowerCase();
+  const lista = q ? CANJE_CATALOGO.filter(it => it.nombre.toLowerCase().includes(q)) : CANJE_CATALOGO;
+  cont.innerHTML = lista.length ? lista.map(it => {
+    const cant = canjeCart[it.id] || 0;
+    return `<div class="canje-cat-row${cant > 0 ? ' activa' : ''}">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${escHtml(it.nombre)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">⭐ ${fmtPts(it.puntos)} c/u</div>
+      </div>
+      <button class="qty-btn" onclick="canjeSetCant('${it.id}',-1)">−</button>
+      <span class="qty-cant" id="canje-cant-${it.id}">${cant}</span>
+      <button class="qty-btn plus" onclick="canjeSetCant('${it.id}',1)">+</button>
+    </div>`;
+  }).join('') : '<div style="font-size:12px;color:var(--text-muted);padding:12px;text-align:center">Sin resultados.</div>';
+}
+
+// +/- de una línea: actualiza solo el contador (no re-renderiza → no salta el
+// scroll) y el resumen del carrito.
+function canjeSetCant(id, delta) {
+  let n = (canjeCart[id] || 0) + delta;
+  if (n < 0) n = 0;
+  if (n > 999) n = 999;
+  if (n === 0) delete canjeCart[id]; else canjeCart[id] = n;
+  const span = document.getElementById('canje-cant-' + id);
+  if (span) { span.textContent = n; const row = span.closest('.canje-cat-row'); if (row) row.classList.toggle('activa', n > 0); }
+  updateCanjeResumen();
+}
+
+// Panel « Tu solicitud » + estado del botón de envío.
+function updateCanjeResumen() {
+  const el = document.getElementById('canjeResumen');
+  const btn = document.getElementById('canjeSendBtn');
+  if (!el || !btn) return;
+  const items = canjeCartItems();
+  const total = canjeCartTotal();
+  const saldo = spBalance(spMovs);
+  if (!items.length) {
+    el.innerHTML = '';
+    btn.disabled = true; btn.textContent = 'Elige uno o más beneficios';
+    return;
+  }
+  const nArt = items.reduce((s, it) => s + it.cantidad, 0);
+  const excede = total > saldo;
+  el.innerHTML = `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px">
+    <div style="font-size:12px;font-weight:800;margin-bottom:6px">Tu solicitud (${nArt} artículo${nArt > 1 ? 's' : ''})</div>
+    ${items.map(it => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span>${it.cantidad}× ${escHtml(it.nombre)}</span><span>⭐ ${fmtPts(it.puntos * it.cantidad)}</span></div>`).join('')}
+    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;border-top:1px solid var(--border);margin-top:6px;padding-top:6px"><span>Total</span><span>⭐ ${fmtPts(total)}</span></div>
+    <div style="font-size:11px;color:${excede ? 'var(--red)' : 'var(--text-muted)'};margin-top:4px">Saldo: ${fmtPts(saldo)}${excede ? ' — insuficiente' : ''}</div>
+  </div>`;
+  btn.disabled = total <= 0 || excede;
+  btn.textContent = excede ? `Saldo insuficiente (${fmtPts(saldo)} pts)` : `Enviar solicitud (⭐ ${fmtPts(total)})`;
+}
+
 function enviarCanje() {
   const c = DB.getCentro();
   if (!c) return;
-  const equipo = document.getElementById('canjeEquipo').value.trim();
-  const puntos = Math.round((parseFloat(document.getElementById('canjePuntos').value) || 0) * 100) / 100;
-  if (!equipo || puntos <= 0 || puntos > spBalance(spMovs)) return;
+  const items = canjeCartItems();
+  const puntos = canjeCartTotal();
+  if (!items.length || puntos <= 0 || puntos > spBalance(spMovs)) return;
   const id = 'cj_' + Date.now();
-  const canje = { id, centroId: c.id, centroName: c.name, equipo, puntos, estado: 'pendiente', fecha: new Date().toISOString() };
+  // equipo = resumen legible → retrocompat con el código que lee cj.equipo
+  // (avisos, lista de SinBa, movimientos del libro de puntos).
+  const equipo = items.map(it => `${it.cantidad}× ${it.nombre}`).join(', ');
+  const canje = { id, centroId: c.id, centroName: c.name, items, equipo, puntos, estado: 'pendiente', fecha: new Date().toISOString() };
   queueSync(`canjes/${id}`, canje);
   spMisCanjes.unshift(canje);
   // Registrar el estado local para que la próxima resolución dispare el aviso.
@@ -3252,9 +3373,10 @@ function enviarCanje() {
     estados[id] = 'pendiente';
     localStorage.setItem('acopi_canjes_estados', JSON.stringify(estados));
   } catch {}
-  document.getElementById('canjeEquipo').value = '';
-  document.getElementById('canjePuntos').value = '';
-  updateCanjeBtn();
+  canjeCart = {};
+  document.getElementById('canjeBuscar').value = '';
+  renderCanjeCatalogo();
+  updateCanjeResumen();
   renderSpCentro();
   showRecsToast('🎁 Solicitud enviada a SinBa');
 }
@@ -3316,8 +3438,9 @@ function renderSpSinba() {
         return `<div class="canje-item">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:700">${escHtml(cj.centroName || 'Centro')} pide: ${escHtml(cj.equipo || 'equipo')}</div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${fmtPts(cj.puntos)} puntos · saldo del centro: ${fmtPts(saldo)} · ${fechaLabel(cj.fecha)}</div>
+              <div style="font-size:13px;font-weight:700">${escHtml(cj.centroName || 'Centro')} pide:</div>
+              <div style="font-size:12px;margin-top:2px;line-height:1.5">${(Array.isArray(cj.items) && cj.items.length) ? cj.items.map(it => `${it.cantidad}× ${escHtml(it.nombre)} <span style="color:var(--text-muted)">(⭐ ${fmtPts(it.puntos * it.cantidad)})</span>`).join('<br>') : escHtml(cj.equipo || 'equipo')}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Total: ${fmtPts(cj.puntos)} puntos · saldo del centro: ${fmtPts(saldo)} · ${fechaLabel(cj.fecha)}</div>
             </div>
             <span class="canje-estado pendiente">⏳</span>
           </div>
@@ -3330,7 +3453,7 @@ function renderSpSinba() {
         <div class="canje-item" style="opacity:0.7">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:700">${escHtml(cj.centroName || 'Centro')} · ${escHtml(cj.equipo || '')}</div>
+              <div style="font-size:13px;font-weight:700">${escHtml(cj.centroName || 'Centro')} · ${escHtml(canjeResumenTexto(cj))}</div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${fmtPts(cj.puntos)} puntos · ${fechaLabel(cj.fecha)}</div>
             </div>
             <span class="canje-estado ${cj.estado}">${cj.estado === 'aprobado' ? '✅ Aprobado' : '❌ Rechazado'}</span>
