@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 10.1                                                -->
+  <!-- Version : 11.1                                                -->
   <!-- Date    : 22/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -992,11 +992,11 @@
     <div>
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span>Stock y precio por materia</span>
-        <button onclick="abrirMisMateriales()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--text-secondary);cursor:pointer">⚙️ Mis materiales</button>
+        <button id="btnMisMateriales" onclick="abrirMisMateriales()" style="background:var(--surface);border:1.5px solid var(--border);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--text-secondary);cursor:pointer">⚙️ Mis materiales</button>
       </div>
       <div class="price-list-precios" id="priceListPrecios"></div>
     </div>
-    <div class="nota"><strong>💡 Stock y precios</strong><br>Cada línea muestra tu stock (suelto + lotes disponibles) y tu precio de compra — toca para editarlo. Los precios se usan en <em>Nueva Entrada</em> y se difunden por WhatsApp. Con <strong>⚙️ Mis materiales</strong> ocultas las que no trabajas.</div>
+    <div class="nota" id="preciosNota"><strong>💡 Stock y precios</strong><br>Cada línea muestra tu stock (suelto + lotes disponibles) y tu precio de compra — toca para editarlo. Los precios se usan en <em>Nueva Entrada</em> y se difunden por WhatsApp. Con <strong>⚙️ Mis materiales</strong> ocultas las que no trabajas.</div>
   </div>
   <div class="bottom-cta">
     <!-- v3.0 : ouvre l'écran WhatsApp (aperçu + édition du message) — il n'est
@@ -2559,12 +2559,18 @@ function updateCentroDisplay() {
   const t = aplicarTemaCuenta();
   document.getElementById('tb-brand-sub').textContent = centro ? `${centro.name} · ${t.tag}` : 'Centro de acopio';
   // v7.0 — SinBa: la pestaña "Lotes" se vuelve "Recepciones" (clasificar + lotes).
+  // v11.0 — el centro clásico (sin cap. 'lotes') NO ve la pestaña Lotes.
   const lotesNav = document.querySelector('.nav-btn[data-screen="lotes"]');
   if (lotesNav) {
-    const ic = lotesNav.querySelector('.nav-icon'), lb = lotesNav.querySelector('.nav-label');
-    const esRecep = tieneCap('sinbapuntos');
-    if (ic) ic.textContent = esRecep ? '📥' : '📦';
-    if (lb) lb.textContent = esRecep ? 'Recep.' : 'Lotes';
+    if (!tieneCap('lotes')) {
+      lotesNav.style.display = 'none';
+    } else {
+      lotesNav.style.display = 'flex';
+      const ic = lotesNav.querySelector('.nav-icon'), lb = lotesNav.querySelector('.nav-label');
+      const esRecep = tieneCap('sinbapuntos');
+      if (ic) ic.textContent = esRecep ? '📥' : '📦';
+      if (lb) lb.textContent = esRecep ? 'Recep.' : 'Lotes';
+    }
   }
   // v10.0 — la pestaña ⭐ SinBa solo existe para cuentas con cap. sinbapuntos.
   const sinbaNav = document.getElementById('nav-sinba');
@@ -2683,15 +2689,15 @@ const SINBA_COMPRA = [
   { id: 'sbc_tetrabrik',      emoji: '🧃', name: 'Tetra brik',                hint: 'Envases de bebida',         precio: 0, puntos: 2.0,  unidad: 'kg'  },
   { id: 'sbc_vidrio',         emoji: '🍶', name: 'Vidrio',                    hint: 'Botellas, frascos',         precio: 0, puntos: 0,    unidad: 'kg'  },
   { id: 'sbc_plastico_duro',  emoji: '🪣', name: 'Plástico duro',             hint: 'Baldes, sillas, juguetes',  precio: 0, puntos: 1.0,  unidad: 'kg'  },
-  { id: 'sbc_film_limpio',    emoji: '🎞️', name: 'Film limpio',               hint: 'Plástico film sin residuos',precio: 0, puntos: 2.0,  unidad: 'kg'  },
+  { id: 'sbc_film_limpio',    emoji: '🎬', name: 'Film limpio',               hint: 'Plástico film sin residuos',precio: 0, puntos: 2.0,  unidad: 'kg'  },
   { id: 'sbc_papel_blanco',   emoji: '📄', name: 'Papel blanco',              hint: 'Papel bond',                precio: 0, puntos: 0,    unidad: 'kg'  },
-  { id: 'sbc_papel_couche',   emoji: '🗞️', name: 'Papel couché',              hint: 'Revistas, brillante',       precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_papel_couche',   emoji: '📔', name: 'Papel couché',              hint: 'Revistas, brillante',       precio: 0, puntos: 0,    unidad: 'kg'  },
   { id: 'sbc_papel_mixto',    emoji: '📰', name: 'Papel mixto',               hint: 'Periódico, mezclado',       precio: 0, puntos: 0,    unidad: 'kg'  },
-  { id: 'sbc_chatarra',       emoji: '⚙️', name: 'Chatarra',                  hint: 'Fierro, metal ferroso',     precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_chatarra',       emoji: '🔩', name: 'Chatarra',                  hint: 'Fierro, metal ferroso',     precio: 0, puntos: 0,    unidad: 'kg'  },
   { id: 'sbc_aluminio',       emoji: '🥫', name: 'Aluminio',                  hint: 'Latas, perfiles',           precio: 0, puntos: 0,    unidad: 'kg'  },
   { id: 'sbc_backus_pilsen',  emoji: '🍺', name: 'Botellas Backus - Pilsen',  hint: 'Por unidad',                precio: 0, puntos: 0.25, unidad: 'und' },
   { id: 'sbc_backus_cusquena',emoji: '🍺', name: 'Botellas Backus - Cusqueña',hint: 'Por unidad',                precio: 0, puntos: 0.25, unidad: 'und' },
-  { id: 'sbc_uco',            emoji: '🛢️', name: 'Aceite vegetal usado',      hint: 'UCO',                       precio: 0, puntos: 0,    unidad: 'kg'  },
+  { id: 'sbc_uco',            emoji: '🍯', name: 'Aceite vegetal usado',      hint: 'UCO',                       precio: 0, puntos: 0,    unidad: 'kg'  },
 ];
 
 // v6.0 (21/07/2026) : SURTRI SinBa reintroducido como ÁRBOL de grados.
@@ -2772,10 +2778,16 @@ function isReciclador() { const c = DB.getCentro(); return !!(c && c.tipo === 'r
 //     (se fusiona con las del tipo — sirve para "pluggear" a un centro
 //     una capacidad puntual sin cambiar su tipo).
 // Las nuevas features deben preguntar tieneCap('x'), NO isSinba().
+// v11.0 — Capacidades 'lotes' y 'red' añadidas (retour SinBa B2-B5).
+//   · 'lotes' : pestaña Lotes + « Crear lote » + Trazabilidad.
+//   · 'red'   : origen « Compra en red » en Nueva Entrada (compra a otra cuenta).
+// El centro clásico NO las tiene → cuaderno digital simple (entrada cash + Stock
+// + Finanzas). SinBa/reciclador las conservan (cero regresión). El código de
+// lotes/red/merma NO se elimina: queda en DORMANCE, reactivable con la capacidad.
 const CAPS_POR_TIPO = {
   centro:     [],
-  sinba:      ['surtri', 'sinbapuntos'],
-  reciclador: ['transformar'],
+  sinba:      ['surtri', 'sinbapuntos', 'lotes', 'red'],
+  reciclador: ['transformar', 'lotes', 'red'],
 };
 function cuentaCaps() {
   const c = DB.getCentro();
@@ -2807,9 +2819,34 @@ function setMisMateriales(ids) {
   const c = DB.getCentro();
   if (c) queueSync(`centros/${c.id}/meta/materiales`, ids && ids.length !== MATERIALES.length ? ids : null);
 }
-// Materias que TRABAJA la cuenta (lista blanca) — para pickers de captura y
-// difusión de precios (no compras ni anuncias lo que no trabajas).
+
+// v11.1 — El centro clásico (cuaderno simple) NO gestiona lista blanca: su lista
+// de materias es AUTOMÁTICA, guiada por el USO real (retours SinBa, remarques
+// d'Arthur). Las materias que compra (o tiene en stock) aparecen solas, las más
+// usadas primero; las que nunca usa no aparecen (quedan detrás de « ver todas »
+// en Nueva Entrada). Una cuenta nueva sin historial arranca con un set semilla.
+// SinBa/reciclador conservan el catálogo completo + « Mis materiales » manual.
+const MATERIALES_DEFAULT_CENTRO = ['sbc_pet_botellas', 'sbc_carton', 'sbc_plastico_duro', 'sbc_chatarra', 'sbc_aluminio', 'sbc_vidrio'];
+function esCuentaSimple() { const c = DB.getCentro(); return !c || (c.tipo || 'centro') === 'centro'; }
+// Nº de entradas por materia (frecuencia de uso).
+function usoPorMat() {
+  const cnt = {};
+  (DB.getEntradas() || []).forEach(e => { const id = e && e.matId; if (id) cnt[id] = (cnt[id] || 0) + 1; });
+  return cnt;
+}
+// Materias que el centro REALMENTE trabaja: usadas (entradas) o con stock,
+// ordenadas por frecuencia de uso desc. Sin historial → set semilla.
+function materialesFrecuentesCentro() {
+  const uso = usoPorMat();
+  const conStock = materialesConStock();
+  const lista = MATERIALES.filter(m => (uso[m.id] || 0) > 0 || conStock.has(m.id));
+  if (!lista.length) return MATERIALES.filter(m => MATERIALES_DEFAULT_CENTRO.includes(m.id));
+  return lista.sort((a, b) => (uso[b.id] || 0) - (uso[a.id] || 0));
+}
+// Materias que TRABAJA la cuenta — para pickers de captura y difusión de precios.
+// Centro simple → guiado por uso; SinBa/reciclador → lista blanca (o todas).
 function materialesActivos() {
+  if (esCuentaSimple()) return materialesFrecuentesCentro();
   const wl = getMisMateriales();
   if (!wl) return MATERIALES;
   return MATERIALES.filter(m => wl.includes(m.id));
@@ -2829,6 +2866,11 @@ function materialesConStock() {
 // Materias VISIBLES en Stock/Finanzas = activas ∪ las que tengan stock (aunque
 // estén ocultas, p.ej. un lote recibido de una materia que la cuenta no compra).
 function materialesVisibles() {
+  if (esCuentaSimple()) {
+    const set = new Set(materialesFrecuentesCentro().map(m => m.id));
+    materialesConStock().forEach(id => set.add(id));
+    return MATERIALES.filter(m => set.has(m.id));
+  }
   const wl = getMisMateriales();
   if (!wl) return MATERIALES;
   const conStock = materialesConStock();
@@ -2882,6 +2924,9 @@ let resumenMes = { year: new Date().getFullYear(), month: new Date().getMonth() 
 function navBack() { goTo(currentScreen === 'whatsapp' ? 'precios' : currentScreen === 'traza' ? 'lotes' : 'resumen'); }
 
 function goTo(id) {
+  // v11.0 — filet: sin cap. 'lotes', las pantallas Lotes/Trazabilidad no existen
+  // para esta cuenta → se redirige al Resumen (el botón de nav ya está oculto).
+  if ((id === 'lotes' || id === 'traza') && !tieneCap('lotes')) id = 'resumen';
   // hide all success overlays
   document.querySelectorAll('.success-overlay').forEach(o => o.classList.remove('show'));
   // switch screens
@@ -3289,7 +3334,7 @@ function detectarCambiosCanje(nuevos) {
 
 function renderSpCentro() {
   const card = document.getElementById('spCardCentro');
-  if (!card || isSinba()) return;
+  if (!card || tieneCap('sinbapuntos')) return;
   const saldo = spBalance(spMovs);
   // La tarjeta aparece en cuanto hay actividad de puntos (o solicitudes).
   card.style.display = (spMovs.length || spMisCanjes.length) ? 'block' : 'none';
@@ -3474,7 +3519,7 @@ function enviarCanje() {
 
 // ── Lado SINBA ────────────────────────────────────────────
 async function refreshSpSinba() {
-  if (!isSinba() || !auth.currentUser || !navigator.onLine) return;
+  if (!tieneCap('sinbapuntos') || !auth.currentUser || !navigator.onLine) return;
   try {
     const all = await fetchJson('sinbapuntos');
     spSaldosRed = {};
@@ -3507,7 +3552,7 @@ async function refreshSpSinba() {
 function renderSpSinba() {
   // v10.0 — la gestión SinBa vive ahora en la pestaña ⭐ SinBa (screen-sinba).
   // Actualiza también la alerta accionable del Resumen.
-  if (!isSinba()) { renderSinbaAlert(); return; }
+  if (!tieneCap('sinbapuntos')) { renderSinbaAlert(); return; }
   const lista = document.getElementById('spCentrosList');
   if (!lista) { renderSinbaAlert(); return; }
 
@@ -3569,7 +3614,7 @@ function renderSpSinba() {
 function renderSinbaAlert() {
   const el = document.getElementById('sinbaAlertResumen');
   if (!el) return;
-  const pend = isSinba() ? spCanjesRed.filter(cj => cj.estado === 'pendiente').length : 0;
+  const pend = tieneCap('sinbapuntos') ? spCanjesRed.filter(cj => cj.estado === 'pendiente').length : 0;
   if (!pend) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
   document.getElementById('sinbaAlertTitle').textContent =
@@ -3602,7 +3647,7 @@ function resolverCanje(id, estado) {
   showRecsToast(estado === 'aprobado' ? '✅ Canje aprobado — puntos descontados' : '❌ Solicitud rechazada');
 }
 
-function refreshSinbapuntos() { if (isSinba()) refreshSpSinba(); else refreshSpCentro(); }
+function refreshSinbapuntos() { if (tieneCap('sinbapuntos')) refreshSpSinba(); else refreshSpCentro(); }
 
 // ════════════════════════════════════════════════════════════
 // SCREEN: FINANZAS (v3.0)
@@ -3778,17 +3823,53 @@ function esRecepcionSinba() { return tieneCap('sinbapuntos') && ['red', 'descono
 
 function initEntrada() {
   loadMatPrices();
+  // v11.0 — el centro clásico (sin cap. 'red') no compra en red: se oculta ese
+  // origen. Solo quedan « Recolector externo » y « Recolección interna ».
+  const ogRed = document.getElementById('og-red');
+  if (ogRed) {
+    ogRed.style.display = tieneCap('red') ? '' : 'none';
+    // 2 orígenes en vez de 3 → grilla a 2 columnas (evita el hueco).
+    if (ogRed.parentElement) ogRed.parentElement.style.gridTemplateColumns = tieneCap('red') ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)';
+  }
+  if (!tieneCap('red')) {
+    const nota = document.getElementById('entradaNota');
+    if (nota) nota.innerHTML = '<strong>💡 ¿Cómo funciona?</strong><br>Elige de dónde viene el material, pésalo y registra lo que pagas en efectivo. Todo suma a tu <em>Stock</em> y tus gastos aparecen en <em>Finanzas</em>.';
+  }
+  entradaVerTodas = false; // v11.1 — el picker arranca en "frecuentes"
   renderEntradaMats();
   updateEntradaUI();
 }
 
+// v11.1 — picker de materias del centro guiado por uso: se muestran las
+// frecuentes; « ➕ Ver todas » despliega el resto del catálogo (para una
+// materia que aún no compró). Al comprarla una vez, aparece sola la próxima.
+let entradaVerTodas = false;
 function renderEntradaMats() {
-  document.getElementById('matGridEntrada').innerHTML = materialesActivos().map(m => `
+  const grid = document.getElementById('matGridEntrada');
+  if (!grid) return;
+  const activos = materialesActivos();
+  const simple = esCuentaSimple();
+  let lista = activos, restantes = [];
+  if (simple) {
+    const ids = new Set(activos.map(m => m.id));
+    restantes = MATERIALES.filter(m => !ids.has(m.id));
+    if (entradaVerTodas) lista = activos.concat(restantes); // frecuentes primero
+  }
+  const btn = m => `
     <button class="mat-btn" id="emat-${m.id}" onclick="selectEntradaMat('${m.id}')">
       <span class="mat-emoji">${m.emoji}</span>
       <span class="mat-name">${m.name}</span>
       <span class="mat-price">S/${m.precio.toFixed(2)}/${matUnidad(m)}</span>
-    </button>`).join('');
+    </button>`;
+  let html = lista.map(btn).join('');
+  if (simple && !entradaVerTodas && restantes.length) {
+    html += `<button class="mat-btn" style="grid-column:1/-1;flex-direction:row;justify-content:center;gap:8px;color:var(--text-secondary);font-weight:700;min-height:auto;padding:12px" onclick="entradaVerTodas=true;renderEntradaMats()">➕ Ver todas las materias (${restantes.length})</button>`;
+  }
+  grid.innerHTML = html;
+  if (entradaState.material) {
+    const b = document.getElementById('emat-' + entradaState.material.id);
+    if (b) b.classList.add('selected');
+  }
 }
 
 function setOrigenTipo(t) {
@@ -4251,7 +4332,7 @@ async function confirmEntradaInner(og, c) {
     });
     // Cuenta SinBa: sinbapuntos inmediatos al vendedor (v6.3: solo si esta
     // contraparte es elegible — casilla del punto 6).
-    if (isSinba() && mat.puntos > 0 && spEsElegible(ct.id)) {
+    if (tieneCap('sinbapuntos') && mat.puntos > 0 && spEsElegible(ct.id)) {
       const pts = Math.round(mat.puntos * peso * 100) / 100;
       queueSync(`sinbapuntos/${ct.id}/movs/cr_e${entrada.id}`, {
         id: 'cr_e' + entrada.id, tipo: 'credito', puntos: pts,
@@ -6386,6 +6467,15 @@ let preciosEditingStr = '0';
 
 function initPrecios() {
   loadMatPrices();
+  // v11.1 — el centro simple gestiona sus materias de forma automática (por uso),
+  // así que no ve « Mis materiales » manual; la nota se adapta.
+  const simple = esCuentaSimple();
+  const btnMM = document.getElementById('btnMisMateriales');
+  if (btnMM) btnMM.style.display = simple ? 'none' : '';
+  const nota = document.getElementById('preciosNota');
+  if (nota) nota.innerHTML = simple
+    ? '<strong>💡 Stock y precios</strong><br>Cada línea muestra tu stock y tu precio de compra — toca para editarlo. Solo aparecen las materias que trabajas; para comprar una nueva, úsala en <em>Nueva Entrada</em> (➕ Ver todas) y aparecerá aquí sola.'
+    : '<strong>💡 Stock y precios</strong><br>Cada línea muestra tu stock (suelto + lotes disponibles) y tu precio de compra — toca para editarlo. Los precios se usan en <em>Nueva Entrada</em> y se difunden por WhatsApp. Con <strong>⚙️ Mis materiales</strong> ocultas las que no trabajas.';
   renderPreciosList();
 }
 
