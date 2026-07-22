@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 8.1                                                 -->
+  <!-- Version : 8.2                                                 -->
   <!-- Date    : 22/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -3024,8 +3024,10 @@ function renderPagos() {
     ? '<strong>💡 Cómo funciona</strong><br>Marca cada compra como pagada cuando entregas el dinero al vendedor. Él verá el cambio automáticamente.'
     : '<strong>💡 Cómo funciona</strong><br>El que COMPRA marca cada línea como pagada cuando entrega el dinero. El vendedor ve el cambio en su columna "por cobrar" automáticamente.';
 
-  // POR PAGAR: toda entrada cuyo origen es una cuenta de la red.
-  const compras = DB.getEntradas().filter(e => e.origenCentroId).sort((a, b) => b.id - a.id);
+  // POR PAGAR: compras que implican un pago — a una cuenta de la red
+  // (origenCentroId) O a un recolector externo (v8.2: mismo trámite que la red;
+  // la recolección interna no tiene pago, se excluye).
+  const compras = DB.getEntradas().filter(e => e.origenCentroId || e.origen === 'desconocido').sort((a, b) => b.id - a.id);
   porPagarEl.innerHTML = compras.length ? compras.map(e => {
     const tel = telefonoDe(e.origenCentroId);
     const reclamado = reclamosList.some(r => r.id === e.id);
@@ -4934,11 +4936,15 @@ function renderTraza() {
         const u = rec.unidad === 'und' ? 'und' : 'kg';
         const nG = (rec.gradosCreados || rec.lotesCreados || []).length;
         const og = rec.origen || (rec.contraparteId ? 'red' : 'desconocido');
-        const pagoTxt = og === 'interna' ? '🏠 Sin costo (recolección interna)'
-          : og === 'desconocido' ? `💵 Pagado en efectivo (neto): <b>${fmt(rec.totalNet || 0)}</b>`
-          : `💰 Pagado al vendedor (neto): <b>${fmt(rec.totalNet || 0)}</b>`;
         // v8.1 (punto 3) — la entrada de la recepción comparte su id (rec.id).
         const entRec = DB.getEntradas().find(x => x.id === rec.id);
+        const pagadoOK = entRec && entRec.pago === 'pagado';
+        // v8.2 — el externo ya no es "pagado" automáticamente: refleja el estado
+        // real (por pagar / pagado), igual que la compra en red.
+        const pagoTxt = og === 'interna' ? '🏠 Sin costo (recolección interna)'
+          : og === 'desconocido'
+            ? `💵 ${pagadoOK ? 'Pagado' : 'Por pagar'} en efectivo (neto): <b>${fmt(rec.totalNet || 0)}</b>${pagadoOK ? '' : ' — <span style="color:#D97706">en Pagos</span>'}`
+            : `💰 ${pagadoOK ? 'Pagado' : 'Por pagar'} al vendedor (neto): <b>${fmt(rec.totalNet || 0)}</b>`;
         const compTxt = `🔖 ${txNumero(rec.id)}${entRec && entRec.nFactura ? ' · 🧾 ' + escHtml(entRec.nFactura) : ''} <span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="pedirFacturaEntrada(${rec.id})">${entRec && entRec.nFactura ? '✏️' : '➕ comprobante'}</span>`;
         return `<div class="lote-card">
           <div class="lote-top"><div style="flex:1;min-width:0">
@@ -6081,8 +6087,11 @@ async function confirmTri() {
     loteId: rec.loteId || null, loteNumero: rec.loteNumero || null,
     brutoKg: rec.brutKg, mermaKg: t.merma, recepcionId: rec.id,
     viaClasificacion: true,
-    pago: og === 'desconocido' ? 'pagado' : null,
-    pagadoAt: og === 'desconocido' ? ahora : null,
+    // v8.2 — el externo (recolector desconocido) ya NO se marca pagado solo:
+    // su pago se registra en Pagos « por pagar » y se marca con « Marcar
+    // pagado », igual que la compra en red. Solo la interna no tiene pago.
+    pago: null,
+    pagadoAt: null,
     lotesOrigen: rec.loteId ? [`${rec.contraparteId}:${rec.loteId}`].concat(Array.isArray(rec.lotesOrigen) ? rec.lotesOrigen : []) : null,
   });
   // 3) SOLO red: pago diferido al vendedor (venta 'triada' al neto) + avance del
