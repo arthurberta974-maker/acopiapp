@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 10.0                                                -->
+  <!-- Version : 10.1                                                -->
   <!-- Date    : 22/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -2819,7 +2819,7 @@ function materialesActivos() {
 function materialesConStock() {
   const ids = new Set();
   try {
-    const sueltos = kgSueltosPorMat();
+    const sueltos = brutoPorMat();
     Object.keys(sueltos).forEach(id => { if (sueltos[id] > 0.001) ids.add(id); });
   } catch {}
   DB.getLotes().forEach(l => { if (l.estado === 'disponible' && (l.kg || 0) > 0) ids.add(l.matId); });
@@ -2960,7 +2960,7 @@ function calcStats() {
   // v2: el stock vive en dos niveles — kilos SUELTOS (entradas aún no
   // agrupadas en lotes) y kilos EN LOTES DISPONIBLES. Los lotes vendidos o
   // transformados ya salieron del stock (la venta ocurre siempre vía lote).
-  const sueltosMap = kgSueltosPorMat();
+  const sueltosMap = brutoPorMat();
   const lotesAll = DB.getLotes();
   // v10.0 — el material CLASIFICADO (trozado en grados, aún sin alotar) también
   // es stock. Antes se ignoraba → SinBa veía menos kilos de los que tenía.
@@ -2987,7 +2987,7 @@ function calcStats() {
 function renderResumenStockHero(stats) {
   const mesLabel = new Date().toLocaleDateString('es-PE',{month:'long',year:'numeric'});
   document.getElementById('tb-badge').textContent = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
-  const sueltosMap = kgSueltosPorMat();
+  const sueltosMap = brutoPorMat();
   const lotesDisp = DB.getLotes().filter(l => l.estado === 'disponible');
   let clasMap = {};
   try { clasMap = clasificadoStockPorMat(); } catch {}
@@ -6396,12 +6396,24 @@ function gradoMatId(gid) {
   if (MATERIALES.find(m => m.id === gid)) return gid;
   return null;
 }
+// v10.1 — BRUTO por materia = material « por clasificar ». Para cuentas SinBa
+// (cap. sinbapuntos) vive en las RECEPCIONES en estado 'recibida' (no en las
+// entradas suelto — esas ya no existen en el modelo v8.0). Para un centro
+// clásico, el bruto sigue siendo su stock suelto (kgSueltosPorMat).
+function brutoPorMat() {
+  if (tieneCap('sinbapuntos')) {
+    const out = {};
+    DB.getRecepciones().forEach(r => { if (r.estado !== 'recibida') return; out[r.matId] = (out[r.matId] || 0) + (r.brutKg || 0); });
+    return out;
+  }
+  return kgSueltosPorMat();
+}
 // v10.0 — detalle de stock por materia en los 3 estados del pipeline:
 // bruto (suelto por clasificar) · clasificado (por alotar) · en lotes (por vender).
 // Devuelve además el desglose por grado de venta (clasificado + lotes).
 function stockDetallePorMat() {
   const r2 = n => Math.round(n * 100) / 100;
-  const sueltos = kgSueltosPorMat();
+  const sueltos = brutoPorMat();
   let clasPorGrado = {}; try { clasPorGrado = kgClasificadoPorGrado(); } catch {}
   const lotesDisp = DB.getLotes().filter(l => l.estado === 'disponible' && (l.kg || 0) > 0);
   const out = {};
