@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 9.0                                                 -->
+  <!-- Version : 10.0                                                -->
   <!-- Date    : 22/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -381,6 +381,35 @@
     .mat-price-kg { font-size: 11px; color: var(--text-muted); font-weight: 600; align-self: flex-end; padding-bottom: 2px; }
     .mat-edit-icon { font-size: 14px; color: var(--text-muted); flex-shrink: 0; }
     .price-card.active .mat-edit-icon { color: var(--accent); }
+    /* ── v10.0 : Stock pipeline (bruto → clasificado → en lotes) ── */
+    .stock-pipe { background: var(--surface); border: 2px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; align-items: stretch; margin-bottom: 12px; }
+    .stock-pipe-cell { flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: center; }
+    .stock-pipe-cell + .stock-pipe-cell { border-left: 1px solid var(--border); }
+    .stock-pipe-val { font-size: 17px; font-weight: 900; line-height: 1; }
+    .stock-pipe-lbl { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--text-muted); }
+    .sp-dot { display: inline-block; width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
+    .c-bruto { color: #B45309; } .bg-bruto { background: #F59E0B; }
+    .c-clasif { color: #6D28D9; } .bg-clasif { background: #8B5CF6; }
+    .c-lote  { color: #0F766E; } .bg-lote  { background: #14B8A6; }
+    .stock-value-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .stock-value-link:active { transform: scale(0.99); }
+    .price-card.has-grados { flex-wrap: wrap; }
+    .grados-toggle { flex-basis: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: none; flex-direction: column; gap: 7px; }
+    .price-card.open .grados-toggle { display: flex; }
+    .grado-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+    .grado-row .gname { flex: 1; min-width: 0; }
+    .grado-row .gkg { font-weight: 800; }
+    .grado-badge { font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 6px; }
+    .chev-grados { transition: transform 0.2s; display: inline-block; }
+    .price-card.open .chev-grados { transform: rotate(90deg); }
+    .grados-cap { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); font-weight: 700; }
+    /* ── v10.0 : onglet SinBa (puntos + canjes) ── */
+    .sinba-alert { display: flex; align-items: center; gap: 11px; background: #FEF3C7; border: 2px solid #FCD34D; border-radius: 12px; padding: 12px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .sinba-alert:active { transform: scale(0.99); }
+    .sinba-alert-ic { font-size: 20px; flex-shrink: 0; }
+    .sinba-alert-main { flex: 1; min-width: 0; }
+    .sinba-alert-t { font-size: 13px; font-weight: 800; color: #92400E; }
+    .sinba-alert-s { font-size: 11px; color: #B45309; margin-top: 1px; }
     .wa-btn { background: var(--green-wa); color: white; border: none; border-radius: var(--radius); padding: 16px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.2px; }
     .wa-btn:active { background: var(--green-wa-dark); transform: scale(0.98); }
     /* Price editor sheet */
@@ -642,6 +671,11 @@
           <div class="hero-mini-lbl">⚖️ Suelto</div>
           <div class="hero-mini-val" id="heroStockSuelto">0 kg</div>
         </div>
+        <div class="hero-divider" id="heroClasifDiv" style="display:none"></div>
+        <div class="hero-mini" id="heroClasifWrap" style="display:none">
+          <div class="hero-mini-lbl">♻️ Clasificado</div>
+          <div class="hero-mini-val" id="heroStockClasif">0 kg</div>
+        </div>
         <div class="hero-divider"></div>
         <div class="hero-mini">
           <div class="hero-mini-lbl">📦 En lotes</div>
@@ -660,12 +694,16 @@
       <div class="sp-card-val"><span id="spBalanceVal">0</span> <span>puntos</span></div>
       <div class="sp-card-sub">Ganas puntos entregando material a SinBa · Toca para canjear por equipos ›</div>
     </div>
-    <!-- SinbaPuntos: vista de la PLANTA SINBA (saldo por centro + canjes) -->
-    <div id="spCardSinba" style="display:none">
-      <div class="section-label">⭐ SinbaPuntos por centro de acopio</div>
-      <div id="spCentrosList"></div>
-      <div class="section-label" style="margin-top:14px" id="spCanjesLbl">🎁 Solicitudes de canje</div>
-      <div id="spCanjesSinbaList"></div>
+    <!-- v10.0 : la gestión SinBa (puntos por centro + canjes) se mudó a la
+         pestaña ⭐ SinBa. Aquí solo queda una ALERTA accionable cuando hay
+         canjes pendientes — como la tarjeta de reclamos. -->
+    <div class="sinba-alert" id="sinbaAlertResumen" style="display:none" onclick="goTo('sinba')">
+      <span class="sinba-alert-ic">🎁</span>
+      <div class="sinba-alert-main">
+        <div class="sinba-alert-t" id="sinbaAlertTitle">Solicitudes de canje pendientes</div>
+        <div class="sinba-alert-s">Toca para revisar y aprobar en la pestaña SinBa</div>
+      </div>
+      <span style="color:#B45309;font-weight:800">›</span>
     </div>
     <!-- v4.0 : síntesis del mes (kilos, lotes, transacciones — sin soles,
          el dinero vive en Finanzas) -->
@@ -688,6 +726,31 @@
   </div>
   <div class="bottom-cta">
     <button class="confirm-btn" onclick="goTo('entrada')">➕ Nueva Entrada</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: SINBA (v10.0) ══════════════════════════════════ -->
+<!-- Gestión de sinbapuntos + canjes, mudada desde el Resumen. Solo visible
+     para cuentas con capacidad `sinbapuntos` (hoy: la planta SinBa). -->
+<div id="screen-sinba" class="screen">
+  <div class="scroll-area">
+    <div class="hero-card" style="background:#5B21B6">
+      <div class="hero-label">⭐ SinbaPuntos otorgados</div>
+      <div class="hero-amount"><span id="sinbaHeroPts">0</span><span class="hero-kg-unit">pts</span></div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-val" id="sinbaHeroCentros">0</div><div class="hero-stat-lbl">Centros con puntos</div></div>
+        <div class="hero-stat"><div class="hero-stat-val" id="sinbaHeroPend">0</div><div class="hero-stat-lbl">Canjes pendientes</div></div>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="section-label">⭐ SinbaPuntos por centro de acopio</div>
+      <div id="spCentrosList"></div>
+    </div>
+    <div style="margin-top:6px">
+      <div class="section-label" id="spCanjesLbl">🎁 Solicitudes de canje</div>
+      <div id="spCanjesSinbaList"></div>
+    </div>
+    <div class="nota"><strong>💡 ¿Cómo funciona?</strong><br>Los centros ganan sinbapuntos al entregarte material. Aquí ves el saldo de cada uno y apruebas o rechazas sus solicitudes de canje — al aprobar, se descuentan de su saldo.</div>
   </div>
 </div>
 
@@ -923,6 +986,9 @@
      logo, stock (suelto + lotes) et prix de compra modifiable. -->
 <div id="screen-precios" class="screen">
   <div class="scroll-area">
+    <!-- v10.0 : bandeau pipeline (bruto → clasificado → en lotes) + valor -->
+    <div id="stockPipe"></div>
+    <div id="stockValueLink"></div>
     <div>
       <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <span>Stock y precio por materia</span>
@@ -1077,6 +1143,8 @@
   <button class="nav-btn" data-screen="precios" onclick="goTo('precios')"><span class="nav-icon">🗃️</span><span class="nav-label">Stock</span></button>
   <button class="nav-btn" data-screen="finanzas" onclick="goTo('finanzas')"><span class="nav-icon">📈</span><span class="nav-label">Finanzas</span></button>
   <button class="nav-btn" data-screen="pagos" onclick="goTo('pagos')"><span class="nav-icon">💵</span><span class="nav-label">Pagos</span></button>
+  <!-- v10.0 : pestaña SinBa (puntos + canjes) — solo cuentas con cap. sinbapuntos -->
+  <button class="nav-btn" id="nav-sinba" data-screen="sinba" style="display:none" onclick="goTo('sinba')"><span class="nav-icon">⭐</span><span class="nav-label">SinBa</span></button>
 </nav>
 
 <!-- (v2.0 : le drawer "reciclador" de l'écran Entrada a été retiré — les
@@ -2498,6 +2566,9 @@ function updateCentroDisplay() {
     if (ic) ic.textContent = esRecep ? '📥' : '📦';
     if (lb) lb.textContent = esRecep ? 'Recep.' : 'Lotes';
   }
+  // v10.0 — la pestaña ⭐ SinBa solo existe para cuentas con cap. sinbapuntos.
+  const sinbaNav = document.getElementById('nav-sinba');
+  if (sinbaNav) sinbaNav.style.display = tieneCap('sinbapuntos') ? 'flex' : 'none';
 }
 auth.onAuthStateChanged(user => {
   if (!user) { openCentroSetup(false); return; }
@@ -2799,6 +2870,7 @@ const SCREEN_CFG = {
   whatsapp: { title: '📲 Enviar Precios',    sub: 'Difunde tus precios por WhatsApp', back: true, add: false },
   finanzas: { title: '📈 Finanzas',          sub: 'Gastos, ingresos y ganancia potencial', back: true, add: false },
   pagos:    { title: '💵 Pagos',             sub: 'Por pagar y por cobrar',      back: true,  add: false },
+  sinba:    { title: '⭐ SinBa',             sub: 'Puntos por centro y solicitudes de canje', back: true, add: false },
   // (v5.1 : la entrada "recs" fue eliminada junto con la pantalla Recicladores.)
 };
 
@@ -2848,7 +2920,11 @@ function goTo(id) {
   if (id === 'whatsapp') initWhatsapp();
   if (id === 'finanzas') initFinanzas();
   if (id === 'pagos')    initPagos();
+  if (id === 'sinba')    initSinba();
 }
+
+// v10.0 — pestaña SinBa: refresca puntos + canjes (renderSpSinba dibuja las listas).
+function initSinba() { refreshSinbapuntos(); }
 
 // ════════════════════════════════════════════════════════════
 // SCREEN: RESUMEN
@@ -2864,6 +2940,7 @@ function initResumen() {
   renderResumenStock(stats);
   renderResumenActividad(stats);
   renderReclamos();
+  renderSinbaAlert();
   procesarVentasEntrantes();
   refreshReclamos();
   refreshSinbapuntos();
@@ -2885,12 +2962,17 @@ function calcStats() {
   // transformados ya salieron del stock (la venta ocurre siempre vía lote).
   const sueltosMap = kgSueltosPorMat();
   const lotesAll = DB.getLotes();
+  // v10.0 — el material CLASIFICADO (trozado en grados, aún sin alotar) también
+  // es stock. Antes se ignoraba → SinBa veía menos kilos de los que tenía.
+  let clasMap = {};
+  try { clasMap = clasificadoStockPorMat(); } catch {}
   const stock = {};
   const valorPotencial = {};
   let valorPotencialTotal = 0;
   MATERIALES.forEach(m => {
     const enLotesDisp = lotesAll.filter(l => l.matId === m.id && l.estado === 'disponible').reduce((s, l) => s + (l.kg || 0), 0);
-    stock[m.id] = Math.round(((sueltosMap[m.id] || 0) + enLotesDisp) * 100) / 100;
+    const clasif = (clasMap[m.id] && clasMap[m.id].kg) || 0;
+    stock[m.id] = Math.round(((sueltosMap[m.id] || 0) + enLotesDisp + clasif) * 100) / 100;
     // Precio de venta potencial = promedio histórico de tus propias ventas de esta
     // materia. Si nunca la vendiste, no se estima (para no inventar un número).
     const ventasMat = allV.filter(v=>v.matId===m.id && v.precioKg>0);
@@ -2907,19 +2989,28 @@ function renderResumenStockHero(stats) {
   document.getElementById('tb-badge').textContent = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
   const sueltosMap = kgSueltosPorMat();
   const lotesDisp = DB.getLotes().filter(l => l.estado === 'disponible');
-  let totalKg = 0, sueltoKg = 0, lotesKg = 0, totalUnd = 0, matsConStock = 0;
+  let clasMap = {};
+  try { clasMap = clasificadoStockPorMat(); } catch {}
+  let totalKg = 0, sueltoKg = 0, lotesKg = 0, clasifKg = 0, totalUnd = 0, matsConStock = 0;
   MATERIALES.forEach(m => {
     const kg = stats.stock[m.id] || 0;
     if (kg > 0) matsConStock++;
     if (matUnidad(m) === 'und') { totalUnd += kg; return; }
     totalKg += kg;
     sueltoKg += sueltosMap[m.id] || 0;
+    clasifKg += (clasMap[m.id] && clasMap[m.id].kg) || 0;
     lotesKg  += lotesDisp.filter(l => l.matId === m.id).reduce((s, l) => s + (l.kg || 0), 0);
   });
   const r1 = n => Math.round(n * 10) / 10;
   document.getElementById('heroStockVal').textContent    = r1(totalKg);
   document.getElementById('heroStockSuelto').textContent = r1(sueltoKg) + ' kg';
   document.getElementById('heroStockLotes').textContent  = r1(lotesKg) + ' kg';
+  const clasifWrap = document.getElementById('heroClasifWrap');
+  const clasifDiv  = document.getElementById('heroClasifDiv');
+  const mostrarClasif = clasifKg > 0.05;
+  if (clasifWrap) clasifWrap.style.display = mostrarClasif ? 'flex' : 'none';
+  if (clasifDiv)  clasifDiv.style.display  = mostrarClasif ? 'block' : 'none';
+  if (mostrarClasif) document.getElementById('heroStockClasif').textContent = r1(clasifKg) + ' kg';
   document.getElementById('heroLotesDisp').textContent   = lotesDisp.length;
   document.getElementById('heroMatsStock').textContent   = matsConStock;
   const undWrap = document.getElementById('heroUndWrap');
@@ -3414,12 +3505,22 @@ async function refreshSpSinba() {
 }
 
 function renderSpSinba() {
-  const card = document.getElementById('spCardSinba');
-  if (!card) return;
-  if (!isSinba()) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
+  // v10.0 — la gestión SinBa vive ahora en la pestaña ⭐ SinBa (screen-sinba).
+  // Actualiza también la alerta accionable del Resumen.
+  if (!isSinba()) { renderSinbaAlert(); return; }
+  const lista = document.getElementById('spCentrosList');
+  if (!lista) { renderSinbaAlert(); return; }
 
   const entries = Object.entries(spSaldosRed).sort((a, b) => b[1].saldo - a[1].saldo);
+  const pend0 = spCanjesRed.filter(cj => cj.estado === 'pendiente');
+  const totalPts = entries.reduce((s, [, c]) => s + (Number(c.saldo) || 0), 0);
+  const heroPts = document.getElementById('sinbaHeroPts');
+  if (heroPts) heroPts.textContent = fmtPts(totalPts);
+  const heroCentros = document.getElementById('sinbaHeroCentros');
+  if (heroCentros) heroCentros.textContent = entries.filter(([, c]) => (c.saldo || 0) > 0).length;
+  const heroPend = document.getElementById('sinbaHeroPend');
+  if (heroPend) heroPend.textContent = pend0.length;
+
   document.getElementById('spCentrosList').innerHTML = entries.length ? entries.map(([id, c]) => `
     <div class="sp-row">
       <div class="sp-row-info">
@@ -3460,6 +3561,19 @@ function renderSpSinba() {
           </div>
         </div>`).join('')
     : '<div style="font-size:12px;color:var(--text-muted);padding:8px 2px">Sin solicitudes de canje.</div>';
+  renderSinbaAlert();
+}
+
+// v10.0 — alerta accionable en el Resumen: aparece solo si hay canjes
+// pendientes; lleva a la pestaña ⭐ SinBa. Mismo patrón que los reclamos.
+function renderSinbaAlert() {
+  const el = document.getElementById('sinbaAlertResumen');
+  if (!el) return;
+  const pend = isSinba() ? spCanjesRed.filter(cj => cj.estado === 'pendiente').length : 0;
+  if (!pend) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  document.getElementById('sinbaAlertTitle').textContent =
+    `${pend} solicitud${pend > 1 ? 'es' : ''} de canje pendiente${pend > 1 ? 's' : ''}`;
 }
 
 function resolverCanje(id, estado) {
@@ -6275,30 +6389,113 @@ function initPrecios() {
   renderPreciosList();
 }
 
+// v10.0 — materia de compra dueña de un grado de venta (para repartir el
+// clasificado por materia). Un grado base = la materia misma.
+function gradoMatId(gid) {
+  for (const matId in GRADOS_VENTA) if (GRADOS_VENTA[matId].some(x => x.id === gid)) return matId;
+  if (MATERIALES.find(m => m.id === gid)) return gid;
+  return null;
+}
+// v10.0 — detalle de stock por materia en los 3 estados del pipeline:
+// bruto (suelto por clasificar) · clasificado (por alotar) · en lotes (por vender).
+// Devuelve además el desglose por grado de venta (clasificado + lotes).
+function stockDetallePorMat() {
+  const r2 = n => Math.round(n * 100) / 100;
+  const sueltos = kgSueltosPorMat();
+  let clasPorGrado = {}; try { clasPorGrado = kgClasificadoPorGrado(); } catch {}
+  const lotesDisp = DB.getLotes().filter(l => l.estado === 'disponible' && (l.kg || 0) > 0);
+  const out = {};
+  MATERIALES.forEach(m => { out[m.id] = { bruto: sueltos[m.id] || 0, clasif: 0, lotes: 0, total: 0, grados: {} }; });
+  Object.entries(clasPorGrado).forEach(([gid, kg]) => {
+    const matId = gradoMatId(gid); if (!matId || !out[matId]) return;
+    out[matId].clasif += kg;
+    const g = out[matId].grados[gid] || (out[matId].grados[gid] = { name: gradoName(gid), kg: 0, enLotes: 0 });
+    g.kg += kg;
+  });
+  lotesDisp.forEach(l => {
+    const matId = l.matId; if (!out[matId]) return;
+    out[matId].lotes += (l.kg || 0);
+    const gid = l.matVentaId || ('base_' + matId);
+    const g = out[matId].grados[gid] || (out[matId].grados[gid] = { name: l.matVentaName || (MATERIALES.find(x => x.id === matId) || {}).name || '', kg: 0, enLotes: 0 });
+    g.kg += (l.kg || 0); g.enLotes += (l.kg || 0);
+  });
+  MATERIALES.forEach(m => { const o = out[m.id]; o.bruto = r2(o.bruto); o.clasif = r2(o.clasif); o.lotes = r2(o.lotes); o.total = r2(o.bruto + o.clasif + o.lotes); });
+  return out;
+}
+
+// v10.0 — bandeau pipeline (totales) + enlace a la valorización (Finanzas).
+function renderStockPipe(det) {
+  const surtri = tieneCap('surtri');
+  const r1 = n => Math.round(n * 10) / 10;
+  let bruto = 0, clasif = 0, lotes = 0;
+  materialesVisibles().forEach(m => { if (matUnidad(m) === 'und') return; const o = det[m.id]; bruto += o.bruto; clasif += o.clasif; lotes += o.lotes; });
+  const cell = (bg, c, val, lbl) => `<div class="stock-pipe-cell"><div class="stock-pipe-val ${c}"><span class="sp-dot ${bg}"></span> ${r1(val)}</div><div class="stock-pipe-lbl">${lbl}</div></div>`;
+  const pipe = document.getElementById('stockPipe');
+  if (pipe) pipe.innerHTML = (bruto + clasif + lotes) > 0.05
+    ? `<div class="stock-pipe">${cell('bg-bruto', 'c-bruto', bruto, 'Bruto · x clasificar')}${(surtri || clasif > 0.05) ? cell('bg-clasif', 'c-clasif', clasif, 'Clasif. · x alotar') : ''}${cell('bg-lote', 'c-lote', lotes, 'En lotes · x vender')}</div>`
+    : '';
+  const vlink = document.getElementById('stockValueLink');
+  let vt = 0; try { vt = calcStats().valorPotencialTotal || 0; } catch {}
+  if (vlink) vlink.innerHTML = vt > 0.05
+    ? `<div class="stock-value-link" onclick="goTo('finanzas')"><div><div style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px">💰 Valor estimado del stock</div><div style="font-size:18px;font-weight:900;margin-top:1px">≈ S/ ${vt.toFixed(2)}</div></div><span style="font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap">Ver en Finanzas ›</span></div>`
+    : '';
+}
+
 function renderPreciosList() {
-  // v4.0 — cada línea muestra también el STOCK de la materia (suelto + lotes).
-  const sueltosMap = kgSueltosPorMat();
-  const lotesAll = DB.getLotes();
+  // v10.0 — cada línea muestra el stock en sus 3 estados; para cuentas con
+  // surtri, las materias con grados se despliegan mostrando el desglose.
+  const det = stockDetallePorMat();
+  renderStockPipe(det);
+  const surtri = tieneCap('surtri');
   document.getElementById('priceListPrecios').innerHTML = materialesVisibles().map(m => {
     const u = matUnidad(m);
-    const suelto = Math.round((sueltosMap[m.id] || 0) * 100) / 100;
-    const lotesDisp = lotesAll.filter(l => l.matId === m.id && l.estado === 'disponible');
-    const enLotes = Math.round(lotesDisp.reduce((s, l) => s + (l.kg || 0), 0) * 100) / 100;
-    const tot = Math.round((suelto + enLotes) * 100) / 100;
-    const stockLine = tot > 0
-      ? `<div class="mat-stock-line">📦 ${tot} ${u} en stock — ${suelto} ${u} sueltos${lotesDisp.length ? ' · ' + enLotes + ' ' + u + ' en ' + lotesDisp.length + ' lote' + (lotesDisp.length > 1 ? 's' : '') : ''}</div>`
+    const o = det[m.id];
+    const tot = o.total;
+    const parts = [];
+    if (o.bruto  > 0.001) parts.push(`<span class="c-bruto">${o.bruto} ${u} bruto</span>`);
+    if (o.clasif > 0.001) parts.push(`<span class="c-clasif">${o.clasif} ${u} clasif.</span>`);
+    if (o.lotes  > 0.001) parts.push(`<span class="c-lote">${o.lotes} ${u} lote</span>`);
+    const stockLine = tot > 0.001
+      ? `<div class="mat-stock-line" style="color:var(--text-secondary);font-weight:600">📦 ${tot} ${u} — ${parts.join(' · ')}</div>`
       : `<div class="mat-stock-line cero">Sin stock</div>`;
-    return `<div class="price-card" id="pcard-${m.id}" onclick="openSheet('${m.id}')">
-      <div class="mat-icon">${m.emoji}</div>
-      <div class="mat-info"><div class="mat-name-p">${m.name}</div>${stockLine}</div>
-      <div class="mat-price-badge">
+    const priceBadge = `<div class="mat-price-badge" onclick="event.stopPropagation(); openSheet('${m.id}')">
         <span class="mat-price-sol">S/</span>
         <span class="mat-price-val" id="pval-${m.id}">${m.precio.toFixed(2)}</span>
         <span class="mat-price-kg">/${u}</span>
-      </div>
+      </div>`;
+    const gradosDef = (GRADOS_VENTA[m.id] || []).length > 0;
+    const expandable = surtri && gradosDef && tot > 0.001;
+    if (expandable) {
+      const gr = Object.entries(o.grados).sort((a, b) => b[1].kg - a[1].kg).map(([gid, g]) => {
+        const kg = Math.round(g.kg * 100) / 100;
+        const enLoteBadge = g.enLotes > 0.001 ? `<span class="grado-badge" style="background:#CCFBF1;color:#0F766E">${Math.round(g.enLotes * 100) / 100} en lote</span>` : '';
+        const soloLote = g.enLotes >= g.kg - 0.001;
+        return `<div class="grado-row"><span class="sp-dot ${soloLote ? 'bg-lote' : 'bg-clasif'}"></span><span class="gname">${escHtml(g.name)}</span>${enLoteBadge}<span class="gkg">${kg} ${u}</span></div>`;
+      }).join('');
+      const brutoRow = o.bruto > 0.001 ? `<div class="grado-row" style="color:var(--text-secondary)"><span class="sp-dot bg-bruto"></span><span class="gname">Sin clasificar (bruto)</span><span class="gkg">${o.bruto} ${u}</span></div>` : '';
+      return `<div class="price-card has-grados" id="pcard-${m.id}" onclick="toggleGradosCard('${m.id}')">
+        <div class="mat-icon">${m.emoji}</div>
+        <div class="mat-info"><div class="mat-name-p">${m.name} <span class="chev-grados" style="color:var(--text-muted);font-size:13px">›</span></div>${stockLine}</div>
+        ${priceBadge}
+        <div class="grados-toggle">
+          <div class="grados-cap">Grados de venta</div>
+          ${gr || '<div style="font-size:12px;color:var(--text-muted)">Aún sin clasificar en grados</div>'}
+          ${brutoRow}
+        </div>
+      </div>`;
+    }
+    return `<div class="price-card" id="pcard-${m.id}" onclick="openSheet('${m.id}')">
+      <div class="mat-icon">${m.emoji}</div>
+      <div class="mat-info"><div class="mat-name-p">${m.name}</div>${stockLine}</div>
+      ${priceBadge}
       <span class="mat-edit-icon">✏️</span>
     </div>`;
   }).join('');
+}
+// v10.0 — despliega / repliega el desglose por grado de una materia.
+function toggleGradosCard(id) {
+  const c = document.getElementById('pcard-' + id);
+  if (c) c.classList.toggle('open');
 }
 
 function openSheet(id) {
