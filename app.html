@@ -3,7 +3,7 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 7.0                                                 -->
+  <!-- Version : 8.0                                                 -->
   <!-- Date    : 21/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
@@ -836,14 +836,19 @@
       <span style="flex:1">Trazabilidad — historial de lotes<span id="trazaBtnSub" style="display:block;font-size:11px;font-weight:500;color:var(--text-muted);margin-top:2px">Lotes vendidos, fusionados y transformados</span></span>
       <span class="chevron">›</span>
     </button>
-    <!-- v7.0 — SinBa: subpestañas Por clasificar / Mis lotes -->
-    <div id="lotesSubtabs" class="origen-grid" style="display:none;order:0;grid-template-columns:1fr 1fr;margin-bottom:14px">
-      <button class="origen-btn" id="subtabRecep" onclick="setLotesVista('recepciones')"><span class="og-emoji">📥</span><span class="og-name">Por clasificar (<span id="subtabRecepN">0</span>)</span></button>
-      <button class="origen-btn" id="subtabLotes" onclick="setLotesVista('lotes')"><span class="og-emoji">📦</span><span class="og-name">Mis lotes</span></button>
+    <!-- v8.0 — SinBa: 3 subpestañas Por clasificar / Por alotar / Mis lotes -->
+    <div id="lotesSubtabs" class="origen-grid" style="display:none;order:0;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px">
+      <button class="origen-btn" id="subtabRecep" onclick="setLotesVista('recepciones')"><span class="og-emoji">📥</span><span class="og-name" style="font-size:10px">Por clasificar (<span id="subtabRecepN">0</span>)</span></button>
+      <button class="origen-btn" id="subtabAlotar" onclick="setLotesVista('alotar')"><span class="og-emoji">🏷️</span><span class="og-name" style="font-size:10px">Por alotar (<span id="subtabAlotarN">0</span>)</span></button>
+      <button class="origen-btn" id="subtabLotes" onclick="setLotesVista('lotes')"><span class="og-emoji">📦</span><span class="og-name" style="font-size:10px">Mis lotes</span></button>
     </div>
     <div id="recepcionesWrap" style="display:none;order:0">
       <div class="section-label">📥 Recepciones por clasificar</div>
       <div id="recepcionesList"></div>
+    </div>
+    <div id="alotarWrap" style="display:none;order:0">
+      <div class="section-label">🏷️ Material clasificado — por grado (crea lotes)</div>
+      <div id="alotarList"></div>
     </div>
     <!-- v5.3 : l'ordre des deux sections dépend du compte (flex order dans
          initLotes) — acopiador/SinBa : Mis lotes en haut ; reciclador :
@@ -1165,6 +1170,36 @@
   </div>
 </div>
 
+<!-- ── ALOTAR DRAWER (v8.0 — crear un lote desde el tas de UN grado) ── -->
+<div class="drawer-overlay" id="alotarOverlay" onclick="closeAlotar()"></div>
+<div class="drawer historial-drawer" id="alotarDrawer">
+  <div class="drawer-handle"></div>
+  <div class="historial-drawer-header">
+    <div class="historial-drawer-title">🏷️ Crear lote</div>
+    <button class="historial-close-btn" onclick="closeAlotar()">✕</button>
+  </div>
+  <div class="historial-body" style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:16px">
+    <div id="alotarCabecera" style="background:var(--bg);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text-secondary);line-height:1.6"></div>
+    <div>
+      <div class="section-label" id="alotarCantLabel">Cantidad (kg)</div>
+      <div class="weight-card">
+        <div class="weight-row">
+          <input class="weight-display" id="alotarCantInput" type="text" inputmode="decimal" placeholder="0" autocomplete="off" style="font-size:38px" oninput="onAlotarCantInput(this)">
+          <span class="weight-unit" id="alotarCantUnit">kg</span>
+        </div>
+        <div class="weight-hint" id="alotarDispHint">—</div>
+      </div>
+    </div>
+    <div id="alotarLotesWrap" style="display:none">
+      <div class="section-label">Agregar a lotes existentes del mismo grado</div>
+      <div id="alotarLotesList"></div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:4px">Los lotes marcados se fusionan en el nuevo — su trazabilidad se conserva.</div>
+    </div>
+    <div id="alotarResumen" style="display:none;background:var(--bg);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text-secondary);line-height:1.6"></div>
+    <button class="confirm-btn" id="alotarConfirmBtn" disabled onclick="confirmAlotar()">Ingresa la cantidad</button>
+  </div>
+</div>
+
 <!-- ── CENTRO/CUENTA REGISTRADA DRAWER (origen de una entrada) ── -->
 <div class="drawer-overlay" id="origenDrawerOverlay" onclick="closeOrigenDrawer()"></div>
 <div class="drawer" id="origenDrawer">
@@ -1438,6 +1473,18 @@ const DB = {
     this.saveRecepciones(l);
     if (c) queueSync(`centros/${c.id}/recepciones/${id}`, l[i]);
     return l[i];
+  },
+  // ── CLASIFICADOS (v8.0) — vrac par grado, produit par la classification et
+  //    consommé par l'alotado (creación de lotes). Un clasificado = la sortie
+  //    d'UN grado d'UNE classification. Regroupés par grado dans « Por alotar ».
+  getClasificados() { try { return JSON.parse(localStorage.getItem('acopi_clasificados')) || []; } catch { return []; } },
+  saveClasificados(l) { localStorage.setItem('acopi_clasificados', JSON.stringify(l)); },
+  addClasificado(cl) {
+    const c = this.getCentro();
+    const rec = {...cl, centroId: c ? c.id : null, id: cl.id || Date.now()};
+    const l = this.getClasificados(); l.unshift(rec); this.saveClasificados(l);
+    if (c) queueSync(`centros/${c.id}/clasificados/${rec.id}`, rec);
+    return rec;
   },
 };
 
@@ -1933,6 +1980,9 @@ async function syncOwnData() {
       });
       DB.saveRecepciones(mergedR);
     }
+    if (remote.clasificados) {
+      localStorage.setItem('acopi_clasificados', JSON.stringify(mergeById(DB.getClasificados(), remote.clasificados)));
+    }
     if (remote.precios) localStorage.setItem('acopi_precios', JSON.stringify({ ...remote.precios, ...DB.getPrecios() }));
     if (remote.recicladores) localStorage.setItem('acopi_recicladores', JSON.stringify(mergeById(DB.getRecs(), remote.recicladores)));
     if (currentScreen === 'resumen') initResumen();
@@ -2295,7 +2345,7 @@ function confirmEditPerfil() {
 }
 function logoutCentro() {
   auth.signOut();
-  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_lotes','acopi_recepciones','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos','acopi_vpend_resueltos','acopi_canjes_estados','acopi_canjes_vistos','acopi_notifs','acopi_notifs_desde'].forEach(k => localStorage.removeItem(k));
+  ['acopi_centro','acopi_entradas','acopi_ventas','acopi_lotes','acopi_recepciones','acopi_clasificados','acopi_precios','acopi_recicladores','acopi_sync_queue','acopi_pend_resueltos','acopi_vpend_resueltos','acopi_canjes_estados','acopi_canjes_vistos','acopi_notifs','acopi_notifs_desde'].forEach(k => localStorage.removeItem(k));
   location.reload();
 }
 
@@ -2346,6 +2396,7 @@ async function resetMisDatos() {
     localStorage.setItem('acopi_ventas', '[]');
     localStorage.setItem('acopi_lotes', '[]');
     localStorage.setItem('acopi_recepciones', '[]');
+    localStorage.setItem('acopi_clasificados', '[]');
     localStorage.removeItem('acopi_pend_resueltos');
     localStorage.removeItem('acopi_vpend_resueltos');
     localStorage.removeItem('acopi_canjes_estados');
@@ -2363,6 +2414,7 @@ async function resetMisDatos() {
       `centros/${centro.id}/ventas`,
       `centros/${centro.id}/lotes`,
       `centros/${centro.id}/recepciones`,
+      `centros/${centro.id}/clasificados`,
       `centros/${centro.id}/reclamos`,
       `centros/${centro.id}/entradas_pendientes`,
       `centros/${centro.id}/ventas_pendientes`,
@@ -2396,6 +2448,7 @@ async function resetMisDatos() {
     localStorage.setItem('acopi_ventas', '[]');
     localStorage.setItem('acopi_lotes', '[]');
     localStorage.setItem('acopi_recepciones', '[]');
+    localStorage.setItem('acopi_clasificados', '[]');
   } finally {
     resetEnCurso = false;
     if (btn) { btn.disabled = false; btn.textContent = '🗑️ Borrar mis transacciones (solo pruebas)'; }
@@ -2688,6 +2741,7 @@ function materialesConStock() {
     Object.keys(sueltos).forEach(id => { if (sueltos[id] > 0.001) ids.add(id); });
   } catch {}
   DB.getLotes().forEach(l => { if (l.estado === 'disponible' && (l.kg || 0) > 0) ids.add(l.matId); });
+  try { const cs = clasificadoStockPorMat(); Object.keys(cs).forEach(id => { if (cs[id].kg > 0.001) ids.add(id); }); } catch {}
   return ids;
 }
 // Materias VISIBLES en Stock/Finanzas = activas ∪ las que tengan stock (aunque
@@ -3389,16 +3443,18 @@ function renderFinPotencial() {
   const allV = DB.getVentas();
   const lotesDisp = DB.getLotes().filter(l => l.estado === 'disponible');
   const sueltosMap = kgSueltosPorMat();
+  const clasStock = clasificadoStockPorMat(); // v8.0 — vrac clasificado (SinBa)
   let valorTotal = 0, costoTotal = 0, gananciaTotal = 0, hayStock = false, faltaHistorial = false;
   const rows = [];
   materialesVisibles().forEach(m => {
     const misLotes = lotesDisp.filter(l => l.matId === m.id);
-    const kg = Math.round((((sueltosMap[m.id] || 0)) + misLotes.reduce((s, l) => s + (l.kg || 0), 0)) * 100) / 100;
+    const cl = clasStock[m.id] || { kg: 0, costo: 0 };
+    const kg = Math.round((((sueltosMap[m.id] || 0)) + cl.kg + misLotes.reduce((s, l) => s + (l.kg || 0), 0)) * 100) / 100;
     if (kg <= 0) return;
     hayStock = true;
     const u = matUnidad(m);
-    // costo de los kilos sueltos restantes (FIFO) + costo de los lotes.
-    let costo = misLotes.reduce((s, l) => s + (l.costoTotal || 0), 0);
+    // costo de los kilos sueltos restantes (FIFO) + clasificados + lotes.
+    let costo = misLotes.reduce((s, l) => s + (l.costoTotal || 0), 0) + cl.costo;
     entradasDisponibles(m.id).forEach(x => { costo += x.resto * (x.e.precioKg || 0); });
     costo = Math.round(costo * 100) / 100;
     const ventasMat = allV.filter(v => v.matId === m.id && v.precioKg > 0);
@@ -3446,9 +3502,10 @@ function renderFinPotencial() {
 // ════════════════════════════════════════════════════════════
 let entradaState = { origen: null, redModo: null, material: null, weightStr: '0', precioStr: '0', brutoStr: '0', contraparte: null, lote: null };
 let lotesVendedor = [];
-// v7.0 — la compra en red de una cuenta SinBa se vuelve una RECEPCIÓN con doble
-// pesada (bruto ahora, triado al neto después). Solo cuentas con cap. sinbapuntos.
-function esRecepcionSinba() { return entradaState.origen === 'red' && tieneCap('sinbapuntos'); }
+// v7.0/v8.0 — para una cuenta SinBa, TODA entrada (red, recolector externo o
+// recolección interna) se vuelve una RECEPCIÓN: se pesa el BRUTO ahora y el
+// pago + los grados se definen al clasificar. Solo cuentas con cap. sinbapuntos.
+function esRecepcionSinba() { return tieneCap('sinbapuntos') && ['red', 'desconocido', 'interna'].includes(entradaState.origen); }
 
 function initEntrada() {
   loadMatPrices();
@@ -3615,20 +3672,22 @@ function openPesoSheet() {
   const esInterna = og === 'interna';
   document.getElementById('psIcon').textContent = mat.emoji;
   document.getElementById('psName').textContent = mat.name;
+  const recepSinba = esRecepcionSinba();
   document.getElementById('psHint').textContent = redSuelto
-    ? (esRecepcionSinba() ? `📥 Recepción — ${entradaState.contraparte.name} · pesa el bruto` : `🤝 Compra en red — ${entradaState.contraparte.name}`)
-    : esInterna ? '🏠 Recolección interna — sin costo' : '👤 Recolector externo — pago en efectivo';
-  document.getElementById('psPesoLabel').textContent = (redSuelto && esRecepcionSinba()) ? 'Peso bruto (pesada 1)' : (u === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)');
+    ? (recepSinba ? `📥 Recepción — ${entradaState.contraparte.name} · pesa el bruto` : `🤝 Compra en red — ${entradaState.contraparte.name}`)
+    : esInterna ? (recepSinba ? '📥 Recepción interna — se clasifica, sin costo' : '🏠 Recolección interna — sin costo')
+    : (recepSinba ? '📥 Recepción externa — pesa el bruto · pago al clasificar' : '👤 Recolector externo — pago en efectivo');
+  document.getElementById('psPesoLabel').textContent = recepSinba ? 'Peso bruto (pesada 1)' : (u === 'und' ? 'Cantidad (unidades)' : 'Peso (kg)');
   document.getElementById('psUnit').textContent = u;
   document.getElementById('psPrecioUnit').textContent = '/' + u;
-  document.getElementById('psPrecioLabel').textContent = redSuelto ? 'Precio acordado con el vendedor' : 'Precio — solo esta transacción';
+  document.getElementById('psPrecioLabel').textContent = redSuelto ? 'Precio acordado con el vendedor' : recepSinba ? 'Precio acordado — se paga al neto' : 'Precio — solo esta transacción';
   document.getElementById('psPeso').value = parseFloat(entradaState.weightStr) > 0 ? entradaState.weightStr : '';
   // Red suelto : le prix est négocié avec le vendeur — pas de pré-remplissage catalogue.
   document.getElementById('psPrecio').value = redSuelto
     ? (parseFloat(entradaState.precioStr) > 0 ? entradaState.precioStr : '')
     : (mat.precio > 0 ? String(mat.precio) : '');
   document.getElementById('psPrecioCard').style.display = esInterna ? 'none' : 'block';
-  document.getElementById('psGuardarWrap').style.display = (esInterna || redSuelto) ? 'none' : 'flex';
+  document.getElementById('psGuardarWrap').style.display = (esInterna || redSuelto || recepSinba) ? 'none' : 'flex';
   document.getElementById('psGuardarPrecio').checked = false;
   document.getElementById('psMatName2').textContent = mat.name;
   document.getElementById('pesoSheetOverlay').classList.add('open');
@@ -3664,22 +3723,26 @@ function onPsInput() {
   updateEntradaUI();
   const btn = document.getElementById('psConfirmBtn');
   if (peso <= 0) { btn.disabled = true; btn.textContent = 'Ingresa el peso'; return; }
-  if (esInterna) { btn.disabled = false; btn.innerHTML = `✅ Registrar — ${peso} ${u} (sin costo)`; return; }
+  if (esInterna) { btn.disabled = false; btn.innerHTML = esRecepcionSinba() ? `📥 Registrar recepción — ${peso} ${u} (sin costo)` : `✅ Registrar — ${peso} ${u} (sin costo)`; return; }
   if (precio <= 0) { btn.disabled = true; btn.textContent = redSuelto ? 'Ingresa el precio acordado' : 'Ingresa el precio'; return; }
   btn.disabled = false;
-  // v7.0 — recepción SinBa: el peso es el BRUTO (pesada 1), el pago va al neto.
-  btn.innerHTML = (redSuelto && esRecepcionSinba()) ? '📥 Registrar recepción'
+  // v7.0/v8.0 — recepción SinBa: el peso es el BRUTO (pesada 1), el pago va al neto.
+  btn.innerHTML = esRecepcionSinba() ? '📥 Registrar recepción'
     : redSuelto ? `✅ Confirmar compra — ${fmt(peso * precio)}` : `✅ Registrar — ${fmt(peso * precio)}`;
 }
 function confirmPesoSheet() {
   if (pesoSheetGuard) return;
   const mat = entradaState.material, og = entradaState.origen;
-  // v5.6 — red suelto : on réutilise le flux complet confirmEntrada()
-  // (dépôt de la venta entrante chez le vendeur, FIFO, sinbapuntos).
-  if (esRedSueltoSheet()) {
+  // v5.6 — red suelto : on réutilise le flux complet confirmEntrada().
+  // v8.0 — SinBa externo/interna aussi = recepción (sans paiement immédiat) →
+  // même chemin confirmEntrada() → confirmRecepcionInner.
+  const sinbaRecep = esRecepcionSinba() && (og === 'desconocido' || og === 'interna');
+  if (esRedSueltoSheet() || sinbaRecep) {
     const pesoRs   = parseFloat(sanitizeDecimal(document.getElementById('psPeso'), 999999)) || 0;
-    const precioRs = parseFloat(sanitizeDecimal(document.getElementById('psPrecio'), 999)) || 0;
-    if (!mat || !entradaState.contraparte || pesoRs <= 0 || precioRs <= 0) return;
+    const precioRs = (og === 'interna') ? 0 : (parseFloat(sanitizeDecimal(document.getElementById('psPrecio'), 999)) || 0);
+    if (!mat || pesoRs <= 0) return;
+    if (esRedSueltoSheet() && (!entradaState.contraparte || precioRs <= 0)) return;
+    if (sinbaRecep && og === 'desconocido' && precioRs <= 0) return;
     pesoSheetGuard = true;
     try {
       entradaState.weightStr = String(pesoRs);
@@ -3833,6 +3896,23 @@ function updateEntradaUI() {
   // desconocido / interna
   const peso = parseFloat(entradaState.weightStr) || 0;
   const mat  = entradaState.material;
+  // v8.0 — SinBa: externo/interna = RECEPCIÓN (bruto ahora, pago al clasificar).
+  if (esRecepcionSinba()) {
+    const precio = og === 'interna' ? 0 : (parseFloat(entradaState.precioStr) || 0);
+    const listo = mat && peso > 0 && (og === 'interna' || precio > 0);
+    if (listo) {
+      card.classList.add('visible'); card.classList.remove('no-price');
+      lbl.textContent = '📥 Recepción — pesada 1 (bruto)';
+      amt.style.fontSize = '38px'; amt.textContent = `${peso} ${matUnidad(mat)}`;
+      det.textContent = og === 'interna' ? `${mat.name} — se clasifica, sin costo` : `≈ ${fmt(peso * precio)} estimado · se paga al neto tras clasificar`;
+      btn.disabled = false; btn.innerHTML = '📥 Registrar recepción';
+    } else {
+      card.classList.remove('visible');
+      btn.disabled = true;
+      btn.textContent = !mat ? 'Elige el material' : peso <= 0 ? 'Ingresa el peso' : 'Ingresa el precio acordado';
+    }
+    return;
+  }
   if (mat && peso > 0) {
     card.classList.add('visible'); card.classList.remove('no-price');
     if (og === 'interna') {
@@ -3869,10 +3949,10 @@ async function confirmEntrada() {
   } finally { entradaEnCurso = false; }
 }
 async function confirmEntradaInner(og, c) {
-  // v7.0 — la compra en red de una cuenta SinBa se registra como RECEPCIÓN
-  // (doble pesada): el pago, la venta del vendedor y los sinbapuntos se
-  // difieren al triado (pesada 2). Vale para lote y para kilos sueltos.
-  if (og === 'red' && tieneCap('sinbapuntos')) { return confirmRecepcionInner(c); }
+  // v7.0/v8.0 — para SinBa, TODA entrada (red, externo, interna) se registra
+  // como RECEPCIÓN (doble pesada): el pago, la venta del vendedor y los
+  // sinbapuntos se difieren al triado (pesada 2).
+  if (esRecepcionSinba()) { return confirmRecepcionInner(c); }
   if (og === 'red' && entradaState.redModo === 'suelto') {
     // ── COMPRA EN RED de KILOS SUELTOS: yo (n+1) registro; el vendedor
     //    recibe el aviso y SU app consume sus kilos sueltos en FIFO ──
@@ -4025,6 +4105,35 @@ async function confirmEntradaInner(og, c) {
 // suelto → auto-lote congelado) y le avisa "en clasificación" SIN monto. No hay
 // entrada, ni venta, ni sinbapuntos todavía: todo eso ocurre al triar.
 async function confirmRecepcionInner(c) {
+  const og = entradaState.origen;
+  // v8.0 — recolector externo / recolección interna: recepción SIN contraparte
+  // y SIN pago inmediato (el pago externo se calcula al clasificar, sobre el
+  // neto; interna no se paga). Va directo a « Por clasificar ».
+  if (og === 'desconocido' || og === 'interna') {
+    const mat = entradaState.material;
+    const brut = parseFloat(entradaState.weightStr) || 0;
+    const precio = og === 'interna' ? 0 : (parseFloat(entradaState.precioStr) || 0);
+    if (!mat || brut <= 0 || (og === 'desconocido' && precio <= 0)) return;
+    const esUnd = matUnidad(mat) === 'und';
+    DB.addRecepcion({
+      fecha: new Date().toISOString(), estado: 'recibida', origen: og,
+      contraparteId: null, contraparteName: og === 'interna' ? 'Recolección interna' : 'Recolector externo',
+      loteId: null, loteNumero: null, suelto: true,
+      matId: mat.id, matName: mat.name,
+      matVentaOrigenId: null, matVentaOrigenName: null,
+      brutAnunciado: null, brutKg: brut, precioKg: precio,
+      unidad: esUnd ? 'und' : 'kg',
+      loteComposicion: null, loteOrigenResumen: null, lotesOrigen: [],
+    });
+    const titEl = document.getElementById('successTitleEntrada');
+    if (titEl) titEl.textContent = '¡Recepción registrada!';
+    document.getElementById('successAmountEntrada').textContent = `${brut} ${esUnd ? 'und' : 'kg'}`;
+    document.getElementById('successSubEntrada').textContent = og === 'interna'
+      ? `📥 Recepción interna · ${mat.name} · en espera de clasificación`
+      : `📥 Recepción de recolector externo · ${mat.name} · en espera de clasificación`;
+    document.getElementById('successEntrada').classList.add('show');
+    return;
+  }
   const ct = entradaState.contraparte;
   if (!ct) return;
   const modo = entradaState.redModo;
@@ -4052,7 +4161,7 @@ async function confirmRecepcionInner(c) {
     btnE.innerHTML = btnTxt; btnE.disabled = false;
     const esUnd = l.unidad === 'und';
     const rec = DB.addRecepcion({
-      fecha: new Date().toISOString(), estado: 'recibida',
+      fecha: new Date().toISOString(), estado: 'recibida', origen: 'red',
       contraparteId: ct.id, contraparteName: ct.name,
       loteId: l.id, loteNumero: l.numero || null, suelto: false,
       matId: l.matId, matName: l.matName,
@@ -4085,7 +4194,7 @@ async function confirmRecepcionInner(c) {
     if (!mat || precio <= 0 || brut <= 0) return;
     const esUnd = matUnidad(mat) === 'und';
     const rec = DB.addRecepcion({
-      fecha: new Date().toISOString(), estado: 'recibida',
+      fecha: new Date().toISOString(), estado: 'recibida', origen: 'red',
       contraparteId: ct.id, contraparteName: ct.name,
       loteId: null, loteNumero: null, suelto: true,
       matId: mat.id, matName: mat.name,
@@ -4157,9 +4266,16 @@ function initLotes() {
   // v5.3 — ordre des sections selon le compte (flex order).
   document.getElementById('misLotesWrap').style.order = isReciclador() ? '3' : '1';
   document.getElementById('lotesRecibidosWrap').style.order = isReciclador() ? '1' : '3';
-  // v7.0 — SinBa: abre en "Por clasificar" si hay recepciones pendientes.
+  // v8.0 — SinBa: abre en la vista más útil (por clasificar > por alotar > lotes)
+  // y oculta el CTA « Crear lote » (la creación se hace en « Por alotar »).
+  const crearBtn = document.getElementById('crearLoteBtn');
   if (tieneCap('sinbapuntos')) {
-    lotesVista = DB.getRecepciones().some(r => r.estado === 'recibida') ? 'recepciones' : 'lotes';
+    if (DB.getRecepciones().some(r => r.estado === 'recibida')) lotesVista = 'recepciones';
+    else if (Object.keys(kgClasificadoPorGrado()).length) lotesVista = 'alotar';
+    else lotesVista = 'lotes';
+    if (crearBtn) crearBtn.parentElement.style.display = 'none';
+  } else if (crearBtn) {
+    crearBtn.parentElement.style.display = '';
   }
   renderLotes();
 }
@@ -4176,10 +4292,87 @@ function kgSueltosPorMat() {
   const sueltos = {};
   DB.getEntradas().forEach(e => {
     if (e.transformado) return; // v5.0 — material transformado = fuera del stock
+    // v8.0 — la entrada de una clasificación SinBa es un registro de COSTE:
+    // su materia vive en los clasificados / lotes, no como suelto bruto.
+    if (e.viaClasificacion) return;
     const resto = Math.max(0, (e.kg || 0) - (usados[e.id] || 0));
     sueltos[e.matId] = (sueltos[e.matId] || 0) + resto;
   });
   return sueltos;
+}
+// ── CLASIFICADOS (v8.0) — vrac por grado disponible para alotar ──
+// Un clasificado se consume al crear lotes: la composición del lote referencia
+// su clasificadoId. kg disponible = kg del clasificado − lo ya comprometido.
+function clasificadoUsados() {
+  const usados = {};
+  DB.getLotes().forEach(l => { if (l.estado === 'fusionado') return; (l.composicion || []).forEach(cp => { if (cp.clasificadoId != null) usados[cp.clasificadoId] = (usados[cp.clasificadoId] || 0) + (cp.kg || 0); }); });
+  return usados;
+}
+// FIFO de los clasificados de UN grado (matVentaId) con kilos libres.
+function clasificadosDisponibles(matVentaId) {
+  const usados = clasificadoUsados();
+  return DB.getClasificados().filter(cl => cl.matVentaId === matVentaId).sort((a, b) => a.id - b.id)
+    .map(cl => ({ cl, resto: Math.max(0, Math.round(((cl.kg || 0) - (usados[cl.id] || 0)) * 100) / 100) }))
+    .filter(x => x.resto > 0.0001);
+}
+// kg + costo disponible por MATERIA de compra (para Stock / Finanzas SinBa).
+function clasificadoStockPorMat() {
+  const usados = clasificadoUsados();
+  const out = {};
+  DB.getClasificados().forEach(cl => {
+    const resto = Math.max(0, (cl.kg || 0) - (usados[cl.id] || 0));
+    if (resto <= 0.0001) return;
+    const frac = (cl.kg || 0) > 0 ? resto / cl.kg : 0;
+    if (!out[cl.matId]) out[cl.matId] = { kg: 0, costo: 0 };
+    out[cl.matId].kg += resto;
+    out[cl.matId].costo += frac * (cl.costoTotal || 0);
+  });
+  Object.keys(out).forEach(k => { out[k].kg = Math.round(out[k].kg * 100) / 100; out[k].costo = Math.round(out[k].costo * 100) / 100; });
+  return out;
+}
+// kg disponible por grado (para el tas « Por alotar »).
+function kgClasificadoPorGrado() {
+  const usados = clasificadoUsados();
+  const out = {};
+  DB.getClasificados().forEach(cl => {
+    const resto = Math.max(0, (cl.kg || 0) - (usados[cl.id] || 0));
+    if (resto > 0.0001) out[cl.matVentaId] = (out[cl.matVentaId] || 0) + resto;
+  });
+  Object.keys(out).forEach(k => { out[k] = Math.round(out[k] * 100) / 100; });
+  return out;
+}
+// Composición de un lote hecho desde el tas de UN grado (FIFO) + lotes del
+// mismo grado a agregar (fusión). Mirror de componerLoteCombinado, sobre clasificados.
+function componerLoteDeGrado(matVentaId, cantidad, lotesSelIds) {
+  const composicion = [], lotesOrigen = [];
+  const origenResumen = { desconocido: 0, interna: 0, red: 0, nodoc: 0 };
+  let falta = cantidad, costo = 0, kgTomado = 0;
+  let matId = null, matVentaName = null, unidad = 'kg';
+  for (const { cl, resto } of clasificadosDisponibles(matVentaId)) {
+    if (falta <= 0.0001) break;
+    matId = matId || cl.matId; matVentaName = matVentaName || cl.matVentaName; unidad = cl.unidad || unidad;
+    const toma = Math.min(resto, falta);
+    const frac = (cl.kg || 0) > 0 ? toma / cl.kg : 0;
+    composicion.push({ clasificadoId: cl.id, kg: Math.round(toma * 100) / 100, origen: cl.origen || 'red', origenName: cl.origenName || null, loteOrigen: cl.loteNumero || null });
+    origenResumen[cl.origen || 'red'] = (origenResumen[cl.origen || 'red'] || 0) + toma;
+    costo += frac * (cl.costoTotal || 0);
+    (cl.lotesOrigen || []).forEach(r => { if (!lotesOrigen.includes(r)) lotesOrigen.push(r); });
+    falta -= toma; kgTomado += toma;
+  }
+  // Agregar lotes existentes del MISMO grado (fusión).
+  const fusionDe = [];
+  const fuentes = DB.getLotes().filter(l => (lotesSelIds || []).includes(l.id) && l.estado === 'disponible');
+  fuentes.forEach(l => {
+    matId = matId || l.matId; matVentaName = matVentaName || l.matVentaName; unidad = l.unidad || unidad;
+    (l.composicion || []).forEach(cp => composicion.push(cp));
+    const r = l.origenResumen || {};
+    ['desconocido', 'interna', 'red', 'nodoc'].forEach(k => { if (r[k]) origenResumen[k] = (origenResumen[k] || 0) + r[k]; });
+    costo += l.costoTotal || 0; kgTomado += l.kg || 0;
+    (l.lotesOrigen || []).forEach(ref => { if (!lotesOrigen.includes(ref)) lotesOrigen.push(ref); });
+    fusionDe.push(l.numero || ('#' + l.id));
+  });
+  Object.keys(origenResumen).forEach(k => { origenResumen[k] = Math.round(origenResumen[k] * 100) / 100; });
+  return { composicion, origenResumen, costoTotal: Math.round(costo * 100) / 100, kgTotal: Math.round(kgTomado * 100) / 100, lotesOrigen, fusionDe, fuentes, matId, matVentaId, matVentaName, unidad, completo: falta <= 0.001 };
 }
 
 // Entradas con kilos libres de una materia, en orden FIFO (las más antiguas
@@ -4187,7 +4380,7 @@ function kgSueltosPorMat() {
 function entradasDisponibles(matId) {
   const usados = {};
   DB.getLotes().forEach(l => { if (l.estado === 'fusionado') return; (l.composicion || []).forEach(cp => { usados[cp.entradaId] = (usados[cp.entradaId] || 0) + (cp.kg || 0); }); });
-  return DB.getEntradas().filter(e => e.matId === matId && !e.transformado).sort((a, b) => a.id - b.id)
+  return DB.getEntradas().filter(e => e.matId === matId && !e.transformado && !e.viaClasificacion).sort((a, b) => a.id - b.id)
     .map(e => ({ e, resto: Math.max(0, (e.kg || 0) - (usados[e.id] || 0)) }))
     .filter(x => x.resto > 0);
 }
@@ -4290,36 +4483,190 @@ function renderRecepcionCard(rec) {
   </div>`;
 }
 
+// v8.0 — « Por alotar » : un tas por grado (clasificados acumulados). Cada
+// grado tiene su kg disponible y un botón « ➕ Crear lote ».
+function renderAlotarList(pool) {
+  pool = pool || kgClasificadoPorGrado();
+  const grados = Object.keys(pool);
+  const cont = document.getElementById('alotarList');
+  if (!cont) return;
+  if (!grados.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="empty-icon">🏷️</div><div class="empty-title">Nada por alotar</div><div class="empty-sub">Clasifica una recepción (Por clasificar) para acumular material por grado y crear lotes aquí.</div></div>`;
+    return;
+  }
+  const clAll = DB.getClasificados();
+  cont.innerHTML = grados.sort().map(gv => {
+    const rep = clAll.find(cl => cl.matVentaId === gv) || {};
+    const mat = MATERIALES.find(m => m.id === rep.matId);
+    const u = rep.unidad === 'und' ? 'und' : 'kg';
+    const kg = pool[gv];
+    const nombre = rep.esBase ? (rep.matVentaName || rep.matName || '') : (rep.matVentaName || gradoName(gv));
+    return `<div class="lote-card">
+      <div class="lote-top"><div style="flex:1;min-width:0">
+        <div class="lote-num">${mat ? mat.emoji + ' ' : '🏷️ '}${escHtml(nombre)}</div>
+        <div class="lote-sub">${fmtKg(kg)} ${u} disponibles${rep.esBase ? '' : ' <span style="opacity:.6">(de ' + escHtml(rep.matName || '') + ')</span>'}</div>
+      </div><span class="lote-chip" style="background:#EDE9FE;color:#5B21B6">🏷️ ${fmtKg(kg)} ${u}</span></div>
+      <button class="transformar-btn" style="background:#0F172A" onclick="openAlotar('${gv}')">➕ Crear lote</button>
+    </div>`;
+  }).join('');
+}
+
+// ── ALOTAR (v8.0) — crear un lote numerado desde el tas de UN grado ──
+let alotarState = { matVentaId: null, grado: null, cantidadStr: '0', lotesSel: [] };
+function lotEsGrado(l, matVentaId, rep) {
+  if (rep && rep.esBase) return l.matId === rep.matId && !l.matVentaId;
+  return l.matVentaId === matVentaId;
+}
+function openAlotar(matVentaId) {
+  const disp = Math.round((kgClasificadoPorGrado()[matVentaId] || 0) * 100) / 100;
+  if (disp <= 0) { showRecsToast('Sin material clasificado en ese grado'); return; }
+  const rep = DB.getClasificados().find(cl => cl.matVentaId === matVentaId) || {};
+  const u = rep.unidad === 'und' ? 'und' : 'kg';
+  const mat = MATERIALES.find(m => m.id === rep.matId);
+  const nombre = rep.esBase ? (rep.matVentaName || rep.matName || '') : (rep.matVentaName || gradoName(matVentaId));
+  alotarState = { matVentaId, grado: { matVentaId, matId: rep.matId, matVentaName: rep.matVentaName, esBase: !!rep.esBase, unidad: u, nombre }, cantidadStr: '0', lotesSel: [] };
+  document.getElementById('alotarCabecera').innerHTML = `${mat ? mat.emoji + ' ' : ''}<b>${escHtml(nombre)}</b>${rep.esBase ? '' : ' <span style="opacity:.7">(de ' + escHtml(rep.matName || '') + ')</span>'}<br>Disponible clasificado: <b>${fmtKg(disp)} ${u}</b>`;
+  document.getElementById('alotarCantLabel').textContent = u === 'und' ? 'Cantidad (unidades)' : 'Cantidad (kg)';
+  document.getElementById('alotarCantUnit').textContent = u;
+  document.getElementById('alotarCantInput').value = '';
+  const hint = document.getElementById('alotarDispHint');
+  hint.textContent = `Disponible: ${fmtKg(disp)} ${u} — toca aquí para usar todo`;
+  hint.style.cursor = 'pointer';
+  hint.onclick = () => { alotarState.cantidadStr = String(disp); document.getElementById('alotarCantInput').value = String(disp); updateAlotarUI(); };
+  const lotesG = DB.getLotes().filter(l => l.estado === 'disponible' && lotEsGrado(l, matVentaId, rep));
+  const lw = document.getElementById('alotarLotesWrap');
+  if (lotesG.length) {
+    lw.style.display = 'block';
+    document.getElementById('alotarLotesList').innerHTML = lotesG.map(l => `
+      <label class="cl-lote-check" id="alchk-${l.id}">
+        <input type="checkbox" onchange="toggleAlotarLote(${l.id}, this.checked)">
+        <span style="flex:1"><b class="lote-num" style="font-size:13px">${escHtml(l.numero || '#' + l.id)}</b> · ${cantidadLote(l)} · ${fechaLabel(l.creadoAt || new Date().toISOString())}</span>
+      </label>`).join('');
+  } else { lw.style.display = 'none'; document.getElementById('alotarLotesList').innerHTML = ''; }
+  document.getElementById('alotarOverlay').classList.add('open');
+  document.getElementById('alotarDrawer').classList.add('open');
+  updateAlotarUI();
+}
+function closeAlotar() {
+  document.getElementById('alotarOverlay').classList.remove('open');
+  document.getElementById('alotarDrawer').classList.remove('open');
+}
+function onAlotarCantInput(el) { alotarState.cantidadStr = sanitizeDecimal(el, 999999); updateAlotarUI(); }
+function toggleAlotarLote(id, checked) {
+  const sel = alotarState.lotesSel;
+  if (checked && !sel.includes(id)) sel.push(id);
+  if (!checked) alotarState.lotesSel = sel.filter(x => x !== id);
+  const row = document.getElementById('alchk-' + id);
+  if (row) row.classList.toggle('checked', checked);
+  updateAlotarUI();
+}
+function updateAlotarUI() {
+  const g = alotarState.grado;
+  const btn = document.getElementById('alotarConfirmBtn');
+  const res = document.getElementById('alotarResumen');
+  if (!g) { btn.disabled = true; res.style.display = 'none'; return; }
+  const u = g.unidad;
+  const disp = Math.round((kgClasificadoPorGrado()[g.matVentaId] || 0) * 100) / 100;
+  const cant = parseFloat(alotarState.cantidadStr) || 0;
+  const nSel = alotarState.lotesSel.length;
+  if (cant <= 0 && nSel === 0) { btn.disabled = true; btn.textContent = 'Ingresa una cantidad o marca lotes'; res.style.display = 'none'; return; }
+  if (cant > disp + 0.001) { btn.disabled = true; btn.textContent = `Solo tienes ${fmtKg(disp)} ${u} clasificados`; res.style.display = 'none'; return; }
+  if (cant <= 0 && nSel === 1) { btn.disabled = true; btn.textContent = 'Agrega clasificado u otro lote'; res.style.display = 'none'; return; }
+  const info = componerLoteDeGrado(g.matVentaId, cant, alotarState.lotesSel);
+  const r = info.origenResumen;
+  res.style.display = 'block';
+  res.innerHTML =
+    `<b>${fmtKg(info.kgTotal)} ${u} de ${escHtml(g.nombre)}</b>` +
+    (cant > 0 ? ` — ${fmtKg(cant)} ${u} clasificados (FIFO)` : '') +
+    (nSel ? `${cant > 0 ? ' +' : ' —'} fusión de ${info.fusionDe.map(escHtml).join(' + ')}` : '') + ':<br>' +
+    (r.red ? `🤝 Red: ${r.red} ${u}<br>` : '') +
+    (r.desconocido ? `👤 Externo: ${r.desconocido} ${u}<br>` : '') +
+    (r.interna ? `🏠 Interna: ${r.interna} ${u}<br>` : '') +
+    (info.lotesOrigen.length ? `⛓ Incluye material de ${info.lotesOrigen.length} lote${info.lotesOrigen.length > 1 ? 's' : ''} anterior${info.lotesOrigen.length > 1 ? 'es' : ''}<br>` : '') +
+    `💰 Costo: ${fmt(info.costoTotal)}`;
+  btn.disabled = false;
+  btn.textContent = (nSel && cant <= 0) ? `🔗 Fusionar — ${fmtKg(info.kgTotal)} ${u}` : `✅ Crear lote — ${fmtKg(info.kgTotal)} ${u}`;
+}
+let lastAlotarAt = 0;
+function confirmAlotar() {
+  if (Date.now() - lastAlotarAt < 1500) return;
+  const g = alotarState.grado;
+  if (!g) return;
+  const cant = parseFloat(alotarState.cantidadStr) || 0;
+  const nSel = alotarState.lotesSel.length;
+  if ((cant <= 0 && nSel === 0) || (cant <= 0 && nSel === 1)) return;
+  const info = componerLoteDeGrado(g.matVentaId, cant, alotarState.lotesSel);
+  if (!info.completo) { showRecsToast('⚠️ No hay suficiente material clasificado'); return; }
+  if (info.fuentes.length !== nSel) { showRecsToast('⚠️ Un lote ya no está disponible — revisa'); closeAlotar(); renderLotes(); return; }
+  if (info.kgTotal <= 0) return;
+  lastAlotarAt = Date.now();
+  const numero = nuevoNumeroLote();
+  const c = DB.getCentro();
+  DB.addLote({
+    numero, matId: g.matId, matName: (MATERIALES.find(m => m.id === g.matId) || {}).name || g.matId,
+    matVentaId: g.esBase ? null : g.matVentaId,
+    matVentaName: g.esBase ? null : (g.matVentaName || g.nombre),
+    kg: info.kgTotal, unidad: g.unidad, estado: 'disponible',
+    creadoAt: new Date().toISOString(),
+    composicion: info.composicion, origenResumen: info.origenResumen,
+    costoTotal: info.costoTotal, lotesOrigen: info.lotesOrigen,
+    fusionDe: info.fusionDe.length ? info.fusionDe : null,
+  });
+  if (info.fuentes.length) {
+    const ll = DB.getLotes(); const ahora = new Date().toISOString();
+    info.fuentes.forEach(f => { const lote = ll.find(x => x.id === f.id); if (!lote) return; lote.estado = 'fusionado'; lote.fusionadoEn = numero; lote.fusionadoAt = ahora; if (c) queueSync(`centros/${c.id}/lotes/${lote.id}`, lote); });
+    DB.saveLotes(ll);
+  }
+  closeAlotar();
+  renderLotes();
+  if (currentScreen === 'resumen') initResumen();
+  showRecsToast(`📦 Lote ${numero} creado — ${fmtKg(info.kgTotal)} ${g.unidad} de ${g.nombre}`);
+}
+
 function renderLotes() {
   const list = document.getElementById('lotesList');
   if (!list) return;
   const wrap = document.getElementById('lotesRecibidosWrap');
-  // v7.0 — SinBa: subpestañas Por clasificar / Mis lotes.
+  // v8.0 — SinBa: 3 subpestañas Por clasificar / Por alotar / Mis lotes.
   const subtabs = document.getElementById('lotesSubtabs');
   const recepWrap = document.getElementById('recepcionesWrap');
+  const alotarWrap = document.getElementById('alotarWrap');
   if (tieneCap('sinbapuntos')) {
     const recibidas = DB.getRecepciones().filter(r => r.estado === 'recibida').sort((a, b) => b.id - a.id);
+    const gradosPool = kgClasificadoPorGrado();
+    const nGrados = Object.keys(gradosPool).length;
     if (subtabs) subtabs.style.display = 'grid';
     document.getElementById('subtabRecepN').textContent = recibidas.length;
+    document.getElementById('subtabAlotarN').textContent = nGrados;
     document.getElementById('subtabRecep').classList.toggle('selected', lotesVista === 'recepciones');
+    document.getElementById('subtabAlotar').classList.toggle('selected', lotesVista === 'alotar');
     document.getElementById('subtabLotes').classList.toggle('selected', lotesVista === 'lotes');
+    // por defecto ocultamos las secciones que no son la vista activa
+    recepWrap.style.display = 'none';
+    if (alotarWrap) alotarWrap.style.display = 'none';
+    document.getElementById('misLotesWrap').style.display = 'none';
+    wrap.style.display = 'none';
+    document.getElementById('transformadosWrap').style.display = 'none';
+    document.getElementById('lotesNota').style.display = 'none';
     if (lotesVista === 'recepciones') {
       recepWrap.style.display = 'block';
       document.getElementById('recepcionesList').innerHTML = recibidas.length
         ? recibidas.map(renderRecepcionCard).join('')
         : `<div class="empty-state"><div class="empty-icon">📥</div><div class="empty-title">Nada por clasificar</div><div class="empty-sub">Las recepciones que registres en ➕ Entrada aparecen aquí hasta que las clasifiques (pesada 2).</div></div>`;
-      document.getElementById('misLotesWrap').style.display = 'none';
-      wrap.style.display = 'none';
-      document.getElementById('transformadosWrap').style.display = 'none';
-      document.getElementById('lotesNota').style.display = 'none';
       return;
     }
-    recepWrap.style.display = 'none';
+    if (lotesVista === 'alotar') {
+      alotarWrap.style.display = 'block';
+      renderAlotarList(gradosPool);
+      return;
+    }
+    // vista 'lotes' → sigue al render normal de « Mis lotes » abajo
     document.getElementById('misLotesWrap').style.display = 'block';
     document.getElementById('lotesNota').style.display = 'block';
   } else {
     if (subtabs) subtabs.style.display = 'none';
     if (recepWrap) recepWrap.style.display = 'none';
+    if (alotarWrap) alotarWrap.style.display = 'none';
   }
   if (isReciclador()) {
     // ── RECICLADOR : layout historique — recibidos en cartes + mis lotes ──
@@ -4398,7 +4745,7 @@ function renderMovimientosLotes() {
         <div class="act-right">${l.precioTotal ? `<div class="act-total venta">+${fmt(l.precioTotal)}</div>` : ''}<div class="act-fecha">${fechaLabel(l.vendidoAt || l.creadoAt || new Date().toISOString())}</div></div>
       </div>` });
   });
-  DB.getEntradas().filter(e => e.loteId && e.origenCentroId && !e.transformado).forEach(e => {
+  DB.getEntradas().filter(e => e.loteId && e.origenCentroId && !e.transformado && !e.viaClasificacion).forEach(e => {
     const resto = Math.max(0, Math.round(((e.kg || 0) - kgComprometidos(e.id)) * 100) / 100);
     if (resto <= 0.001) return; // material ya re-loteado → vive en mis lotes
     const parcial = resto < (e.kg || 0) - 0.001;
@@ -4534,13 +4881,17 @@ function renderTraza() {
       rw2.style.display = 'block';
       document.getElementById('trazaRendList').innerHTML = triadas.map(rec => {
         const u = rec.unidad === 'und' ? 'und' : 'kg';
-        const nL = (rec.lotesCreados || []).length;
+        const nG = (rec.gradosCreados || rec.lotesCreados || []).length;
+        const og = rec.origen || (rec.contraparteId ? 'red' : 'desconocido');
+        const pagoTxt = og === 'interna' ? '🏠 Sin costo (recolección interna)'
+          : og === 'desconocido' ? `💵 Pagado en efectivo (neto): <b>${fmt(rec.totalNet || 0)}</b>`
+          : `💰 Pagado al vendedor (neto): <b>${fmt(rec.totalNet || 0)}</b>`;
         return `<div class="lote-card">
           <div class="lote-top"><div style="flex:1;min-width:0">
-            <div class="lote-num">♻️ ${rec.suelto ? 'Suelto' : escHtml(rec.loteNumero || '#' + rec.id)} — ${escHtml(rec.matName || '')}</div>
+            <div class="lote-num">♻️ ${escHtml(rec.matName || '')} · ${og === 'interna' ? 'interna' : og === 'desconocido' ? 'externo' : (rec.suelto ? 'suelto' : escHtml(rec.loteNumero || '#' + rec.id))}</div>
             <div class="lote-sub">de ${escHtml(rec.contraparteName || '')} · ${fechaLabel(rec.triadaAt || rec.fecha)}</div>
           </div><span class="lote-chip" style="background:#DCFCE7;color:#166534">${rec.rendimiento != null ? rec.rendimiento + '%' : ''}</span></div>
-          <div class="traza-paso">⚖️ Bruto <b>${fmtKg(rec.brutKg)} ${u}</b> → Neto <b>${fmtKg(rec.netKg)} ${u}</b> (${nL} lote${nL > 1 ? 's' : ''}) + Merma <b>${fmtKg(rec.mermaKg)} ${u}</b><br>💰 Pagado al neto: <b>${fmt(rec.totalNet || 0)}</b></div>
+          <div class="traza-paso">⚖️ Bruto <b>${fmtKg(rec.brutKg)} ${u}</b> → Neto <b>${fmtKg(rec.netKg)} ${u}</b> (${nG} grado${nG > 1 ? 's' : ''}) + Merma <b>${fmtKg(rec.mermaKg)} ${u}</b><br>${pagoTxt}</div>
         </div>`;
       }).join('');
     } else rw2.style.display = 'none';
@@ -5532,11 +5883,18 @@ function openTri(recId) {
   if (!rec || rec.estado !== 'recibida') return;
   triState = { recepcion: rec, alloc: {} };
   const u = rec.unidad === 'und' ? 'und' : 'kg';
+  const og = rec.origen || (rec.contraparteId ? 'red' : 'desconocido');
+  const fuenteTxt = og === 'interna' ? '🏠 Recolección interna'
+    : og === 'desconocido' ? '👤 Recolector externo'
+    : (rec.suelto ? '⚖️ Suelto' : '📦 Lote ' + escHtml(rec.loteNumero || '')) + ' de <b>' + escHtml(rec.contraparteName || '') + '</b>';
+  const precioTxt = og === 'interna'
+    ? 'Sin costo (recolección propia) — solo se clasifica'
+    : `Precio acordado: <b>S/${(rec.precioKg || 0).toFixed(2)}/${u}</b> — el pago va sobre el NETO${og === 'desconocido' ? ' (efectivo al clasificar)' : ''}`;
   document.getElementById('triCabecera').innerHTML =
-    `${rec.suelto ? '⚖️ Suelto' : '📦 Lote ' + escHtml(rec.loteNumero || '')} de <b>${escHtml(rec.contraparteName || '')}</b><br>` +
+    `${fuenteTxt}<br>` +
     `Materia: <b>${escHtml(rec.matName || '')}</b>${rec.matVentaOrigenName ? ' (' + escHtml(rec.matVentaOrigenName) + ')' : ''}<br>` +
     `Bruto (pesada 1): <b>${fmtKg(rec.brutKg)} ${u}</b>${rec.brutAnunciado ? ` · anunciado ${fmtKg(rec.brutAnunciado)} ${u}` : ''}<br>` +
-    `Precio acordado: <b>S/${(rec.precioKg || 0).toFixed(2)}/${u}</b> — el pago va sobre el NETO`;
+    precioTxt;
   const grados = gradosDe(rec.matId);
   document.getElementById('triRows').innerHTML = grados.map(g => `
     <div class="surtri-row" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:10px">
@@ -5578,30 +5936,39 @@ function updateTriUI() {
   const rec = triState.recepcion;
   if (!rec) { btn.disabled = true; btn.textContent = 'Reparte los kilos'; box.innerHTML = ''; return; }
   const t = triTotals();
+  const og = rec.origen || (rec.contraparteId ? 'red' : 'desconocido');
+  const pagoLbl = og === 'interna' ? 'Costo' : og === 'desconocido' ? 'Pago en efectivo (neto)' : 'Pago al vendedor (neto)';
+  const pagoVal = og === 'interna' ? 'sin costo' : fmt(t.pago);
   box.innerHTML =
-    `Neto (Σ grados): <b>${fmtKg(t.net)} ${t.u}</b> en ${t.alloc.length} lote${t.alloc.length !== 1 ? 's' : ''}<br>` +
+    `Neto (Σ grados): <b>${fmtKg(t.net)} ${t.u}</b> en ${t.alloc.length} grado${t.alloc.length !== 1 ? 's' : ''}<br>` +
     (t.merma >= -0.001
       ? `Merma (bruto − neto): <b>${fmtKg(Math.max(0, t.merma))} ${t.u}</b> · rendimiento <b>${t.rendimiento}%</b><br>`
       : `<b style="color:var(--red)">Lo clasificado excede el bruto por ${fmtKg(-t.merma)} ${t.u}</b><br>`) +
-    `Pago al vendedor (neto): <b>${fmt(t.pago)}</b>`;
+    `${pagoLbl}: <b>${pagoVal}</b>`;
   if (t.net <= 0.0001) { btn.disabled = true; btn.textContent = 'Reparte al menos un grado'; return; }
   if (t.merma < -0.001) { btn.disabled = true; btn.textContent = 'Excede el bruto — corrige'; return; }
   btn.disabled = false;
-  btn.textContent = `✅ Confirmar — ${t.alloc.length} lote${t.alloc.length > 1 ? 's' : ''} · paga ${fmt(t.pago)}`;
+  btn.textContent = og === 'interna'
+    ? `✅ Clasificar — ${t.alloc.length} grado${t.alloc.length > 1 ? 's' : ''}`
+    : `✅ Clasificar — paga ${fmt(t.pago)}`;
 }
 
-// Composición de cada grado desde la ÚNICA fuente (el lote/suelto recibido).
+// Composición de cada grado desde la ÚNICA fuente (recepción: lote/suelto red,
+// o pesada externo/interna). El origen (red/desconocido/interna) viene de la
+// recepción. Coste proporcional al neto (0 para interna).
 function componerTriRecepcion(rec, alloc, net) {
+  const og = rec.origen || (rec.contraparteId ? 'red' : 'desconocido');
   const chain = rec.loteId
     ? [`${rec.contraparteId}:${rec.loteId}`].concat(Array.isArray(rec.lotesOrigen) ? rec.lotesOrigen : [])
-    : [`${rec.contraparteId}:${rec.id}`];
+    : (rec.contraparteId ? [`${rec.contraparteId}:${rec.id}`] : []);
   const totalNet = Math.round(net * (rec.precioKg || 0) * 100) / 100;
   const piezas = alloc.map(a => {
     const frac = net > 0 ? a.kg / net : 0;
+    const ores = { desconocido: 0, interna: 0, red: 0, nodoc: 0 }; ores[og] = a.kg;
     return {
       gradeId: a.gradeId, gradeName: a.gradeName, esBase: !!a.esBase, kg: a.kg,
-      composicion: [{ entradaId: rec.id, kg: a.kg, origen: 'red', origenName: rec.contraparteName || null, loteOrigen: rec.loteNumero || null }],
-      origenResumen: { desconocido: 0, interna: 0, red: a.kg, nodoc: 0 },
+      composicion: [{ recepcionId: rec.id, kg: a.kg, origen: og, origenName: rec.contraparteName || null, loteOrigen: rec.loteNumero || null }],
+      origenResumen: ores,
       costoTotal: Math.round(frac * totalNet * 100) / 100,
       lotesOrigen: chain.slice(),
     };
@@ -5619,89 +5986,94 @@ async function confirmTri() {
   lastTriAt = Date.now();
   const c = DB.getCentro();
   if (!c) return;
+  const og = rec.origen || (rec.contraparteId ? 'red' : 'desconocido');
+  const esRed = og === 'red';
   const esUnd = rec.unidad === 'und';
   const comp = componerTriRecepcion(rec, t.alloc, t.net);
+  const ahora = new Date().toISOString();
   const base = Date.now();
-  // 1) Crear los lotes de grado (NETO) — lotes propios de SinBa.
-  const lotesCreados = [];
+  // 1) Crear los CLASIFICADOS (vrac por grado) — NO lotes. El material clasificado
+  //    va al « tas por grado » de « Por alotar »; los lotes se crean allí.
+  const gradosCreados = [];
   comp.piezas.forEach((p, i) => {
     if ((p.kg || 0) <= 0.0001) return;
-    const numero = nuevoNumeroLote();
     const esBase = p.esBase || p.gradeId === rec.matId;
-    DB.addLote({
-      id: base + i + 1,
-      numero, matId: rec.matId, matName: rec.matName,
-      matVentaId: esBase ? null : p.gradeId,
-      matVentaName: esBase ? null : p.gradeName,
-      recepcionId: rec.id,
-      kg: p.kg, unidad: esUnd ? 'und' : 'kg', estado: 'disponible',
-      creadoAt: new Date().toISOString(),
-      composicion: p.composicion,
-      origenResumen: p.origenResumen,
-      costoTotal: p.costoTotal,
-      lotesOrigen: p.lotesOrigen,
+    DB.addClasificado({
+      id: base + i + 1, recepcionId: rec.id,
+      matId: rec.matId, matVentaId: p.gradeId,
+      matVentaName: esBase ? rec.matName : p.gradeName, esBase,
+      origen: og, origenName: rec.contraparteName || null, loteNumero: rec.loteNumero || null,
+      kg: p.kg, unidad: esUnd ? 'und' : 'kg',
+      composicion: p.composicion, origenResumen: p.origenResumen,
+      costoTotal: p.costoTotal, lotesOrigen: p.lotesOrigen,
+      fecha: ahora,
     });
-    lotesCreados.push(numero);
+    gradosCreados.push(esBase ? rec.matName : p.gradeName);
   });
-  const ahora = new Date().toISOString();
-  // 2) Mi ENTRADA al NETO (lo que pago a la red). id = id de la recepción → la
-  //    venta anotada del vendedor comparte el mismo id (idempotente). El net
-  //    queda 100% comprometido en los lotes de grado (sin fuga de suelto).
+  // 2) Mi ENTRADA al NETO = registro de COSTE (Finanzas/Pagos). id = id de la
+  //    recepción (idempotente; comparte id con la venta del vendedor en red).
+  //    viaClasificacion → no cuenta como suelto bruto (su materia vive en los
+  //    clasificados). Externo: pago en efectivo AHORA. Interna: coste 0.
   DB.addEntrada({
-    id: rec.id, fecha: ahora, origen: 'red', suelto: !rec.loteId,
+    id: rec.id, fecha: ahora, origen: og, suelto: !rec.loteId,
     recId: null, recName: rec.contraparteName, recColor: '#0F172A',
     matId: rec.matId, matName: rec.matName, kg: t.net,
     matVentaId: null, matVentaName: null,
     unidades: esUnd ? t.net : null,
     precioKg: rec.precioKg, total: t.pago,
-    origenCentroId: rec.contraparteId,
+    origenCentroId: esRed ? rec.contraparteId : null,
     loteId: rec.loteId || null, loteNumero: rec.loteNumero || null,
     brutoKg: rec.brutKg, mermaKg: t.merma, recepcionId: rec.id,
+    viaClasificacion: true,
+    pago: og === 'desconocido' ? 'pagado' : null,
+    pagadoAt: og === 'desconocido' ? ahora : null,
     lotesOrigen: rec.loteId ? [`${rec.contraparteId}:${rec.loteId}`].concat(Array.isArray(rec.lotesOrigen) ? rec.lotesOrigen : []) : null,
   });
-  // 3) Depósito fase 'triada' al vendedor — anota la venta al NETO (con bruto y
-  //    merma para el rendimiento).
-  queueSync(`centros/${rec.contraparteId}/ventas_pendientes/${rec.id}`, {
-    id: rec.id, estado: 'triada', compradorId: c.id, compradorName: c.name,
-    matId: rec.matId, matName: rec.matName,
-    kg: t.net, unidades: esUnd ? t.net : null, precioKg: rec.precioKg, total: t.pago,
-    brutKg: rec.brutKg, mermaKg: t.merma, rendimiento: t.rendimiento,
-    suelto: !rec.loteId, loteId: rec.loteId || null, loteNumero: rec.loteNumero || null,
-    fecha: ahora,
-  });
-  // 4) Avanzar el lote del vendedor a 'vendido' (caso lote).
-  if (rec.loteId) {
-    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/estado`, 'vendido');
-    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/compradorId`, c.id);
-    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/compradorName`, c.name);
-    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/vendidoAt`, ahora);
-    queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/precioTotal`, t.pago);
-  }
-  // 5) Sinbapuntos sobre el NETO (si la contraparte es elegible).
-  if (tieneCap('sinbapuntos') && spEsElegible(rec.contraparteId)) {
-    const mat = MATERIALES.find(m => m.id === rec.matId);
-    const pts = mat && mat.puntos ? Math.round(mat.puntos * t.net * 100) / 100 : 0;
-    if (pts > 0) {
-      queueSync(`sinbapuntos/${rec.contraparteId}/movs/cr_e${rec.id}`, {
-        id: 'cr_e' + rec.id, tipo: 'credito', puntos: pts, fecha: ahora,
-        centroId: rec.contraparteId, centroName: rec.contraparteName || null,
-        sinbaId: c.id, sinbaName: c.name,
-        matId: rec.matId, matName: rec.matName,
-        kg: esUnd ? null : t.net, unidades: esUnd ? t.net : null,
-        refId: rec.id,
-      });
+  // 3) SOLO red: pago diferido al vendedor (venta 'triada' al neto) + avance del
+  //    lote a 'vendido' + sinbapuntos sobre el neto. Externo/interna: nada de esto.
+  if (esRed && rec.contraparteId) {
+    queueSync(`centros/${rec.contraparteId}/ventas_pendientes/${rec.id}`, {
+      id: rec.id, estado: 'triada', compradorId: c.id, compradorName: c.name,
+      matId: rec.matId, matName: rec.matName,
+      kg: t.net, unidades: esUnd ? t.net : null, precioKg: rec.precioKg, total: t.pago,
+      brutKg: rec.brutKg, mermaKg: t.merma, rendimiento: t.rendimiento,
+      suelto: !rec.loteId, loteId: rec.loteId || null, loteNumero: rec.loteNumero || null,
+      fecha: ahora,
+    });
+    if (rec.loteId) {
+      queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/estado`, 'vendido');
+      queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/compradorId`, c.id);
+      queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/compradorName`, c.name);
+      queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/vendidoAt`, ahora);
+      queueSync(`centros/${rec.contraparteId}/lotes/${rec.loteId}/precioTotal`, t.pago);
+    }
+    if (spEsElegible(rec.contraparteId)) {
+      const mat = MATERIALES.find(m => m.id === rec.matId);
+      const pts = mat && mat.puntos ? Math.round(mat.puntos * t.net * 100) / 100 : 0;
+      if (pts > 0) {
+        queueSync(`sinbapuntos/${rec.contraparteId}/movs/cr_e${rec.id}`, {
+          id: 'cr_e' + rec.id, tipo: 'credito', puntos: pts, fecha: ahora,
+          centroId: rec.contraparteId, centroName: rec.contraparteName || null,
+          sinbaId: c.id, sinbaName: c.name,
+          matId: rec.matId, matName: rec.matName,
+          kg: esUnd ? null : t.net, unidades: esUnd ? t.net : null,
+          refId: rec.id,
+        });
+      }
     }
   }
-  // 6) Cerrar la recepción — la merma queda como ATRIBUTO (no pseudo-lote).
+  // 4) Cerrar la recepción — la merma es un ATRIBUTO (no pseudo-lote).
   DB.updateRecepcion(rec.id, {
     estado: 'triada', triadaAt: ahora,
     grados: t.alloc, netKg: t.net, mermaKg: t.merma, rendimiento: t.rendimiento,
-    totalNet: t.pago, lotesCreados,
+    totalNet: t.pago, gradosCreados,
   });
+  triState.vista = 'alotar';
   closeTri();
-  if (currentScreen === 'lotes') renderLotes();
+  if (currentScreen === 'lotes') { lotesVista = 'alotar'; renderLotes(); }
   if (currentScreen === 'resumen') initResumen();
-  showRecsToast(`♻️ Clasificado — ${lotesCreados.length} lote${lotesCreados.length > 1 ? 's' : ''} · neto ${fmtKg(t.net)} ${t.u} · merma ${fmtKg(Math.max(0, t.merma))} ${t.u}`);
+  const pagoTxt = esRed ? ` · paga ${fmt(t.pago)} al vendedor` : og === 'desconocido' ? ` · paga ${fmt(t.pago)} efectivo` : '';
+  showRecsToast(`♻️ Clasificado — ${gradosCreados.length} grado${gradosCreados.length > 1 ? 's' : ''} · neto ${fmtKg(t.net)} ${t.u} · merma ${fmtKg(Math.max(0, t.merma))} ${t.u}${pagoTxt}`);
 }
 
 // ════════════════════════════════════════════════════════════
