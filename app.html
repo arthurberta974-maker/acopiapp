@@ -3,8 +3,8 @@
 <head>
   <!-- ============================================================= -->
   <!-- AcopiApp — app.html                                           -->
-  <!-- Version : 8.0                                                 -->
-  <!-- Date    : 21/07/2026                                          -->
+  <!-- Version : 8.1                                                 -->
+  <!-- Date    : 22/07/2026                                          -->
   <!-- Historique complet : versions/CHANGELOG.txt                   -->
   <!-- ============================================================= -->
   <meta charset="UTF-8">
@@ -2010,6 +2010,8 @@ async function syncMisVentasEstado() {
           if (nodo && nodo.pago === 'pagado' && v.estadoPago !== 'pagado') {
             v.estadoPago = 'pagado';
             v.pagadoAt = nodo.pagadoAt || null;
+            // v8.1 (punto 3) — recojo el n° de comprobante que puso el comprador.
+            if (nodo.nFactura != null) v.nFactura = nodo.nFactura;
             changed = true;
             addNotif({ id: 'np_' + v.id, tipo: 'pago', icon: '✅', titulo: `Pago recibido de ${escHtml(v.comprador || 'la red')}`, sub: `${escHtml(v.matName || '')}${v.loteNumero ? ' · lote ' + escHtml(v.loteNumero) : ''} · ${fmt(v.total || 0)}` });
           }
@@ -3027,10 +3029,11 @@ function renderPagos() {
   porPagarEl.innerHTML = compras.length ? compras.map(e => {
     const tel = telefonoDe(e.origenCentroId);
     const reclamado = reclamosList.some(r => r.id === e.id);
-    return `<div class="pago-row"${reclamado ? ' style="border-color:#FCD34D"' : ''}>
+    return `<div class="pago-row" style="flex-wrap:wrap${reclamado ? ';border-color:#FCD34D' : ''}">
       <div class="pago-info">
         <div class="pago-name">${escHtml(e.recName || 'Acopiador')}${e.loteNumero ? ' <span style="font-size:11px;color:var(--text-muted)">· ' + escHtml(e.loteNumero) + '</span>' : ''}</div>
         <div class="pago-sub">${escHtml(e.matName || e.matId)} · ${cantidadLabel(e)} · ${fechaLabel(e.fecha)}${tel ? ' · 📱 ' + escHtml(tel) : ''}${reclamado ? ' · <b style="color:var(--amber)">⚠️ reclamado por el vendedor</b>' : ''}</div>
+        <div class="pago-tx" style="font-size:10.5px;color:var(--text-muted);margin-top:2px">🔖 ${txNumeroDe(e)}${e.nFactura ? ' · 🧾 ' + escHtml(e.nFactura) : ''} <span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="pedirFacturaEntrada(${e.id})">${e.nFactura ? '✏️' : '➕ comprobante'}</span></div>
       </div>
       <div class="pago-right">
         <div class="pago-total">${fmt(e.total || 0)}</div>
@@ -3059,6 +3062,7 @@ function renderPagos() {
       <div class="pago-info">
         <div class="pago-name">${escHtml(v.comprador || 'Acopiador')}${v.loteNumero ? ' <span style="font-size:11px;color:var(--text-muted)">· ' + escHtml(v.loteNumero) + '</span>' : ''}</div>
         <div class="pago-sub">${escHtml(v.matName || v.matId)} · ${cantidadLabel(v)} · ${fechaLabel(v.fecha)}${tel ? ' · 📱 ' + escHtml(tel) : ''}</div>
+        <div class="pago-tx" style="font-size:10.5px;color:var(--text-muted);margin-top:2px">🔖 ${txNumeroDe(v)}${v.nFactura ? ' · 🧾 ' + escHtml(v.nFactura) : ''}</div>
         ${reclamoHtml}
       </div>
       <div class="pago-right">
@@ -3089,6 +3093,32 @@ function marcarPagadoLinea(id) {
   localStorage.setItem('acopi_entradas', JSON.stringify(list));
   renderPagos();
   showRecsToast('💵 Pago registrado');
+  // v8.1 (punto 3) — ofrecer registrar el n° de comprobante/factura (opcional).
+  pedirFacturaEntrada(id, 'Pago registrado.\n\nN° de comprobante / factura (opcional — déjalo vacío si no hay):');
+}
+
+// v8.1 (punto 3) — n° de comprobante/factura sobre la ENTRADA (el que paga).
+//   El vendedor lo lee en MI entrada (igual que el campo `pago`, vía
+//   syncMisVentasEstado) → visible de los dos lados sin escritura nueva.
+function setFacturaEntrada(id, valor) {
+  const c = DB.getCentro(); if (!c) return null;
+  const list = DB.getEntradas();
+  const e = list.find(x => x.id === id); if (!e) return null;
+  const v = (valor || '').trim().slice(0, 40);
+  e.nFactura = v || null;
+  localStorage.setItem('acopi_entradas', JSON.stringify(list));
+  queueSync(`centros/${c.id}/entradas/${e.id}/nFactura`, e.nFactura);
+  return e.nFactura;
+}
+// prompt() nativo: es opcional y poco frecuente — evita montar un drawer.
+function pedirFacturaEntrada(id, motivo) {
+  const e = DB.getEntradas().find(x => x.id === id); if (!e) return;
+  const v = prompt(motivo || 'N° de comprobante / factura (opcional):', e.nFactura || '');
+  if (v === null) return; // cancelado → sin cambios
+  const guardado = setFacturaEntrada(id, v);
+  if (currentScreen === 'pagos')  renderPagos();
+  if (currentScreen === 'traza')  renderTraza();
+  showRecsToast(guardado ? '🧾 Comprobante guardado' : '🧾 Comprobante quitado');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4464,6 +4494,27 @@ function nuevoNumeroLote() {
   return `${pref}-${String(seq).padStart(3, '0')}`;
 }
 
+// v8.1 (punto 3) — Número de TRANSACCIÓN legible, DERIVADO del id.
+//   La entrada del comprador y la venta del vendedor comparten el mismo id
+//   (venta anotada con id = compraId; en SinBa entrada.id = recepción.id).
+//   Al derivar el número de ese id compartido, sale IDÉNTICO de los dos lados
+//   sin ninguna escritura extra, y es retrocompatible (las transacciones ya
+//   existentes lo calculan al vuelo). Formato: TX-AAMMDD-XXXX (4 car. base36).
+//   La fecha va codificada en el propio id (Date.now()).
+function txNumero(id) {
+  const n = Number(id);
+  if (!n || !isFinite(n)) return 'TX-—';
+  const d = new Date(n);
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const suf = Math.floor(n % 1679616).toString(36).toUpperCase().padStart(4, '0'); // 36^4
+  return `TX-${yy}${mm}${dd}-${suf}`;
+}
+// El id compartido de una transacción: para una venta es compraId (o su id),
+// para una entrada es su id. Uniforme para comprador y vendedor.
+function txNumeroDe(rec) { return txNumero((rec && (rec.compraId || rec.id)) || 0); }
+
 let lotesVista = 'lotes'; // v7.0 — SinBa: 'recepciones' | 'lotes'
 function setLotesVista(v) { lotesVista = v; renderLotes(); }
 
@@ -4886,12 +4937,15 @@ function renderTraza() {
         const pagoTxt = og === 'interna' ? '🏠 Sin costo (recolección interna)'
           : og === 'desconocido' ? `💵 Pagado en efectivo (neto): <b>${fmt(rec.totalNet || 0)}</b>`
           : `💰 Pagado al vendedor (neto): <b>${fmt(rec.totalNet || 0)}</b>`;
+        // v8.1 (punto 3) — la entrada de la recepción comparte su id (rec.id).
+        const entRec = DB.getEntradas().find(x => x.id === rec.id);
+        const compTxt = `🔖 ${txNumero(rec.id)}${entRec && entRec.nFactura ? ' · 🧾 ' + escHtml(entRec.nFactura) : ''} <span style="color:var(--blue);cursor:pointer;font-weight:700" onclick="pedirFacturaEntrada(${rec.id})">${entRec && entRec.nFactura ? '✏️' : '➕ comprobante'}</span>`;
         return `<div class="lote-card">
           <div class="lote-top"><div style="flex:1;min-width:0">
             <div class="lote-num">♻️ ${escHtml(rec.matName || '')} · ${og === 'interna' ? 'interna' : og === 'desconocido' ? 'externo' : (rec.suelto ? 'suelto' : escHtml(rec.loteNumero || '#' + rec.id))}</div>
             <div class="lote-sub">de ${escHtml(rec.contraparteName || '')} · ${fechaLabel(rec.triadaAt || rec.fecha)}</div>
           </div><span class="lote-chip" style="background:#DCFCE7;color:#166534">${rec.rendimiento != null ? rec.rendimiento + '%' : ''}</span></div>
-          <div class="traza-paso">⚖️ Bruto <b>${fmtKg(rec.brutKg)} ${u}</b> → Neto <b>${fmtKg(rec.netKg)} ${u}</b> (${nG} grado${nG > 1 ? 's' : ''}) + Merma <b>${fmtKg(rec.mermaKg)} ${u}</b><br>${pagoTxt}</div>
+          <div class="traza-paso">⚖️ Bruto <b>${fmtKg(rec.brutKg)} ${u}</b> → Neto <b>${fmtKg(rec.netKg)} ${u}</b> (${nG} grado${nG > 1 ? 's' : ''}) + Merma <b>${fmtKg(rec.mermaKg)} ${u}</b><br>${pagoTxt}<br><span style="font-size:10.5px;color:var(--text-muted)">${compTxt}</span></div>
         </div>`;
       }).join('');
     } else rw2.style.display = 'none';
@@ -5092,10 +5146,12 @@ function abrirDetalleRecibido(entradaId) {
     <span class="lote-chip ${e.transformado ? 'transformado' : 'vendido'}">${e.transformado ? '♻️ Transformado' : '📥 Recibido'}</span>
   </div>`;
   html += detalleSeccion('Compra', [
+    detalleFila('🔖', 'N° de transacción', null, txNumeroDe(e)),
     detalleFila('🤝', 'Vendedor', null, escHtml(e.recName || 'la red')),
     detalleFila('🗓️', 'Fecha', null, fechaLabel(e.fecha)),
     e.precioKg ? detalleFila('🏷️', `Precio por ${u}`, null, fmt(e.precioKg)) : '',
     detalleFila('💰', 'Total pagado', null, fmt(e.total || 0) + (e.pago === 'pagado' ? ' · ✅' : ' · ⏳')),
+    detalleFila('🧾', 'N° de comprobante', e.nFactura ? null : 'sin comprobante registrado', `<span style="color:var(--blue);cursor:pointer;font-size:12px" onclick="closeDetalleLote();pedirFacturaEntrada(${e.id})">${e.nFactura ? escHtml(e.nFactura) + ' ✏️' : '➕ añadir'}</span>`),
   ].join(''));
   // Origines déclarées par le vendeur (voyagent avec le lot)
   const r = e.loteOrigenResumen || null;
